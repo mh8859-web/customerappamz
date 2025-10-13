@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aura Interiors PM</title>
+    <link rel="icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" type="image/webp" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary-bg': '#1A202C', // Dark Slate
+              'surface': '#2D3748',    // Slate
+              'accent': '#4FD1C5',     // Aqua/Teal
+              'accent-hover': '#81E6D9', // Lighter Aqua
+              'text-muted': '#A0AEC0',   // Light Gray
+              'text-headline': '#F7FAFC', // Off-white
+              'border-color': '#4A5568', // Gray
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+            },
+            borderRadius: {
+              'xl': '12px',
+            },
+            boxShadow: {
+              'soft': '0 4px 14px 0 rgba(0, 0, 0, 0.25)',
+              'glow-accent': '0 0 15px 0 rgba(79, 209, 197, 0.5)',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: #1A202C; /* fallback */
+        background-image: radial-gradient(circle at 1% 1%, #2D3748 0%, #1A202C 50%);
+      }
+      .text-gradient-accent {
+        background: linear-gradient(to right, #81E6D9, #4FD1C5);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .verified-badge-container {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+      .verified-tooltip {
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #2D3748;
+        color: #F7FAFC;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        pointer-events: none;
+        z-index: 10;
+        border: 1px solid #4A5568;
+      }
+      .verified-badge-container:hover .verified-tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.4",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.1"
+  }
+}
+</script>
+</head>
+  <body class="bg-primary-bg text-text-muted font-sans">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
