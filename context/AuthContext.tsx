@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Map database snake_case to application camelCase
       const userProfile: User = {
           id: data.id,
-          fullName: data.full_name,
+          fullName: data.full_name || 'User', // Fallback to prevent crash if full_name is null
           email: data.email,
           role: data.role,
           avatarUrl: data.avatar_url,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { MOCK_PROJECTS, MOCK_USERS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../../services/mockData';
+import { MOCK_PROJECTS, MOCK_USERS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../services/mockData';
 import Card from '../../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../../constants';
 import Button from '../../components/ui/Button';
