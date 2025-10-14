@@ -17,28 +17,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
-      }
-      
-      // The listener fires with INITIAL_SESSION on page load.
-      // We stop loading only after this initial check is complete.
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
-
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     const { data, error } = await supabase
       .from('users')
@@ -66,6 +44,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
+  useEffect(() => {
+    // This function actively checks for a session on initial load.
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserProfile(session.user);
+      } else {
+        setUser(null);
+      }
+      // Once the initial check is complete, we update the loading state.
+      setLoading(false);
+    };
+
+    initializeAuth();
+
+    // We then set up a listener for any subsequent auth state changes.
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
     // Step 1: Find the user's profile using their custom User ID to get their real email.
     const { data: userProfile, error: profileError } = await supabase
