@@ -64,9 +64,9 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     }
     setPasswordError('');
     setIsSubmitting(true);
+    // Let the parent component handle closing the modal and any errors.
+    // The useEffect hook listening for `isOpen` will reset our state, including `isSubmitting`.
     await onCreate(formData);
-    // The parent component will close the modal, which will trigger the useEffect to reset the state.
-    setIsSubmitting(false); 
   };
   
   const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (

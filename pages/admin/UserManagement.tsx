@@ -45,38 +45,49 @@ const UserManagement: React.FC = () => {
     password: string;
     verified: boolean;
   }) => {
-    // 1. Generate a "proxy" email for Supabase Auth, which is invisible to the user.
-    // The user will only ever use their `userId` (custom ID) to log in.
-    const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
+    try {
+      // 1. Generate a "proxy" email for Supabase Auth, which is invisible to the user.
+      const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
 
-    // 2. Prepare metadata to be stored in the public.users table via the trigger.
-    const metadata = {
-        fullName: newUser.fullName,
-        role: newUser.role,
-        userId: newUser.userId,
-    };
+      // 2. Prepare metadata to be stored in the public.users table via the trigger.
+      const metadata = {
+          fullName: newUser.fullName,
+          role: newUser.role,
+          userId: newUser.userId,
+      };
 
-    // 3. Call the Supabase Auth sign-up function.
-    const { user, error } = await signUpNewUser(proxyEmail, newUser.password, metadata);
+      // 3. Call the Supabase Auth sign-up function.
+      const { user, error: signUpError } = await signUpNewUser(proxyEmail, newUser.password, metadata);
 
-    if (error) {
-        alert(`Failed to create user: ${error.message}`);
+      if (signUpError) {
+          throw signUpError;
+      }
+      
+      if (user) {
+          // 4. The trigger creates the user profile, but we must manually update it
+          // to set the userId (custom User ID) and the verified status.
+          const { error: updateError } = await updateRecord('users', user.id, {
+              user_id: newUser.userId,
+              verified: newUser.verified,
+          });
+          
+          if (updateError) {
+               // This is a partial failure, but we still want to refresh and close.
+               // The user is created in auth but not correctly in public.users.
+              alert(`User account was created, but setting the profile failed: ${updateError.message}. Please edit the user manually to set their User ID and Verified status.`);
+          }
+      }
+      
+      // 5. Refresh the user list to show the new user.
+      await refetchUsers(); 
+    } catch (error) {
+        alert(`Failed to create user: ${(error as Error).message}`);
         console.error(error);
-        return;
+    } finally {
+        // This ensures the modal always closes, which will trigger the useEffect
+        // in the modal to reset its internal state, fixing the "stuck" UI.
+        setCreateUserModalOpen(false);
     }
-    
-    if (user) {
-        // 4. The trigger creates the user profile, but we must manually update it
-        // to set the userId (custom User ID) and the verified status.
-        await updateRecord('users', user.id, {
-            user_id: newUser.userId,
-            verified: newUser.verified,
-        });
-    }
-
-    // 5. Refresh the user list to show the new user.
-    await refetchUsers(); 
-    setCreateUserModalOpen(false);
   };
 
   const handleOpenEditModal = (user: User) => {
