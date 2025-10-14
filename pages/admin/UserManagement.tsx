@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { User, UserRole } from '../../types';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import EditUserModal from '../../components/admin/EditUserModal';
-import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
+import { signUpNewUser, updateRecord } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
@@ -80,20 +80,11 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
-    if (window.confirm(`Are you sure you want to delete ${userToDelete.fullName}? This action is irreversible.`)) {
-        if (currentUser && currentUser.id === userToDelete.id) {
-            alert("You cannot delete your own account.");
-            return;
-        }
-
-        const { error } = await deleteUser(userToDelete.id);
-        if (error) {
-            alert(`Failed to delete user: ${error.message}. Ensure the 'delete_user' RPC function exists and is accessible.`);
-        } else {
-            alert('User deleted successfully.');
-            await refetchUsers();
-        }
-    }
+    // NOTE: User deletion is disabled because it requires a backend database function 
+    // ('delete_user' RPC) to be created in Supabase for security. This function must handle
+    // deleting the user from 'auth.users', which cannot be done directly from the client-side.
+    // Once the function is created, the original implementation can be restored.
+    alert("User deletion is currently disabled. A secure backend function ('delete_user' RPC) is required for this action. Please contact your administrator.");
   };
   
   if (loading) {
