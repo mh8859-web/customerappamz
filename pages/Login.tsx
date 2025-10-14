@@ -41,7 +41,7 @@ const Login: React.FC = () => {
         <div className="text-center mb-8">
             <img 
               src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-              alt="Aura Interiors PM Logo" 
+              alt="AMAZ Interiors PM Logo" 
               className="h-12 mx-auto mb-4" 
             />
             <h1 className="text-3xl font-bold text-text-primary">Welcome Back</h1>

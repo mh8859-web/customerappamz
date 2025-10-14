@@ -94,7 +94,7 @@ const CustomerDashboard: React.FC = () => {
                     <Card className="!p-4 bg-accent/10 border-accent/30 flex items-start gap-3">
                         <MegaphoneIcon className="w-5 h-5 text-accent flex-shrink-0 mt-1"/>
                         <div>
-                            <h3 className="font-bold text-accent">An Update from Aura Interiors</h3>
+                            <h3 className="font-bold text-accent">An Update from AMAZ Interiors</h3>
                             <p className="text-sm text-text-headline">{latestAnnouncement.content}</p>
                         </div>
                     </Card>

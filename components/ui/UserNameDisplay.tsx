@@ -16,9 +16,9 @@ const badgeMap: Record<UserRole, string> = {
 };
 
 const tooltipTextMap: Record<UserRole, string> = {
-    Admin: 'This account is verified because it is a Official Amaz Modular Company account.',
-    Designer: 'This account is verified because it is a Official Amaz Modular employee account.',
-    Customer: 'This account is verified because it is a Official Amaz Modular Client account.',
+    Admin: 'This account is verified because it is an official AMAZ Interiors account.',
+    Designer: 'This account is verified because it is an official AMAZ Interiors employee account.',
+    Customer: 'This account is verified because it is an official AMAZ Interiors client account.',
 };
 
 

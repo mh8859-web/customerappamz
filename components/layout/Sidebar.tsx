@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           <div className="flex items-center justify-center h-20 border-b border-border-color">
             <img 
               src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-              alt="Aura Interiors PM Logo" 
+              alt="AMAZ Interiors PM Logo" 
               className="h-10" 
             />
           </div>

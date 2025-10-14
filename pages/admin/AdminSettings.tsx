@@ -39,14 +39,14 @@ const CompanyProfileSettings = () => {
                     </div>
                 </FormField>
                 <FormField label="Company Name">
-                    <input type="text" defaultValue="Aura Interiors" className={inputClasses} />
+                    <input type="text" defaultValue="AMAZ Interiors" className={inputClasses} />
                 </FormField>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField label="Contact Number">
                         <input type="tel" defaultValue="+1 (555) 123-4567" className={inputClasses} />
                     </FormField>
                     <FormField label="Website">
-                        <input type="url" defaultValue="https://www.aura-interiors.com" className={inputClasses} />
+                        <input type="url" defaultValue="https://www.amaz-interiors.com" className={inputClasses} />
                     </FormField>
                 </div>
                  <FormField label="Default Currency">
