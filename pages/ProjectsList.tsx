@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_USERS } from '../services/mockData';
+import { MOCK_PROJECTS, MOCK_QUOTES } from '../services/mockData';
 import Card from '../components/ui/Card';
-import { Project } from '../types';
+import { Project, Quote } from '../types';
+import { useUsers } from '../context/UserContext';
+import UserNameDisplay from '../components/ui/UserNameDisplay';
+import Button from '../components/ui/Button';
+import CreateProjectModal from '../components/admin/CreateProjectModal';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
-    const designer = MOCK_USERS.find(u => u.id === project.designerId);
-    const customer = MOCK_USERS.find(u => u.id === project.customerId);
+    const { findUserById } = useUsers();
+    const designer = findUserById(project.designerId);
+    const customer = findUserById(project.customerId);
 
     return (
         <Card className="hover:border-accent transition-colors duration-300">
@@ -21,8 +26,14 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
                 </div>
                 <p className="text-sm text-text-muted mb-4">{project.address}</p>
                 <div className="text-sm space-y-2 mb-4">
-                    <p><span className="font-semibold text-text-headline">Customer:</span> {customer?.fullName}</p>
-                    <p><span className="font-semibold text-text-headline">Designer:</span> {designer?.fullName || 'Not Assigned'}</p>
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-text-headline">Customer:</span>
+                        <UserNameDisplay user={customer} textClassName="text-sm" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold text-text-headline">Designer:</span>
+                        {designer ? <UserNameDisplay user={designer} textClassName="text-sm" /> : 'Not Assigned'}
+                    </div>
                 </div>
                 <div>
                     <div className="flex justify-between text-xs text-text-muted mb-1">
@@ -40,10 +51,40 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 
 const ProjectsList: React.FC = () => {
   const { user } = useAuth();
+  const { loading: usersLoading } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
+  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
   
-  if (!user) return null;
+  if (!user || usersLoading) return null;
   
+  const handleCreateProject = (newProject: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
+    const projectToAdd: Project = {
+        ...newProject,
+        id: `proj-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        revenueDisplay: 0,
+        progress: 10,
+        status: 'Active',
+        stage: 'design_phase',
+    };
+    MOCK_PROJECTS.push(projectToAdd);
+
+    const initialQuote: Quote = {
+        id: `quote-${Date.now()}`,
+        projectId: projectToAdd.id,
+        version: 'initial',
+        fileUrl: 'dummy.pdf', // Mock file URL
+        uploadedBy: projectToAdd.adminId,
+        createdAt: new Date().toISOString(),
+    };
+    MOCK_QUOTES.push(initialQuote);
+
+    setCreateModalOpen(false);
+    navigate(`/projects/${projectToAdd.id}`);
+  };
+
   const projectsForUser = MOCK_PROJECTS.filter(p => 
       user.role === 'Admin' || p.designerId === user.id || p.customerId === user.id
   );
@@ -75,25 +116,37 @@ const ProjectsList: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-text-headline">
-        {user.role === 'Customer' ? 'Project Archive' : 'Projects'}
-      </h1>
-      
-      {user.role === 'Customer' && renderTabs()}
-
-      {projectsToDisplay.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projectsToDisplay.map(project => (
-            <ProjectCard key={project.id} project={project} />
-            ))}
+    <>
+      <CreateProjectModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          onCreate={handleCreateProject}
+      />
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <h1 className="text-3xl font-bold text-text-headline">
+                {user.role === 'Customer' ? 'Project Archive' : 'Projects'}
+            </h1>
+            {user.role === 'Admin' && (
+                <Button onClick={() => setCreateModalOpen(true)}>+ Create New Project</Button>
+            )}
         </div>
-      ) : (
-        <Card className="text-center py-12">
-            <p className="text-text-muted">No {user.role === 'Customer' && activeTab.toLowerCase()} projects found.</p>
-        </Card>
-      )}
-    </div>
+        
+        {user.role === 'Customer' && renderTabs()}
+
+        {projectsToDisplay.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {projectsToDisplay.map(project => (
+                <ProjectCard key={project.id} project={project} />
+                ))}
+            </div>
+        ) : (
+            <Card className="text-center py-12">
+                <p className="text-text-muted">No {user.role === 'Customer' && activeTab.toLowerCase()} projects found.</p>
+            </Card>
+        )}
+      </div>
+    </>
   );
 };
 

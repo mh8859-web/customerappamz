@@ -1,16 +1,18 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_TASKS, MOCK_DESIGNS, MOCK_SITE_VISITS, MOCK_LEAVE_REQUESTS, MOCK_ANNOUNCEMENTS, MOCK_USERS } from '../../services/mockData';
+import { MOCK_PROJECTS, MOCK_TASKS, MOCK_DESIGNS, MOCK_SITE_VISITS, MOCK_LEAVE_REQUESTS, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
 import Card from '../../components/ui/Card';
 import { Link, useNavigate } from 'react-router-dom';
 import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
+import { useUsers } from '../../context/UserContext';
 
 const DesignerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { findUserById, loading: usersLoading } = useUsers();
   const navigate = useNavigate();
 
-  if (!user) return null;
+  if (!user || usersLoading) return null;
 
   const assignedProjects = MOCK_PROJECTS.filter(p => p.designerId === user.id);
   const tasksDueToday = MOCK_TASKS.filter(t => t.assigneeId === user.id && t.status !== 'Done');
@@ -43,7 +45,7 @@ const DesignerDashboard: React.FC = () => {
         <Card className="!p-4 bg-accent/10 border-accent/30 flex items-start gap-3">
             <MegaphoneIcon className="w-5 h-5 text-accent flex-shrink-0 mt-1"/>
             <div>
-                <h3 className="font-bold text-accent">Announcement from {MOCK_USERS.find(u => u.id === latestAnnouncement.authorId)?.fullName}</h3>
+                <h3 className="font-bold text-accent">Announcement from {findUserById(latestAnnouncement.authorId)?.fullName}</h3>
                 <p className="text-sm text-text-headline">{latestAnnouncement.content}</p>
             </div>
         </Card>

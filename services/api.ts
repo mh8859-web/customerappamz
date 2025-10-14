@@ -25,7 +25,7 @@ export const getUsers = async (): Promise<User[]> => {
         email: user.email,
         role: user.role,
         avatarUrl: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=4FD1C5&color=1A202C`,
-        verified: user.verified,
+        verified: !!user.verified, // FIX: Ensure verified is always a boolean to fix display bug.
         verificationRequested: user.verification_requested,
         userId: user.user_id,
     }));
@@ -78,4 +78,12 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
         .getPublicUrl(filePath);
 
     return data.publicUrl;
+};
+
+// Deletes a user by calling a Supabase RPC function.
+// This is the secure way to delete a user from the client-side.
+// NOTE: This requires a `delete_user` function to be created in your Supabase SQL editor.
+export const deleteUser = async (userId: string) => {
+    const { data, error } = await supabase.rpc('delete_user', { user_id: userId });
+    return { data, error };
 };

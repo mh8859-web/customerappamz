@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { MOCK_PROJECTS, MOCK_USERS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../services/mockData';
+import { MOCK_PROJECTS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../services/mockData';
 import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
@@ -14,6 +14,8 @@ import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import GeneratePOModal from '../components/designer/GeneratePOModal';
+import { useUsers } from '../context/UserContext';
+import UserNameDisplay from '../components/ui/UserNameDisplay';
 
 type UnifiedUpdate = {
     id: string;
@@ -27,6 +29,7 @@ type UnifiedUpdate = {
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
     const { user } = useAuth();
+    const { findUserById, loading: usersLoading } = useUsers();
     
     const [project, setProject] = useState<Project | undefined>(MOCK_PROJECTS.find(p => p.id === projectId));
     const [designs, setDesigns] = useState<Design[]>(MOCK_DESIGNS.filter(d => d.projectId === projectId));
@@ -50,7 +53,7 @@ const ProjectDetails: React.FC = () => {
             .map(u => ({
                 id: u.id,
                 type: 'update',
-                author: MOCK_USERS.find(usr => usr.id === u.authorId),
+                author: findUserById(u.authorId),
                 content: u.message,
                 timestamp: u.createdAt
             }));
@@ -60,7 +63,7 @@ const ProjectDetails: React.FC = () => {
             .map(w => ({
                 id: w.id,
                 type: 'work_log',
-                author: MOCK_USERS.find(usr => usr.id === w.designerId),
+                author: findUserById(w.designerId),
                 content: w.tasksCompleted,
                 timestamp: new Date(w.date).toISOString(),
                 hours: w.hoursSpent,
@@ -71,13 +74,13 @@ const ProjectDetails: React.FC = () => {
             .map(a => ({
                 id: a.id,
                 type: 'system',
-                author: MOCK_USERS.find(usr => usr.id === a.actorId),
+                author: findUserById(a.actorId),
                 content: a.details,
                 timestamp: a.createdAt,
             }));
             
         return [...updates, ...workLogs, ...systemEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [projectId]);
+    }, [projectId, findUserById]);
     
     const [feed, setFeed] = useState(unifiedUpdateFeed);
 
@@ -95,12 +98,12 @@ const ProjectDetails: React.FC = () => {
 
     }, [projectId, unifiedUpdateFeed, user]);
 
-    if (!project || !user) {
+    if (!project || !user || usersLoading) {
         return <div className="text-center text-text-headline">Project not found or user not loaded.</div>;
     }
 
-    const designer = MOCK_USERS.find(u => u.id === project.designerId);
-    const customer = MOCK_USERS.find(u => u.id === project.customerId);
+    const designer = findUserById(project.designerId);
+    const customer = findUserById(project.customerId);
     const projectMilestones = MOCK_MILESTONES.filter(m => m.projectId === project.id);
 
     const updateProjectState = (updates: Partial<Project>, actorId: string, actionDetails: string) => {
@@ -126,7 +129,7 @@ const ProjectDetails: React.FC = () => {
         const newFeedEntry: UnifiedUpdate = {
             id: newLog.id,
             type: 'system',
-            author: MOCK_USERS.find(usr => usr.id === actorId),
+            author: findUserById(actorId),
             content: newLog.details,
             timestamp: newLog.createdAt,
         };
@@ -310,15 +313,7 @@ const ProjectDetails: React.FC = () => {
                                     <div className="flex-1 border-l-2 border-border-color pl-8 relative">
                                         <UpdateIcon type={item.type}/>
                                         <div className="flex items-center justify-between">
-                                            <div className="font-bold text-text-headline flex items-center gap-1.5">
-                                                {item.author?.fullName}
-                                                {item.author?.verified && (
-                                                    <div className="verified-badge-container">
-                                                        <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="Verified Badge" className="w-4 h-4" />
-                                                        <span className="verified-tooltip">Verified By Zcy</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <UserNameDisplay user={item.author} textClassName="font-bold text-text-headline" />
                                             <p className="text-xs text-text-muted">{new Date(item.timestamp).toLocaleString()}</p>
                                         </div>
                                         <p className="text-sm text-text-muted mt-1">{item.content}</p>
@@ -452,14 +447,14 @@ const ProjectDetails: React.FC = () => {
                         <h2 className="text-xl font-bold text-text-headline mb-4">Client Feedback</h2>
                         <div className="space-y-4">
                             {allComments.map(comment => {
-                                const author = MOCK_USERS.find(u => u.id === comment.authorId);
+                                const author = findUserById(comment.authorId);
                                 return (
                                     <div key={comment.id} className="bg-primary-bg p-4 rounded-xl flex gap-4">
                                         <img src={comment.design.fileUrl} alt="design" className="w-24 h-24 rounded-lg object-cover" />
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <p className="text-text-headline font-semibold">Comment from {author?.fullName}</p>
+                                                    <UserNameDisplay user={author} textClassName="text-text-headline font-semibold" />
                                                     <p className="text-xs text-text-muted">on Design v{comment.design.version}</p>
                                                 </div>
                                                 <span className={`text-xs font-semibold ${comment.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}`}>{comment.status}</span>
@@ -487,7 +482,7 @@ const ProjectDetails: React.FC = () => {
                                         <FileTextIcon className="w-6 h-6 text-accent" />
                                         <div>
                                             <p className="font-semibold text-text-headline capitalize">{q.version} Quote</p>
-                                            <p className="text-xs text-text-muted">Uploaded by {MOCK_USERS.find(u=> u.id === q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
+                                            <p className="text-xs text-text-muted">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
                                         </div>
                                     </div>
                                     <Button variant="secondary" className="px-4 py-2 text-sm">Download</Button>
@@ -648,7 +643,7 @@ const ProjectDetails: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-text-headline">{project.title}</h1>
-                        <p className="text-text-muted">Customer: {customer?.fullName}</p>
+                        <div className="text-text-muted flex items-center gap-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-muted" /></div>
                     </div>
                     {renderHeaderActions()}
                 </div>
@@ -667,7 +662,7 @@ const ProjectDetails: React.FC = () => {
                         </div>
                         <div>
                             <h3 className="font-bold text-text-headline mb-1 uppercase tracking-wider text-xs">Client Contact</h3>
-                            <p className="text-text-muted">{customer?.fullName}</p>
+                            <UserNameDisplay user={customer} textClassName="text-text-muted" />
                             <p className="text-text-muted">{customer?.userId || 'Not available'}</p>
                         </div>
                     </div>

@@ -4,10 +4,12 @@ import React from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_SUPPORT_TICKETS, MOCK_USERS, MOCK_PROJECTS } from '../../services/mockData';
+import { MOCK_SUPPORT_TICKETS, MOCK_PROJECTS } from '../../services/mockData';
+import { useUsers } from '../../context/UserContext';
 
 const SupportPage: React.FC = () => {
     const { user } = useAuth();
+    const { findUserById, loading: usersLoading } = useUsers();
 
     const AdminView = () => (
         <Card>
@@ -16,7 +18,7 @@ const SupportPage: React.FC = () => {
             {/* Mobile View */}
             <div className="md:hidden space-y-3">
                 {MOCK_SUPPORT_TICKETS.map(ticket => {
-                    const submitter = MOCK_USERS.find(u => u.id === ticket.submittedBy);
+                    const submitter = findUserById(ticket.submittedBy);
                     const project = MOCK_PROJECTS.find(p => p.id === ticket.projectId);
                     return (
                         <div key={ticket.id} className="bg-primary-bg p-4 rounded-xl text-sm">
@@ -46,7 +48,7 @@ const SupportPage: React.FC = () => {
                     </thead>
                     <tbody>
                         {MOCK_SUPPORT_TICKETS.map(ticket => {
-                            const submitter = MOCK_USERS.find(u => u.id === ticket.submittedBy);
+                            const submitter = findUserById(ticket.submittedBy);
                             const project = MOCK_PROJECTS.find(p => p.id === ticket.projectId);
                             return (
                                 <tr key={ticket.id} className="border-b border-border-color">
@@ -82,6 +84,10 @@ const SupportPage: React.FC = () => {
             </form>
         </Card>
     );
+    
+    if (usersLoading) {
+        return <div>Loading support...</div>;
+    }
 
     return (
         <div className="space-y-6">

@@ -88,7 +88,8 @@ const FinancialReports: React.FC = () => {
                                 fill="#8884d8"
                                 dataKey="profit"
                                 nameKey="name"
-                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                // FIX: The 'percent' prop from recharts can be undefined. Defaulted to 0 to prevent a potential runtime error on multiplication.
+                                label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
                             >
                                 {projectProfitabilityData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

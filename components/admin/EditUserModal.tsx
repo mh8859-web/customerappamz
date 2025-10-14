@@ -8,7 +8,7 @@ interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  onUpdate: (userId: string, updates: Partial<User>) => void;
+  onUpdate: (userId: string, updates: Partial<User>) => Promise<void>;
 }
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, onUpdate }) => {
@@ -18,6 +18,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     userId: '',
     verified: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -28,11 +29,15 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
         verified: user.verified || false,
       });
     }
-  }, [user]);
+    // Reset submitting state when modal is opened/closed or user changes
+    if (!isOpen) {
+      setIsSubmitting(false);
+    }
+  }, [user, isOpen]);
 
+  // FIX: Added type guard to ensure `e.target` is an HTMLInputElement before accessing 'checked' property.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
      const { name, value, type } = e.target;
-    // FIX: Add type guard to ensure e.target is an HTMLInputElement before accessing 'checked' property
     if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
         setFormData(prev => ({ ...prev, [name]: e.target.checked }));
     } else {
@@ -40,7 +45,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (user) {
         const updates: Partial<User> = {};
@@ -50,7 +55,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
         if (formData.verified !== user.verified) updates.verified = formData.verified;
         
         if (Object.keys(updates).length > 0) {
-            onUpdate(user.id, updates);
+            setIsSubmitting(true);
+            await onUpdate(user.id, updates);
+            setIsSubmitting(false);
         }
     }
     onClose();
@@ -93,8 +100,10 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
         </div>
         
         <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Save Changes</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </form>
     </Modal>

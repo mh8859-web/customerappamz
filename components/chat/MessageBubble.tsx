@@ -1,6 +1,7 @@
 import React from 'react';
 import { Message, User } from '../../types';
 import { DownloadIcon, FileTextIcon } from '../icons';
+import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface MessageBubbleProps {
   message: Message;
@@ -45,14 +46,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, se
             )}
             <div className={`rounded-xl p-3 ${bubbleClasses}`}>
                  {!isOwnMessage && (
-                    <div className="text-xs font-bold text-accent mb-1 flex items-center gap-1.5">
-                        {sender?.fullName}
-                        {sender?.verified && (
-                            <div className="verified-badge-container">
-                                <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="Verified Badge" className="w-4 h-4" />
-                                <span className="verified-tooltip">Verified By Zcy</span>
-                            </div>
-                        )}
+                    <div className="mb-1">
+                      <UserNameDisplay user={sender} className="text-xs font-bold text-accent" />
                     </div>
                 )}
                 {message.body && <p className="text-sm">{message.body}</p>}

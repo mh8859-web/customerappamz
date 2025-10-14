@@ -28,8 +28,8 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary-bg text-text-headline">
-        Loading...
+      <div className="flex items-center justify-center min-h-screen bg-page-bg">
+        <div className="spinner"></div>
       </div>
     );
   }

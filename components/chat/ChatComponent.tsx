@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '../../types';
-import { MOCK_MESSAGES, MOCK_USERS } from '../../services/mockData';
+import { MOCK_MESSAGES } from '../../services/mockData';
 import { PaperclipIcon, SendIcon } from '../icons';
 import MessageBubble from './MessageBubble';
 import Card from '../ui/Card';
+import { useUsers } from '../../context/UserContext';
 
 interface ChatComponentProps {
   projectId: string;
@@ -16,6 +17,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
   const [newMessage, setNewMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { findUserById } = useUsers();
 
   useEffect(() => {
     // Filter messages for the current project and sort them by date
@@ -83,7 +85,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
             key={msg.id}
             message={msg}
             isOwnMessage={msg.senderId === currentUser.id}
-            sender={MOCK_USERS.find(u => u.id === msg.senderId)}
+            sender={findUserById(msg.senderId)}
           />
         ))}
         <div ref={messagesEndRef} />

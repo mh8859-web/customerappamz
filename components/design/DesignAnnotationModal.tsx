@@ -2,7 +2,7 @@ import React, { useState, useRef, MouseEvent } from 'react';
 import Modal from '../ui/Modal';
 import { Design, User, Comment } from '../../types';
 import Button from '../ui/Button';
-import { MOCK_USERS } from '../../services/mockData';
+import { useUsers } from '../../context/UserContext';
 
 interface DesignAnnotationModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
   const [comments, setComments] = useState<Comment[]>(design.comments || []);
   const [newComment, setNewComment] = useState<{ x: number, y: number, text: string } | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const { findUserById } = useUsers();
 
   const handleImageClick = (e: MouseEvent<HTMLImageElement>) => {
     if (newComment) return; // Only one new comment at a time
@@ -49,7 +50,7 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
   }
 
   const CommentMarker: React.FC<{ comment: Comment | { x: number, y: number } }> = ({ comment }) => {
-    const author = 'authorId' in comment ? MOCK_USERS.find(u => u.id === comment.authorId) : null;
+    const author = 'authorId' in comment ? findUserById(comment.authorId) : null;
     return (
         <div 
             className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-accent border-2 border-white shadow-lg cursor-pointer group"

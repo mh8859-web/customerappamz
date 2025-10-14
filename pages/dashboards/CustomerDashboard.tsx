@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_USERS, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
+import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
 import { Project, Milestone } from '../../types';
 import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
@@ -9,9 +9,12 @@ import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
 import { DownloadIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
+import { useUsers } from '../../context/UserContext';
+import UserNameDisplay from '../../components/ui/UserNameDisplay';
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
+    const { findUserById, loading: usersLoading } = useUsers();
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
 
@@ -19,10 +22,10 @@ const CustomerDashboard: React.FC = () => {
         if (!user) return { project: null, milestones: [], designer: null, admin: null };
         const myProject = MOCK_PROJECTS.find(p => p.customerId === user.id && p.status === 'Active');
         const projectMilestones = myProject ? MOCK_MILESTONES.filter(m => m.projectId === myProject.id) : [];
-        const projectDesigner = myProject ? MOCK_USERS.find(u => u.id === myProject.designerId) : null;
-        const projectAdmin = myProject ? MOCK_USERS.find(u => u.id === myProject.adminId) : null;
+        const projectDesigner = myProject ? findUserById(myProject.designerId) : null;
+        const projectAdmin = myProject ? findUserById(myProject.adminId) : null;
         return { project: myProject, milestones: projectMilestones, designer: projectDesigner, admin: projectAdmin };
-    }, [user]);
+    }, [user, findUserById]);
     
     const completedProject = useMemo(() => {
         if (!user) return null;
@@ -55,6 +58,10 @@ const CustomerDashboard: React.FC = () => {
         // Force re-render by creating a new object
         // In a real app, this would trigger a re-fetch
     };
+
+    if (usersLoading) {
+        return <div>Loading dashboard...</div>;
+    }
 
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;
@@ -133,7 +140,7 @@ const CustomerDashboard: React.FC = () => {
                                     <div className="flex items-center gap-3">
                                         <img src={designer.avatarUrl} alt={designer.fullName} className="w-10 h-10 rounded-full" />
                                         <div>
-                                            <p className="font-semibold text-text-headline flex items-center gap-1.5">{designer.fullName} {designer.verified && <div className="verified-badge-container"><img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="V" className="w-4 h-4"/><span className="verified-tooltip">Verified By Zcy</span></div>}</p>
+                                            <UserNameDisplay user={designer} textClassName="font-semibold text-text-headline" />
                                             <p className="text-sm text-text-muted">Lead Designer</p>
                                         </div>
                                     </div>
@@ -142,7 +149,7 @@ const CustomerDashboard: React.FC = () => {
                                      <div className="flex items-center gap-3">
                                         <img src={admin.avatarUrl} alt={admin.fullName} className="w-10 h-10 rounded-full" />
                                         <div>
-                                            <p className="font-semibold text-text-headline flex items-center gap-1.5">{admin.fullName} {admin.verified && <div className="verified-badge-container"><img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="V" className="w-4 h-4"/><span className="verified-tooltip">Verified By Zcy</span></div>}</p>
+                                            <UserNameDisplay user={admin} textClassName="font-semibold text-text-headline" />
                                             <p className="text-sm text-text-muted">Project Admin</p>
                                         </div>
                                     </div>

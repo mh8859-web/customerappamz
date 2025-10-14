@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { User, UserRole } from '../../types';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import EditUserModal from '../../components/admin/EditUserModal';
-import { getUsers, signUpNewUser, updateRecord } from '../../services/api';
+import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
+import { useUsers } from '../../context/UserContext';
+import { useAuth } from '../../context/AuthContext';
+import UserNameDisplay from '../../components/ui/UserNameDisplay';
 
 const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { users, loading, refetchUsers } = useUsers();
+  const { user: currentUser } = useAuth();
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    const data = await getUsers();
-    setUsers(data);
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const handleCreateUser = async (newUser: {
     fullName: string;
@@ -61,7 +54,7 @@ const UserManagement: React.FC = () => {
     }
 
     // 5. Refresh the user list to show the new user.
-    fetchUsers(); 
+    await refetchUsers(); 
     setCreateUserModalOpen(false);
   };
 
@@ -82,7 +75,24 @@ const UserManagement: React.FC = () => {
     if (error) {
         alert(`Failed to update user: ${error.message}`);
     } else {
-        await fetchUsers(); // Refresh list on successful update
+        await refetchUsers(); // Refresh list on successful update
+    }
+  };
+
+  const handleDeleteUser = async (userToDelete: User) => {
+    if (window.confirm(`Are you sure you want to delete ${userToDelete.fullName}? This action is irreversible.`)) {
+        if (currentUser && currentUser.id === userToDelete.id) {
+            alert("You cannot delete your own account.");
+            return;
+        }
+
+        const { error } = await deleteUser(userToDelete.id);
+        if (error) {
+            alert(`Failed to delete user: ${error.message}. Ensure the 'delete_user' RPC function exists and is accessible.`);
+        } else {
+            alert('User deleted successfully.');
+            await refetchUsers();
+        }
     }
   };
   
@@ -117,15 +127,7 @@ const UserManagement: React.FC = () => {
                 <div className="flex items-center gap-4 mb-3">
                   <img src={user.avatarUrl} alt={user.fullName} className="w-10 h-10 rounded-full" />
                   <div>
-                    <div className="font-bold text-text-headline flex items-center gap-1.5">
-                      {user.fullName}
-                      {user.verified && (
-                        <div className="verified-badge-container">
-                          <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="Verified Badge" className="w-4 h-4" />
-                          <span className="verified-tooltip">Verified By Zcy</span>
-                        </div>
-                      )}
-                    </div>
+                    <UserNameDisplay user={user} className="font-bold text-text-headline" />
                     <p className="text-sm text-text-muted">{user.email}</p>
                   </div>
                 </div>
@@ -139,7 +141,7 @@ const UserManagement: React.FC = () => {
                       </span>
                   <div className="flex gap-2">
                       <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                      <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400">Delete</Button>
+                      <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400" onClick={() => handleDeleteUser(user)}>Delete</Button>
                   </div>
                 </div>
               </div>
@@ -161,17 +163,8 @@ const UserManagement: React.FC = () => {
               <tbody>
                 {users.map((user: User) => (
                   <tr key={user.id} className="border-b border-border-color">
-                    <td className="px-6 py-4 font-medium text-text-headline flex items-center gap-3">
-                      <img src={user.avatarUrl} alt={user.fullName} className="w-8 h-8 rounded-full" />
-                      <div className="flex items-center gap-1.5">
-                        {user.fullName}
-                        {user.verified && (
-                          <div className="verified-badge-container">
-                            <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg" alt="Verified Badge" className="w-4 h-4" />
-                            <span className="verified-tooltip">Verified By Zcy</span>
-                          </div>
-                        )}
-                      </div>
+                    <td className="px-6 py-4 font-medium text-text-headline">
+                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-medium"/>
                     </td>
                     <td className="px-6 py-4">{user.email}</td>
                     <td className="px-6 py-4 font-mono">{user.userId}</td>
@@ -187,7 +180,7 @@ const UserManagement: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
                           <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                          <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400">Delete</Button>
+                          <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400" onClick={() => handleDeleteUser(user)}>Delete</Button>
                       </div>
                     </td>
                   </tr>

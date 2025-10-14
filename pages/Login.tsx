@@ -28,7 +28,7 @@ const Login: React.FC = () => {
       if (loginError === 'USER_NOT_FOUND') {
         setError('User ID not found. Please check and try again.');
       } else if (loginError === 'INVALID_PASSWORD') {
-        setError('Incorrect password. If you have forgotten it, please ask an administrator to reset it for you in the Supabase dashboard.');
+        setError('Incorrect password. Please ask amaz team for password.');
       } else {
         setError('An unexpected error occurred. Please try again later.');
       }
@@ -36,7 +36,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-primary-bg p-4">
+    <div className="flex items-center justify-center min-h-screen bg-page-bg p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
             <img 
@@ -44,17 +44,17 @@ const Login: React.FC = () => {
               alt="Aura Interiors PM Logo" 
               className="h-12 mx-auto mb-4" 
             />
-            <h1 className="text-3xl font-bold text-text-headline">Welcome Back</h1>
-            <p className="text-text-muted">Sign in to your account to continue</p>
+            <h1 className="text-3xl font-bold text-text-primary">Welcome Back</h1>
+            <p className="text-text-secondary">Sign in to your account to continue</p>
         </div>
 
-        <form onSubmit={handleLogin} className="bg-surface/80 backdrop-blur-sm border border-border-color rounded-xl p-8 shadow-soft space-y-6">
+        <form onSubmit={handleLogin} className="bg-surface rounded-xl p-8 shadow-card space-y-6">
           
           <div>
-            <label htmlFor="userId" className="block text-sm font-medium text-text-headline">User ID</label>
+            <label htmlFor="userId" className="block text-sm font-medium text-text-primary">User ID</label>
             <div className="relative mt-1">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                <UserCircleIcon className="w-5 h-5 text-text-muted" />
+                <UserCircleIcon className="w-5 h-5 text-text-secondary" />
               </span>
               <input
                 id="userId"
@@ -64,17 +64,17 @@ const Login: React.FC = () => {
                 required
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-primary-bg border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full pl-10 pr-4 py-3 bg-page-bg border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="Enter your user ID"
               />
             </div>
           </div>
           
           <div>
-            <label htmlFor="password"className="block text-sm font-medium text-text-headline">Password</label>
+            <label htmlFor="password"className="block text-sm font-medium text-text-primary">Password</label>
             <div className="relative mt-1">
                <span className="absolute inset-y-0 left-0 flex items-center pl-3">
-                <LockIcon className="w-5 h-5 text-text-muted" />
+                <LockIcon className="w-5 h-5 text-text-secondary" />
               </span>
               <input
                 id="password"
@@ -84,20 +84,20 @@ const Login: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-3 bg-primary-bg border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-accent"
+                className="w-full pl-10 pr-10 py-3 bg-page-bg border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted hover:text-text-headline"
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-secondary hover:text-text-primary"
               >
                 {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+          {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 
           <div>
             <Button type="submit" className="w-full" disabled={loading}>
@@ -105,9 +105,6 @@ const Login: React.FC = () => {
             </Button>
           </div>
           
-          <div className="text-center">
-            <a href="#" className="text-sm text-accent hover:text-accent-hover">Forgot password?</a>
-          </div>
         </form>
       </div>
     </div>

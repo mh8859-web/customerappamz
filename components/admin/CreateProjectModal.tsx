@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { Project } from '../../types';
-import { MOCK_USERS } from '../../services/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { useUsers } from '../../context/UserContext';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface CreateProjectModalProps {
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
   const { user: adminUser } = useAuth();
+  const { users } = useUsers();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -24,8 +25,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     startDate: '',
   });
 
-  const clients = MOCK_USERS.filter(u => u.role === 'Customer');
-  const designers = MOCK_USERS.filter(u => u.role === 'Designer');
+  const clients = users.filter(u => u.role === 'Customer');
+  const designers = users.filter(u => u.role === 'Designer');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

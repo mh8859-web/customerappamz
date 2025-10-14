@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { MOCK_PROJECTS, MOCK_USERS, MOCK_MILESTONES, MOCK_EXPENSES, MOCK_LEAVE_REQUESTS, MOCK_PROJECT_TEMPLATES } from '../../services/mockData';
+import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_EXPENSES, MOCK_LEAVE_REQUESTS, MOCK_PROJECT_TEMPLATES } from '../../services/mockData';
 import { User, LeaveRequest, ProjectTemplate } from '../../types';
 import { DollarSignIcon, BriefcaseIcon, UsersIcon, CheckCircleIcon, FilePlusIcon } from '../../components/icons';
 import CreateTemplateModal from '../../components/admin/CreateTemplateModal';
 import { useNavigate } from 'react-router-dom';
+import { useUsers } from '../../context/UserContext';
+import UserNameDisplay from '../../components/ui/UserNameDisplay';
 
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
 
@@ -58,7 +60,8 @@ const Financials: React.FC = () => {
 };
 
 const TeamManagement: React.FC = () => {
-    const designers = MOCK_USERS.filter(u => u.role === 'Designer');
+    const { users } = useUsers();
+    const designers = users.filter(u => u.role === 'Designer');
     const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
     
     const handleLeaveRequest = (requestId: string, status: 'Approved' | 'Rejected') => {
@@ -79,10 +82,7 @@ const TeamManagement: React.FC = () => {
                         const projectCount = MOCK_PROJECTS.filter(p => p.designerId === designer.id && p.status === 'Active').length;
                         return (
                             <div key={designer.id} className="flex items-center justify-between bg-primary-bg p-3 rounded-xl">
-                                <div className="flex items-center gap-3">
-                                    <img src={designer.avatarUrl} alt={designer.fullName} className="w-8 h-8 rounded-full" />
-                                    <p className="text-text-headline font-semibold">{designer.fullName}</p>
-                                </div>
+                                <UserNameDisplay user={designer} showAvatar={true} imageSize="w-8 h-8" textClassName="font-semibold text-text-headline" />
                                 <p className="text-sm font-mono text-accent">{projectCount} Active Project{projectCount !== 1 ? 's' : ''}</p>
                             </div>
                         );
@@ -94,7 +94,7 @@ const TeamManagement: React.FC = () => {
                 {pendingLeave.length > 0 ? (
                     <div className="space-y-3">
                         {pendingLeave.map(req => {
-                            const designer = MOCK_USERS.find(u => u.id === req.designerId);
+                            const designer = users.find(u => u.id === req.designerId);
                             return (
                                 <div key={req.id} className="bg-primary-bg p-3 rounded-xl">
                                     <div className="flex items-center justify-between">
@@ -120,7 +120,8 @@ const TeamManagement: React.FC = () => {
 };
 
 const ClientDirectory: React.FC = () => {
-    const clients = MOCK_USERS.filter(u => u.role === 'Customer');
+    const { users } = useUsers();
+    const clients = users.filter(u => u.role === 'Customer');
 
     return (
         <Card>
@@ -134,7 +135,7 @@ const ClientDirectory: React.FC = () => {
                             <div className="flex items-center gap-3">
                                 <img src={client.avatarUrl} alt={client.fullName} className="w-8 h-8 rounded-full" />
                                 <div>
-                                    <p className="text-text-headline font-semibold">{client.fullName}</p>
+                                    <UserNameDisplay user={client} textClassName="text-text-headline font-semibold"/>
                                     <p className="text-xs text-text-muted">{clientProjects.length} Project{clientProjects.length !== 1 ? 's' : ''}</p>
                                 </div>
                             </div>
@@ -189,6 +190,12 @@ const ProjectTemplates: React.FC = () => {
 }
 
 const AdminOverview: React.FC = () => {
+    const { loading: usersLoading } = useUsers();
+
+    if (usersLoading) {
+        return <div>Loading overview...</div>;
+    }
+
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold text-text-headline">Strategic Overview</h1>

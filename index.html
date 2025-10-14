@@ -14,24 +14,27 @@
         theme: {
           extend: {
             colors: {
-              'primary-bg': '#1A202C', // Dark Slate
-              'surface': '#2D3748',    // Slate
-              'accent': '#4FD1C5',     // Aqua/Teal
-              'accent-hover': '#81E6D9', // Lighter Aqua
-              'text-muted': '#A0AEC0',   // Light Gray
-              'text-headline': '#F7FAFC', // Off-white
-              'border-color': '#4A5568', // Gray
+              'page-bg': '#F0F2F5',      // Light Gray (Facebook's background)
+              'surface': '#FFFFFF',      // White (for cards, headers)
+              'accent': '#1877F2',       // Facebook Blue
+              'accent-hover': '#166FE5',   // Darker Blue
+              'secondary': '#E4E6EB',     // Light Gray (buttons, hover states)
+              'secondary-hover': '#D8DBE0',// Darker Gray
+              'text-primary': '#050505',    // Primary Text (almost black)
+              'text-secondary': '#65676B',  // Secondary Text (gray)
+              'border-color': '#DADDE1',    // Lighter border color
+              'accent-blue-light': '#E7F3FF', // Very light blue for active sidebar bg
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
               serif: ['Playfair Display', 'serif'],
             },
             borderRadius: {
-              'xl': '12px',
+              'xl': '8px',
             },
             boxShadow: {
-              'soft': '0 4px 14px 0 rgba(0, 0, 0, 0.25)',
-              'glow-accent': '0 0 15px 0 rgba(79, 209, 197, 0.5)',
+              'subtle': '0 1px 2px rgba(0, 0, 0, 0.1)',
+              'card': '0 2px 4px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.1)',
             }
           }
         }
@@ -41,11 +44,10 @@
       body {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        background-color: #1A202C; /* fallback */
-        background-image: radial-gradient(circle at 1% 1%, #2D3748 0%, #1A202C 50%);
+        background-color: #F0F2F5;
       }
       .text-gradient-accent {
-        background: linear-gradient(to right, #81E6D9, #4FD1C5);
+        background: linear-gradient(to right, #1877F2, #166FE5);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
@@ -59,8 +61,8 @@
         bottom: 125%;
         left: 50%;
         transform: translateX(-50%);
-        background-color: #2D3748;
-        color: #F7FAFC;
+        background-color: #050505;
+        color: #FFFFFF;
         padding: 4px 8px;
         border-radius: 6px;
         font-size: 12px;
@@ -70,11 +72,26 @@
         transition: opacity 0.2s, visibility 0.2s;
         pointer-events: none;
         z-index: 10;
-        border: 1px solid #4A5568;
+        border: 1px solid #DADDE1;
       }
       .verified-badge-container:hover .verified-tooltip {
         opacity: 1;
         visibility: visible;
+      }
+      .spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #E4E6EB;
+        border-bottom-color: #1877F2;
+        border-radius: 50%;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: rotation 1s linear infinite;
+      }
+
+      @keyframes rotation {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
       }
     </style>
   <script type="importmap">
@@ -90,7 +107,7 @@
 }
 </script>
 </head>
-  <body class="bg-primary-bg text-text-muted font-sans">
+  <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

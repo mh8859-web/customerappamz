@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
-import { MOCK_ATTENDANCE_LOGS, MOCK_USERS, MOCK_WORK_LOGS, MOCK_PROJECTS } from '../../services/mockData';
+import { MOCK_ATTENDANCE_LOGS, MOCK_PROJECTS, MOCK_WORK_LOGS } from '../../services/mockData';
 import { AttendanceLog, WorkLog } from '../../types';
 import { MapPinIcon } from '../../components/icons';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
+import { useUsers } from '../../context/UserContext';
 
 const AttendanceLogs: React.FC = () => {
+  const { findUserById, loading: usersLoading } = useUsers();
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState<WorkLog[]>([]);
   const [selectedDesigner, setSelectedDesigner] = useState<string>('');
@@ -17,7 +19,7 @@ const AttendanceLogs: React.FC = () => {
   };
 
   const handleViewLogClick = (log: AttendanceLog) => {
-    const designer = MOCK_USERS.find(u => u.id === log.designerId);
+    const designer = findUserById(log.designerId);
     const logDate = formatDate(log.clockIn);
     const workLogs = MOCK_WORK_LOGS.filter(wl => wl.designerId === log.designerId && wl.date === logDate);
     
@@ -26,6 +28,10 @@ const AttendanceLogs: React.FC = () => {
     setSelectedDate(new Date(log.clockIn).toLocaleDateString());
     setModalOpen(true);
   };
+
+  if (usersLoading) {
+    return <div>Loading logs...</div>
+  }
 
   return (
     <>
@@ -62,7 +68,7 @@ const AttendanceLogs: React.FC = () => {
           {/* Mobile View */}
           <div className="md:hidden space-y-4">
             {MOCK_ATTENDANCE_LOGS.map((log: AttendanceLog) => {
-              const designer = MOCK_USERS.find(u => u.id === log.designerId);
+              const designer = findUserById(log.designerId);
               return (
                 <div key={log.id} className="bg-primary-bg p-4 rounded-xl text-sm">
                   <div className="flex justify-between items-start">
@@ -97,7 +103,7 @@ const AttendanceLogs: React.FC = () => {
               </thead>
               <tbody>
                 {MOCK_ATTENDANCE_LOGS.map((log: AttendanceLog) => {
-                  const designer = MOCK_USERS.find(u => u.id === log.designerId);
+                  const designer = findUserById(log.designerId);
                   return (
                     <tr key={log.id} className="border-b border-border-color">
                       <td className="px-6 py-4 font-medium text-text-headline">{designer?.fullName}</td>

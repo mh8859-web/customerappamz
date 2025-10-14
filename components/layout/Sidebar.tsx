@@ -11,9 +11,9 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
   
-  const baseLinkClasses = "flex items-center p-3 my-1 rounded-xl transition-colors duration-200";
-  const inactiveLinkClasses = "text-text-muted hover:bg-surface hover:text-text-headline";
-  const activeLinkClasses = "bg-accent/10 text-accent font-semibold";
+  const baseLinkClasses = "flex items-center p-3 my-1 rounded-lg transition-colors duration-200";
+  const inactiveLinkClasses = "text-text-primary font-medium hover:bg-secondary";
+  const activeLinkClasses = "bg-accent-blue-light text-accent font-semibold";
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 
     `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses}`;
@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       <div className={`fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden transition-opacity ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
            onClick={() => setSidebarOpen(false)}>
       </div>
-      <div className={`fixed md:relative z-30 md:z-auto inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 bg-surface/80 backdrop-blur-md border-r border-border-color flex-shrink-0 transition-transform duration-300 ease-in-out`}>
+      <div className={`fixed md:relative z-30 md:z-auto inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 w-64 bg-surface flex-shrink-0 transition-transform duration-300 ease-in-out`}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-center h-20 border-b border-border-color">
             <img 

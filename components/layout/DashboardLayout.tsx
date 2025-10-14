@@ -8,7 +8,7 @@ const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-primary-bg text-text-muted">
+    <div className="flex h-screen bg-page-bg text-text-secondary">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex flex-col flex-1 overflow-y-auto">
