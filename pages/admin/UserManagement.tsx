@@ -33,7 +33,7 @@ const UserManagement: React.FC = () => {
   }) => {
     // 1. Generate a "proxy" email for Supabase Auth, which is invisible to the user.
     // The user will only ever use their `userId` (custom ID) to log in.
-    const proxyEmail = `user-${newUser.userId}@aura-interiors.app`;
+    const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
 
     // 2. Prepare metadata to be stored in the public.users table via the trigger.
     const metadata = {
