@@ -1,0 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
+
+// --- LIVE SUPERBASE CONFIGURATION ---
+// The application is now connected to your live Supabase project.
+
+const supabaseUrl = 'https://tqttuawbjhpsmvcibich.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxdHR1YXdiamhwc212Y2liaWNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzNjMzMDAsImV4cCI6MjA3NTkzOTMwMH0.BWVK7CejJ4pvPWgyWgVqBgAJH-FQpWt0iFsTPH-PwaQ';
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);

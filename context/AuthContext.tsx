@@ -1,66 +1,117 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { User, UserRole } from '../types';
-import { MOCK_USERS } from '../services/mockData';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { User } from '../types';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  login: (uniqueId: string, password: string) => Promise<boolean>;
+  loading: boolean;
+  login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEFAULT_USERS: Record<string, { role: UserRole; id: string; password: string }> = {
-    '786786': { role: 'Admin', id: 'user-admin-1', password: 'INTER@7m' },
-    'designer@aura.com': { role: 'Designer', id: 'user-designer-1', password: 'password123' },
-    'customer@aura.com': { role: 'Customer', id: 'user-customer-1', password: 'password123' },
-};
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = async (uniqueId: string, password: string): Promise<boolean> => {
-    // In a live app, this would be an API call.
-    let userToLogin = MOCK_USERS.find(u => u.email === uniqueId || u.id === uniqueId);
+  useEffect(() => {
+    setLoading(true);
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        await fetchUserProfile(session.user);
+      } else {
+        setUser(null);
+      }
+      
+      // The listener fires with INITIAL_SESSION on page load.
+      // We stop loading only after this initial check is complete.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        setLoading(false);
+      }
+    });
 
-    if (userToLogin) {
-        if (userToLogin.password === password) {
-            setUser(userToLogin);
-            return true;
-        }
-        return false;
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      await supabase.auth.signOut();
+      setUser(null);
+    } else if (data) {
+      // Map database snake_case to application camelCase
+      const userProfile: User = {
+          id: data.id,
+          fullName: data.full_name,
+          email: data.email,
+          role: data.role,
+          avatarUrl: data.avatar_url,
+          verified: data.verified,
+          verificationRequested: data.verification_requested,
+          userId: data.user_id,
+      };
+      setUser(userProfile);
+    }
+  };
+  
+  const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
+    // Step 1: Find the user's profile using their custom User ID to get their real email.
+    const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('email') // Select the actual email address
+        .eq('user_id', userId)
+        .single();
+    
+    if (profileError || !userProfile) {
+        // This is the custom error condition for the Login page.
+        console.error("AUTHENTICATION FAILED: Step 1 of 2. Could not find a user profile in the 'users' table with user_id = " + userId + ". Please ensure the user exists and the 'user_id' column is set correctly.");
+        return { success: false, error: 'USER_NOT_FOUND' };
     }
 
-    // If user doesn't exist, check if it's a default user trying to log in for the first time.
-    if (!userToLogin && DEFAULT_USERS[uniqueId] && password === DEFAULT_USERS[uniqueId].password) {
-        const defaultUserInfo = DEFAULT_USERS[uniqueId];
-        const role = defaultUserInfo.role;
-        userToLogin = {
-            id: defaultUserInfo.id,
-            fullName: `${role} User`,
-            email: uniqueId,
-            role: role,
-            avatarUrl: `https://i.pravatar.cc/150?u=${uniqueId}`,
-            verified: role === 'Admin',
-            password: defaultUserInfo.password,
-        };
-        MOCK_USERS.push(userToLogin);
-        setUser(userToLogin);
-        return true;
+    // Step 2: Use the fetched email to sign in with Supabase Auth.
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userProfile.email, // Use the real email from the database
+      password,
+    });
+
+    if (signInError) {
+        console.error("AUTHENTICATION FAILED: Step 2 of 2. User profile found, but password was incorrect.", signInError);
+        return { success: false, error: 'INVALID_PASSWORD' };
     }
     
-    return false;
+    return { success: true, error: null };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
+  
+  const updateUser = (updates: Partial<User>) => {
+      setUser(prevUser => prevUser ? { ...prevUser, ...updates } : null);
+  };
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    loading,
+    login,
+    logout,
+    updateUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {

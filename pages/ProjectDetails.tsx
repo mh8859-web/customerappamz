@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { MOCK_PROJECTS, MOCK_USERS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../services/mockData';
-import Card from '../components/ui/Card';
-import { STAGE_DISPLAY_NAMES } from '../constants';
-import Button from '../components/ui/Button';
-import { useAuth } from '../context/AuthContext';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../types';
-import Modal from '../components/ui/Modal';
-import ProjectStatusBar from '../components/ProjectStatusBar';
-import ChatComponent from '../components/chat/ChatComponent';
-import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
-import AddProductModal from '../components/designer/AddProductModal';
-import ProjectGanttChart from '../components/customer/ProjectGanttChart';
-import GeneratePOModal from '../components/designer/GeneratePOModal';
+import { MOCK_PROJECTS, MOCK_USERS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../../services/mockData';
+import Card from '../../components/ui/Card';
+import { STAGE_DISPLAY_NAMES } from '../../constants';
+import Button from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext';
+import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../../components/icons';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../../types';
+import Modal from '../../components/ui/Modal';
+import ProjectStatusBar from '../../components/ProjectStatusBar';
+import ChatComponent from '../../components/chat/ChatComponent';
+import DesignAnnotationModal from '../../components/design/DesignAnnotationModal';
+import AddProductModal from '../../components/designer/AddProductModal';
+import ProjectGanttChart from '../../components/customer/ProjectGanttChart';
+import GeneratePOModal from '../../components/designer/GeneratePOModal';
 
 type UnifiedUpdate = {
     id: string;
@@ -668,7 +668,7 @@ const ProjectDetails: React.FC = () => {
                         <div>
                             <h3 className="font-bold text-text-headline mb-1 uppercase tracking-wider text-xs">Client Contact</h3>
                             <p className="text-text-muted">{customer?.fullName}</p>
-                            <p className="text-text-muted">{customer?.mobileNumber || 'Not available'}</p>
+                            <p className="text-text-muted">{customer?.userId || 'Not available'}</p>
                         </div>
                     </div>
                 </Card>

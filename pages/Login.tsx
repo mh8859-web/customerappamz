@@ -1,71 +1,81 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
-import { MailIcon, LockIcon, EyeIcon, EyeOffIcon } from '../components/icons';
+import { LockIcon, UserCircleIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 
 const Login: React.FC = () => {
-  const { login } = useAuth();
-  const [uniqueId, setUniqueId] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+    setError('');
+    setLoading(true);
+
+    const { success, error: loginError } = await login(userId, password);
     
-    try {
-      const success = await login(uniqueId, password);
-      if (!success) {
-        setError('Invalid credentials. Please try again.');
+    setLoading(false);
+    
+    if (success) {
+      navigate('/');
+    } else {
+      if (loginError === 'USER_NOT_FOUND') {
+        setError('User ID not found. Please check and try again.');
+      } else if (loginError === 'INVALID_PASSWORD') {
+        setError('Incorrect password. If you have forgotten it, please ask an administrator to reset it for you in the Supabase dashboard.');
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
       }
-    } catch (err) {
-      setError('An unexpected error occurred. Please try again later.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-primary-bg">
-      <div className="w-full max-w-md p-8 space-y-8 bg-surface/80 backdrop-blur-sm rounded-xl shadow-soft border border-border-color">
-        <div className="text-center">
-          <img 
-            src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-            alt="Aura Interiors PM Logo" 
-            className="h-12 mx-auto" 
-          />
-          <p className="mt-2 text-text-muted">Interior Project Management</p>
+    <div className="flex items-center justify-center min-h-screen bg-primary-bg p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+            <img 
+              src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
+              alt="Aura Interiors PM Logo" 
+              className="h-12 mx-auto mb-4" 
+            />
+            <h1 className="text-3xl font-bold text-text-headline">Welcome Back</h1>
+            <p className="text-text-muted">Sign in to your account to continue</p>
         </div>
-        <form onSubmit={handleLogin} className="space-y-6">
+
+        <form onSubmit={handleLogin} className="bg-surface/80 backdrop-blur-sm border border-border-color rounded-xl p-8 shadow-soft space-y-6">
+          
           <div>
-            <label htmlFor="uniqueId" className="block text-sm font-medium text-text-headline mb-2">
-              Email / Unique ID
-            </label>
-            <div className="relative">
-              <MailIcon className="absolute w-5 h-5 text-text-muted top-1/2 left-3 -translate-y-1/2" />
+            <label htmlFor="userId" className="block text-sm font-medium text-text-headline">User ID</label>
+            <div className="relative mt-1">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <UserCircleIcon className="w-5 h-5 text-text-muted" />
+              </span>
               <input
-                id="uniqueId"
-                name="uniqueId"
+                id="userId"
+                name="userId"
                 type="text"
-                autoComplete="email"
+                autoComplete="username"
                 required
-                value={uniqueId}
-                onChange={(e) => setUniqueId(e.target.value)}
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-primary-bg border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-accent"
-                placeholder="Your Id"
+                placeholder="Enter your user ID"
               />
             </div>
           </div>
-
+          
           <div>
-            <label htmlFor="password"className="block text-sm font-medium text-text-headline mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <LockIcon className="absolute w-5 h-5 text-text-muted top-1/2 left-3 -translate-y-1/2" />
+            <label htmlFor="password"className="block text-sm font-medium text-text-headline">Password</label>
+            <div className="relative mt-1">
+               <span className="absolute inset-y-0 left-0 flex items-center pl-3">
+                <LockIcon className="w-5 h-5 text-text-muted" />
+              </span>
               <input
                 id="password"
                 name="password"
@@ -75,35 +85,28 @@ const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-3 bg-primary-bg border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-accent"
-                placeholder="••••••••"
+                placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 text-text-muted hover:text-text-headline"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted hover:text-text-headline"
               >
-                {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
               </button>
             </div>
           </div>
-          
-          {error && (
-            <p className="text-sm text-red-400 text-center">{error}</p>
-          )}
 
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <a href="#" className="font-medium text-accent-hover hover:text-accent">
-                Forgot your password?
-              </a>
-            </div>
-          </div>
+          {error && <p className="text-sm text-red-400 text-center">{error}</p>}
 
           <div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Signing In...' : 'Sign In'}
             </Button>
+          </div>
+          
+          <div className="text-center">
+            <a href="#" className="text-sm text-accent hover:text-accent-hover">Forgot password?</a>
           </div>
         </form>
       </div>

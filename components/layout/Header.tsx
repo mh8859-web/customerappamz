@@ -156,14 +156,14 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           <span className="absolute top-1 right-1 block w-2 h-2 bg-accent rounded-full"></span>
         </button>
         
-        <div className="flex items-center space-x-3">
+        <Link to="/account" className="flex items-center space-x-3 p-1 rounded-lg hover:bg-primary-bg transition-colors">
           <img src={user?.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
           <div className="hidden md:block">
             <p className="font-semibold text-text-headline">{user?.fullName}</p>
             <p className="text-sm text-text-muted">{user?.role}</p>
           </div>
           <ChevronDownIcon className="w-5 h-5 text-text-muted hidden md:block" />
-        </div>
+        </Link>
       </div>
     </header>
   );

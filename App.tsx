@@ -24,13 +24,18 @@ import FinancialReports from './pages/admin/FinancialReports';
 import TeamCalendar from './pages/designer/TeamCalendar';
 
 const App: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
-  if (!user) {
-    return <Login />;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-primary-bg text-text-headline">
+        Loading...
+      </div>
+    );
   }
 
   const renderDashboard = () => {
+    if (!user) return <Navigate to="/login" />;
     switch (user.role) {
       case 'Admin':
         return <AdminDashboard />;
@@ -46,26 +51,27 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/" element={<DashboardLayout />}>
+        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
+        <Route path="/" element={user ? <DashboardLayout /> : <Navigate to="/login" />}>
           <Route index element={renderDashboard()} />
           <Route path="projects" element={<ProjectsList />} />
           <Route path="projects/:projectId" element={<ProjectDetails />} />
+          <Route path="support" element={<SupportPage />} />
+          <Route path="account" element={<MyAccount />} />
           
           {/* Admin Routes */}
-          {user.role === 'Admin' && (
+          {user?.role === 'Admin' && (
             <>
               <Route path="overview" element={<AdminOverview />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="attendance" element={<AttendanceLogs />} />
               <Route path="reports" element={<FinancialReports />} />
-              <Route path="support" element={<SupportPage />} />
               <Route path="settings" element={<AdminSettings />} />
             </>
           )}
 
           {/* Designer Routes */}
-          {user.role === 'Designer' && (
+          {user?.role === 'Designer' && (
             <>
               <Route path="task-board" element={<TaskBoard />} />
               <Route path="my-calendar" element={<MyCalendar />} />
@@ -77,11 +83,9 @@ const App: React.FC = () => {
           )}
 
           {/* Customer Routes */}
-          {user.role === 'Customer' && (
+          {user?.role === 'Customer' && (
             <>
-             <Route path="support" element={<SupportPage />} />
              <Route path="billing" element={<BillingHistory />} />
-             <Route path="account" element={<MyAccount />} />
             </>
           )}
 

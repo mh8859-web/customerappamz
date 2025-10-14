@@ -1,5 +1,8 @@
 import { User, Project, Task, Design, Message, SiteVisit, Milestone, ActivityLog, Quote, SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate, Comment, Expense, Product, ProjectTemplate, Announcement } from '../types';
 
+// NOTE: This mock data is deprecated. The app now fetches data from a Supabase backend.
+// This file is kept to avoid breaking existing import statements during the transition.
+
 export const MOCK_USERS: User[] = [];
 
 export const MOCK_PROJECTS: Project[] = [];

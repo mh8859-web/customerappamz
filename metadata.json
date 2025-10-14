@@ -1,8 +1,5 @@
 {
-  "name": "Aura Interiors PM",
+  "name": "AMAZ-CUS-DES",
   "description": "A premium, luxury, mobile-responsive Interior Project Management web app that connects Admin, Designers, and Customers for seamless project tracking, design approvals, and communication.",
-  "requestFramePermissions": [
-    "camera",
-    "microphone"
-  ]
+  "requestFramePermissions": []
 }

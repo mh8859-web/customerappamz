@@ -1,5 +1,5 @@
 {
-  "name": "aura-interiors-pm",
+  "name": "amaz-cus-des",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.4",
-    "recharts": "^3.2.1"
+    "recharts": "^3.2.1",
+    "@supabase/supabase-js": "2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

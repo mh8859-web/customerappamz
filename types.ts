@@ -17,7 +17,7 @@ export interface User {
   avatarUrl: string;
   verified?: boolean;
   verificationRequested?: boolean;
-  mobileNumber?: string;
+  userId?: string;
   password?: string;
 }
 

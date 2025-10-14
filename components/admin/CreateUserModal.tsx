@@ -1,75 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { User, UserRole } from '../../types';
+import { UserRole } from '../../types';
+import { USER_ROLES } from '../../constants';
+import { EyeIcon, EyeOffIcon } from '../icons';
 
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (user: Omit<User, 'avatarUrl'>) => void;
+  onCreate: (user: {
+    fullName: string;
+    role: UserRole;
+    userId: string;
+    password: string;
+    verified: boolean;
+  }) => Promise<void>;
 }
-
-const ToggleSwitch: React.FC<{ label: string; enabled: boolean; setEnabled: (enabled: boolean) => void }> = ({ label, enabled, setEnabled }) => (
-  <label className="flex items-center justify-between cursor-pointer">
-    <span className="text-sm text-text-headline">{label}</span>
-    <div className="relative">
-      <input type="checkbox" className="sr-only" checked={enabled} onChange={() => setEnabled(!enabled)} />
-      <div className={`block w-14 h-8 rounded-full transition ${enabled ? 'bg-accent' : 'bg-surface'}`}></div>
-      <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${enabled ? 'transform translate-x-6' : ''}`}></div>
-    </div>
-  </label>
-);
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
-    id: '',
     fullName: '',
-    email: '',
-    password: '',
     role: 'Designer' as UserRole,
-    salary: '',
+    userId: '',
+    password: '',
     verified: false,
-    mobileNumber: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  // This effect resets the form's state whenever the modal is closed.
+  // This prevents issues with stale data and fixes the "typing issue".
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        fullName: '',
+        role: 'Designer' as UserRole,
+        userId: '',
+        password: '',
+        verified: false,
+      });
+      setShowPassword(false);
+      setPasswordError('');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+        setFormData(prev => ({ ...prev, [name]: e.target.checked }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
-  
-  const handleToggle = (enabled: boolean) => {
-    setFormData(prev => ({ ...prev, verified: enabled }));
-  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Exclude password and salary from the final user object for security/simplicity in this mock app
-    const { password, salary, ...userData } = formData;
-    
-    if (!userData.id || !userData.fullName || !userData.email) {
-        alert('Please fill all required fields');
+    if (formData.password.length < 6) {
+        setPasswordError('Password must be at least 6 characters.');
         return;
     }
-
-    onCreate({
-        ...userData,
-        role: userData.role as UserRole
-    });
-
-    // Reset form and close modal
-    onClose();
-    setFormData({
-        id: '',
-        fullName: '',
-        email: '',
-        password: '',
-        role: 'Designer' as UserRole,
-        salary: '',
-        verified: false,
-        mobileNumber: '',
-    });
+    setPasswordError('');
+    setIsSubmitting(true);
+    await onCreate(formData);
+    // The parent component will close the modal, which will trigger the useEffect to reset the state.
+    setIsSubmitting(false); 
   };
-
+  
   const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
     <div>
         <label className="block text-sm font-medium text-text-headline mb-1">{label}</label>
@@ -82,49 +80,62 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New User">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Name">
+        <FormField label="Full Name">
           <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} required />
         </FormField>
-        <FormField label="Email Address">
-          <input type="email" name="email" value={formData.email} onChange={handleChange} className={inputClasses} required />
-        </FormField>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Role">
                 <select name="role" value={formData.role} onChange={handleChange} className={inputClasses} required>
-                    <option value="Designer">Designer</option>
-                    <option value="Customer">Customer</option>
-                    <option value="Admin">Admin</option>
+                    {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
             </FormField>
-            <FormField label="ID">
-              <input type="text" name="id" value={formData.id} placeholder="e.g., user-designer-3" onChange={handleChange} className={inputClasses} required />
+            <FormField label="User ID">
+                <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required placeholder="Create a unique ID" />
+                 <p className="mt-1 text-xs text-text-muted">This is the unique ID the user will use to log in.</p>
             </FormField>
         </div>
-        
-        {formData.role === 'Customer' ? (
-          <FormField label="Mobile Number">
-            <input type="tel" name="mobileNumber" value={formData.mobileNumber} onChange={handleChange} className={inputClasses} required />
-          </FormField>
-        ) : (
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               <FormField label="Password">
-                <input type="password" name="password" value={formData.password} onChange={handleChange} className={inputClasses} required />
-              </FormField>
-               <FormField label="Salary (₹) (Admin view only)">
-                <input type="number" name="salary" value={formData.salary} onChange={handleChange} className={inputClasses} required />
-              </FormField>
-          </div>
-        )}
 
-        <FormField label="File Upload (Optional)">
-            <input type="file" className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/20 file:text-accent hover:file:bg-accent/30`}/>
+        <FormField label="Password">
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={(e) => {
+                    handleChange(e);
+                    if (passwordError) setPasswordError('');
+                }}
+                className={`${inputClasses} pr-10`}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-muted hover:text-text-headline"
+              >
+                {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+              </button>
+            </div>
+            {passwordError ? (
+                <p className="mt-1 text-xs text-red-400">{passwordError}</p>
+            ) : (
+                <p className="mt-1 text-xs text-text-muted">Must be at least 6 characters.</p>
+            )}
         </FormField>
-        <div className="bg-primary-bg p-3 rounded-xl">
-           <ToggleSwitch label="Verified User" enabled={formData.verified} setEnabled={handleToggle} />
+        
+        <div className="flex items-center">
+            <input type="checkbox" id="verified" name="verified" checked={formData.verified} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
+            <label htmlFor="verified" className="ml-2 block text-sm text-text-headline">
+                Mark as Verified
+            </label>
         </div>
+        
         <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Create User</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating User...' : 'Create User'}
+          </Button>
         </div>
       </form>
     </Modal>

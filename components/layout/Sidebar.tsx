@@ -26,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/users', icon: <UsersIcon className="w-5 h-5" />, label: 'User Management' },
       { to: '/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
       { to: '/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financial Reports' },
+      { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Support Tickets' },
       { to: '/settings', icon: <SettingsIcon className="w-5 h-5" />, label: 'Settings' },
     ],
@@ -38,6 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/daily-work', icon: <ClipboardIcon className="w-5 h-5" />, label: 'Daily Work' },
       { to: '/my-attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'My Attendance' },
       { to: '/leave', icon: <CalendarIcon className="w-5 h-5" />, label: 'Leave' },
+      { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
+      { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Support' },
     ],
     Customer: [
       { to: '/', icon: <HomeIcon className="w-5 h-5" />, label: 'My Project' },
