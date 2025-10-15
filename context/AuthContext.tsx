@@ -26,7 +26,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (error) {
       console.error('Error fetching user profile:', error);
-      // Don't sign out here, as it can cause loops. Let the listener handle it.
       setUser(null);
       return null;
     } else if (data) {
@@ -47,37 +46,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   };
   
+  // This useEffect hook is the core of the authentication logic.
+  // It sets up a listener that reacts to any change in the user's authentication state.
   useEffect(() => {
-    // Check for an active session on initial load
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      }
-      setLoading(false);
-    };
-
-    checkSession();
-
-    // Listen for auth state changes (login, logout)
+    // onAuthStateChange fires an event upon initialization (if a session exists)
+    // and whenever the user signs in or out. This is our single source of truth.
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+      async (_event, session) => {
+        // If a session object exists, the user is authenticated.
+        if (session) {
+          // Fetch the detailed user profile from our public 'users' table.
+          await fetchUserProfile(session.user);
+        } else {
+          // If no session exists, the user is not authenticated.
           setUser(null);
-        } else if (session?.user) {
-          // A user session exists, fetch their profile if we don't have it yet.
-          // This handles login events.
-          if (!user || user.id !== session.user.id) {
-            await fetchUserProfile(session.user);
-          }
         }
+        // Once the session check is complete (either we found a user or not),
+        // we set loading to false. This unblocks the UI.
+        setLoading(false);
       }
     );
 
+    // The cleanup function unsubscribes from the listener when the component unmounts.
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // The empty dependency array ensures this effect runs only once on component mount.
 
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
     // Step 1: Find the user's profile using their custom User ID to get their real email.
