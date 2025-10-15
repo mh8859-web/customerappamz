@@ -45,21 +45,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
   
   useEffect(() => {
-    // This function actively checks for a session on initial load.
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
-        setUser(null);
-      }
-      // Once the initial check is complete, we update the loading state.
-      setLoading(false);
-    };
+    setLoading(true);
 
-    initializeAuth();
-
-    // We then set up a listener for any subsequent auth state changes.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -67,6 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           setUser(null);
         }
+        setLoading(false);
       }
     );
 
