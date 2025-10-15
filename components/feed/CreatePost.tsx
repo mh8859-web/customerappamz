@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Project, Post } from '../../types';
+import { User, Project, Post, PostVisibility } from '../../types';
 import Card from '../ui/Card';
 import { PhotoIcon, VideoCameraIcon } from '../icons';
 import CreatePostModal from './CreatePostModal';
@@ -14,7 +14,8 @@ interface CreatePostProps {
     projectId?: string,
     postType?: Post['postType'],
     showcaseDetails?: Post['showcaseDetails'],
-    beforeMediaFile?: File
+    beforeMediaFile?: File,
+    visibility?: PostVisibility
   ) => void;
 }
 
@@ -46,7 +47,7 @@ const CreatePost: React.FC<CreatePostProps> = ({ user, projects, onCreatePost })
                         Photo
                     </button>
                     <button onClick={() => setIsModalOpen(true)} className="flex-1 flex justify-center items-center gap-2 text-sm text-text-secondary font-semibold p-2 rounded-lg hover:bg-secondary transition-colors">
-                        <VideoCameraIcon className="w-6 h-6 text-red-500" />
+                        <VideoCameraIcon className="w-6 h-6 text-brand-blue" />
                         Video
                     </button>
                 </div>

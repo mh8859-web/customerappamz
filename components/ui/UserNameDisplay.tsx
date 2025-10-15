@@ -49,7 +49,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   }, []);
 
   if (!user) {
-    return <span className={className}>Unknown User</span>;
+    return <span className={`${className} ${textClassName}`}>Unknown User</span>;
   }
 
   const badgeUrl = user.verified ? badgeMap[user.role] : null;

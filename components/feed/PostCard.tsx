@@ -3,7 +3,7 @@ import { Post, User, FeedComment, ReactionType, Project } from '../../types';
 import Card from '../ui/Card';
 import UserNameDisplay from '../ui/UserNameDisplay';
 import { useUsers } from '../../context/UserContext';
-import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinIcon, HeartIcon, SparklesIcon, QuestionMarkCircleIcon, HandRaisedIcon, BriefcaseIcon } from '../icons';
+import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinIcon, HeartIcon, SparklesIcon, QuestionMarkCircleIcon, HandRaisedIcon, BriefcaseIcon, GlobeAltIcon, UserGroupIcon } from '../icons';
 import CommentSection from './CommentSection';
 import { Link } from 'react-router-dom';
 
@@ -46,6 +46,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
     const canModify = currentUser.id === post.authorId || currentUser.role === 'Admin';
     const isAdmin = currentUser.role === 'Admin';
     const project = useMemo(() => post.projectId ? projects.find(p => p.id === post.projectId) : null, [post.projectId, projects]);
+
+    const visibilityDetails = useMemo(() => {
+        switch(post.visibility) {
+            case 'everyone':
+                return { icon: <GlobeAltIcon className="w-3.5 h-3.5"/>, text: 'Visible to Everyone' };
+            case 'team_only':
+                return { icon: <UserGroupIcon className="w-3.5 h-3.5"/>, text: 'Visible to Team Only' };
+            case 'project_members':
+                return { icon: <BriefcaseIcon className="w-3.5 h-3.5"/>, text: `Visible to members of ${project?.title || 'Project'}` };
+            default:
+                return null;
+        }
+    }, [post.visibility, project]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -136,6 +149,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
                                     </span>
                                 )}
                                 <span>{timeAgo(post.createdAt)}</span>
+                                {visibilityDetails && (
+                                    <span className="flex items-center gap-1" title={visibilityDetails.text}>
+                                        &middot;
+                                        {visibilityDetails.icon}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>

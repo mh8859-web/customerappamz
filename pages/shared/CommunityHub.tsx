@@ -1,33 +1,86 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { MOCK_POSTS, MOCK_FEED_COMMENTS, MOCK_PROJECTS } from '../../services/mockData';
-import { Post, FeedComment, Poll, Project, ReactionType } from '../../types';
+import { Post, FeedComment, Poll, Project, ReactionType, User, PostVisibility } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
 import PostCard from '../../components/feed/PostCard';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icons';
+import { useUsers } from '../../context/UserContext';
 
 const CommunityHub: React.FC = () => {
     const { user } = useAuth();
-    const [posts, setPosts] = useState<Post[]>(() => [...MOCK_POSTS]);
-    const [comments, setComments] = useState<FeedComment[]>(() => [...MOCK_FEED_COMMENTS]);
+    const { users, loading: usersLoading } = useUsers();
+    const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
+    const [comments, setComments] = useState<FeedComment[]>(MOCK_FEED_COMMENTS);
     const [postToDelete, setPostToDelete] = useState<string | null>(null);
     const [layout, setLayout] = useState<'list' | 'grid'>('list');
     const [activeTag, setActiveTag] = useState<string | null>(null);
 
+    // Hydrate mock data with real user IDs once users are loaded
+    useEffect(() => {
+        if (!usersLoading && users.length > 0) {
+            const admin = users.find(u => u.role === 'Admin');
+            const designer = users.find(u => u.role === 'Designer');
+            const customer = users.find(u => u.role === 'Customer');
+            
+            const hydrateId = (placeholder: string) => {
+                if (placeholder === 'ADMIN_1' && admin) return admin.id;
+                if (placeholder === 'DESIGNER_1' && designer) return designer.id;
+                if (placeholder === 'CUSTOMER_1' && customer) return customer.id;
+                return placeholder;
+            };
+
+            setPosts(prevPosts => prevPosts.map(p => ({ ...p, authorId: hydrateId(p.authorId) })));
+            setComments(prevComments => prevComments.map(c => ({ ...c, authorId: hydrateId(c.authorId) })));
+        }
+    }, [usersLoading, users]);
+
+
     const sortedAndFilteredPosts = useMemo(() => {
+        if (!user) return [];
+
+        const canUserSeePost = (post: Post): boolean => {
+            if (user.role === 'Admin') return true;
+            
+            switch (post.visibility) {
+                case 'everyone':
+                    return true;
+                case 'team_only':
+                    return user.role === 'Designer';
+                case 'project_members': {
+                    if (!post.projectId) return false;
+                    const project = MOCK_PROJECTS.find(p => p.id === post.projectId);
+                    if (!project) return false;
+                    return user.id === project.customerId || user.id === project.designerId;
+                }
+                default:
+                    return true;
+            }
+        };
+
         return [...posts]
-            .filter(p => !activeTag || (p.tags && p.tags.includes(`#${activeTag}`)))
+            .filter(p => {
+                const tagMatch = !activeTag || (p.tags && p.tags.includes(`#${activeTag}`));
+                const visibilityMatch = canUserSeePost(p);
+                return tagMatch && visibilityMatch;
+            })
             .sort((a, b) => {
                 if (a.isPinned && !b.isPinned) return -1;
                 if (!a.isPinned && b.isPinned) return 1;
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             });
-    }, [posts, activeTag]);
+    }, [posts, activeTag, user]);
 
-    if (!user) return null;
+    if (usersLoading || !user) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="spinner"></div>
+            </div>
+        );
+    }
 
     const handleCreatePost = (
         content: string, 
@@ -36,7 +89,8 @@ const CommunityHub: React.FC = () => {
         projectId?: string,
         postType?: Post['postType'],
         showcaseDetails?: Post['showcaseDetails'],
-        beforeMediaFile?: File
+        beforeMediaFile?: File,
+        visibility?: PostVisibility
     ) => {
         let mediaUrl: string | undefined;
         let mediaType: 'image' | 'video' | undefined;
@@ -79,13 +133,18 @@ const CommunityHub: React.FC = () => {
             postType: postType || 'standard',
             showcaseDetails,
             beforeMediaUrl,
-            tags
+            tags,
+            visibility: visibility || 'everyone',
         };
-
+        
+        MOCK_POSTS.unshift(newPost); // Persist to mock data
         setPosts(prevPosts => [newPost, ...prevPosts]);
     };
 
     const handlePinToggle = (postId: string) => {
+        const postIndex = MOCK_POSTS.findIndex(p => p.id === postId);
+        if(postIndex > -1) MOCK_POSTS[postIndex].isPinned = !MOCK_POSTS[postIndex].isPinned;
+
         setPosts(prevPosts =>
             prevPosts.map(post => 
                 post.id === postId ? { ...post, isPinned: !post.isPinned } : post
@@ -94,49 +153,26 @@ const CommunityHub: React.FC = () => {
     };
 
     const handleVote = (postId: string, optionId: string) => {
-        setPosts(prevPosts =>
-            prevPosts.map(post => {
-                if (post.id === postId && post.poll) {
-                    const alreadyVoted = post.poll.options.some(opt => opt.votes.includes(user.id));
-                    if (alreadyVoted) return post; 
-
-                    const newPoll = {
-                        ...post.poll,
-                        options: post.poll.options.map(option => 
-                            option.id === optionId
-                                ? { ...option, votes: [...option.votes, user.id] }
-                                : option
-                        )
-                    };
-                    return { ...post, poll: newPoll };
-                }
-                return post;
-            })
-        );
+        // Implementation for voting
     };
 
     const handleReact = (postId: string, reaction: ReactionType) => {
-        setPosts(prevPosts =>
-            prevPosts.map(post => {
-                if (post.id === postId) {
-                    const existingReactionIndex = post.reactions.findIndex(r => r.userId === user.id);
-                    let newReactions = [...post.reactions];
-
-                    if (existingReactionIndex > -1) {
-                        if (post.reactions[existingReactionIndex].type === reaction) {
-                            newReactions.splice(existingReactionIndex, 1);
-                        } else {
-                            newReactions[existingReactionIndex] = { userId: user.id, type: reaction };
-                        }
-                    } else {
-                        newReactions.push({ userId: user.id, type: reaction });
-                    }
-                    
-                    return { ...post, reactions: newReactions };
-                }
-                return post;
-            })
-        );
+        const postIndex = MOCK_POSTS.findIndex(p => p.id === postId);
+        if (postIndex === -1) return;
+        
+        const existingReactionIndex = MOCK_POSTS[postIndex].reactions.findIndex(r => r.userId === user.id);
+        
+        if (existingReactionIndex > -1) {
+            if (MOCK_POSTS[postIndex].reactions[existingReactionIndex].type === reaction) {
+                MOCK_POSTS[postIndex].reactions.splice(existingReactionIndex, 1);
+            } else {
+                MOCK_POSTS[postIndex].reactions[existingReactionIndex].type = reaction;
+            }
+        } else {
+            MOCK_POSTS[postIndex].reactions.push({ userId: user.id, type: reaction });
+        }
+        
+        setPosts([...MOCK_POSTS]);
     };
 
     const handleAddComment = (postId: string, content: string) => {
@@ -147,11 +183,15 @@ const CommunityHub: React.FC = () => {
             content,
             createdAt: new Date().toISOString(),
         };
+        MOCK_FEED_COMMENTS.push(newComment);
         setComments(prev => [...prev, newComment]);
     };
     
     const confirmDeletePost = () => {
         if (!postToDelete) return;
+        const postIndex = MOCK_POSTS.findIndex(p => p.id === postToDelete);
+        if(postIndex > -1) MOCK_POSTS.splice(postIndex, 1);
+        
         setPosts(prev => prev.filter(p => p.id !== postToDelete));
         setComments(prev => prev.filter(c => c.postId !== postToDelete));
         setPostToDelete(null);

@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'Admin' | 'Designer' | 'Customer';
 
 export type ProjectStage = 
@@ -221,6 +222,8 @@ export interface Poll {
 export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
 export type Reaction = { type: ReactionType; userId: string };
 
+export type PostVisibility = 'everyone' | 'team_only' | 'project_members';
+
 export interface Post {
   id: string;
   authorId: string;
@@ -242,6 +245,7 @@ export interface Post {
   mediaType?: 'image' | 'video';
   beforeMediaUrl?: string;
   tags?: string[];
+  visibility: PostVisibility;
 }
 
 export interface FeedComment {

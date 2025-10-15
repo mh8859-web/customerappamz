@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Post, Project } from '../../types';
+import { User, Post, Project, PostVisibility } from '../../types';
 import Button from '../ui/Button';
-import { PhotoIcon, XMarkIcon } from '../icons';
+import { PhotoIcon, XMarkIcon, UserGroupIcon, GlobeAltIcon, BriefcaseIcon } from '../icons';
 import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface CreatePostModalProps {
@@ -16,7 +16,8 @@ interface CreatePostModalProps {
     projectId?: string,
     postType?: Post['postType'],
     showcaseDetails?: Post['showcaseDetails'],
-    beforeMediaFile?: File
+    beforeMediaFile?: File,
+    visibility?: PostVisibility
   ) => void;
 }
 
@@ -30,6 +31,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
     // New state for advanced features
     const [postType, setPostType] = useState<Post['postType']>('standard');
     const [projectId, setProjectId] = useState<string>('');
+    const [visibility, setVisibility] = useState<PostVisibility>('everyone');
     const [showcaseDetails, setShowcaseDetails] = useState({ style: '', materials: '', palette: ''});
     const [beforeMediaFile, setBeforeMediaFile] = useState<File | null>(null);
     const [beforeMediaPreview, setBeforeMediaPreview] = useState<string | null>(null);
@@ -46,6 +48,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
             setAddPoll(false);
             setPostType('standard');
             setProjectId('');
+            setVisibility('everyone');
             setShowcaseDetails({ style: '', materials: '', palette: ''});
             setBeforeMediaFile(null);
             setBeforeMediaPreview(null);
@@ -81,7 +84,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
     const handleSubmit = () => {
         try {
             if (content.trim() || mediaFile) {
-                onCreatePost(content, mediaFile || undefined, addPoll, projectId, postType, showcaseDetails, beforeMediaFile || undefined);
+                onCreatePost(content, mediaFile || undefined, addPoll, projectId, postType, showcaseDetails, beforeMediaFile || undefined, visibility);
             }
         } catch (error) {
             console.error("Failed to create post:", error);
@@ -91,8 +94,14 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
         }
     };
 
-    const inputClasses = "w-full bg-page-bg/80 border border-border-color rounded-lg p-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface placeholder:text-text-secondary/80";
+    const inputClasses = "w-full bg-page-bg/80 border border-border-color rounded-lg p-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80";
     
+    const visibilityOptions = [
+        { id: 'everyone', label: 'Everyone', icon: <GlobeAltIcon className="w-5 h-5"/> },
+        { id: 'team_only', label: 'Team Only', icon: <UserGroupIcon className="w-5 h-5"/> },
+        { id: 'project_members', label: 'Project Members', icon: <BriefcaseIcon className="w-5 h-5"/>, disabled: !projectId },
+    ];
+
     if (!isOpen) {
       return null;
     }
@@ -103,11 +112,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
           onClick={onClose}
         >
             <div 
-                className="bg-surface rounded-xl shadow-card w-full max-w-lg transform transition-all flex flex-col max-h-[90vh]"
+                className="bg-surface rounded-2xl shadow-modal w-full max-w-lg transform modal-content-animation flex flex-col max-h-[90vh]"
                 onClick={e => e.stopPropagation()}
             >
                 <div className="relative flex justify-center items-center border-b border-border-color p-4 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-text-primary">Create Post</h2>
+                    <h2 className="text-xl font-display font-semibold text-text-primary">Create Post</h2>
                     <button onClick={onClose} className="absolute right-3 top-1/2 -translate-y-1/2 bg-secondary hover:bg-secondary-hover rounded-full p-2">
                         <XMarkIcon className="w-5 h-5 text-text-primary" />
                     </button>
@@ -127,21 +136,45 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
                         </div>
                     </div>
 
+                    {isDesignerOrAdmin && (
+                        <div className="my-4">
+                            <label className="text-sm font-semibold text-text-primary mb-2 block">Visible to</label>
+                            <div className="flex gap-2 rounded-xl bg-secondary p-1">
+                                {visibilityOptions.map(option => (
+                                    <button 
+                                        key={option.id} 
+                                        onClick={() => !option.disabled && setVisibility(option.id as PostVisibility)}
+                                        disabled={option.disabled}
+                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                                            visibility === option.id 
+                                                ? 'bg-surface shadow-sm text-text-primary font-semibold' 
+                                                : 'text-text-secondary hover:bg-surface/50'
+                                        } ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        title={option.disabled ? 'Link a project to enable this option' : option.label}
+                                    >
+                                        {option.icon}
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         placeholder={`Share a project update or inspiration...`}
-                        className="w-full bg-transparent py-4 text-lg text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
+                        className="w-full bg-transparent pt-0 pb-4 text-lg text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
                         rows={3}
                         autoFocus
                     />
 
                     {isDesignerOrAdmin && (
                         <div className="mb-3">
-                            <label className="text-sm font-semibold">Post Type</label>
+                            <label className="text-sm font-semibold text-text-primary">Post Type</label>
                             <div className="flex gap-2 mt-1">
                                 {(['standard', 'showcase', 'before_after'] as const).map(type => (
-                                    <button key={type} onClick={() => setPostType(type)} className={`px-3 py-1 text-xs rounded-full ${postType === type ? 'bg-accent text-white' : 'bg-secondary hover:bg-secondary-hover'}`}>
+                                    <button key={type} onClick={() => setPostType(type)} className={`px-3 py-1 text-xs rounded-full ${postType === type ? 'bg-brand-blue text-white' : 'bg-secondary hover:bg-secondary-hover'}`}>
                                         {type.replace('_', ' & ').replace(/\b\w/g, l => l.toUpperCase())}
                                     </button>
                                 ))}
@@ -160,12 +193,12 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
                     {postType === 'before_after' && (
                          <div className="grid grid-cols-2 gap-2 mb-3">
                              <div className="relative border border-border-color rounded-lg p-2">
-                                <label className="text-sm font-semibold">Before</label>
+                                <label className="text-sm font-semibold text-text-primary">Before</label>
                                 <input type="file" accept="image/*" ref={beforeFileInputRef} onChange={e => handleFileChange(e, 'before')} className="text-xs mt-1" />
                                 {beforeMediaPreview && <button onClick={() => handleRemoveMedia('before')} className="absolute top-1 right-1 bg-black bg-opacity-40 text-white rounded-full p-0.5"><XMarkIcon className="w-4 h-4" /></button>}
                              </div>
                              <div className="relative border border-border-color rounded-lg p-2">
-                                <label className="text-sm font-semibold">After</label>
+                                <label className="text-sm font-semibold text-text-primary">After</label>
                                 <input type="file" accept="image/*" ref={fileInputRef} onChange={e => handleFileChange(e, 'after')} className="text-xs mt-1" />
                                  {mediaPreview && <button onClick={() => handleRemoveMedia('after')} className="absolute top-1 right-1 bg-black bg-opacity-40 text-white rounded-full p-0.5"><XMarkIcon className="w-4 h-4" /></button>}
                              </div>
@@ -184,7 +217,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
                     {mediaFile?.type.startsWith('image/') && user.role === 'Designer' && postType !== 'before_after' && (
                         <div className="my-2">
                              <label className="flex items-center gap-2 cursor-pointer text-sm text-text-primary">
-                                <input type="checkbox" checked={addPoll} onChange={(e) => setAddPoll(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
+                                <input type="checkbox" checked={addPoll} onChange={(e) => setAddPoll(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" />
                                 Add a "Yes/No" poll to get feedback
                             </label>
                         </div>
@@ -200,7 +233,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
                     )}
                 </div>
 
-                <div className="p-4 border-t border-divider-color flex-shrink-0">
+                <div className="p-4 border-t border-border-color flex-shrink-0">
                     <Button onClick={handleSubmit} disabled={!content.trim() && !mediaFile} className="w-full">
                         Post
                     </Button>
