@@ -1,73 +1,129 @@
-// A new, robust, architecturally-correct service worker.
-// This version uses a "Stale-While-Revalidate" strategy for assets,
-// which is resilient to hashed filenames from the build process.
+const CACHE_NAME = 'amaz-pm-cache-v10'; // Incremented version
 
-const CACHE_NAME = 'amaz-pm-cache-v8'; // Incremented version to force update.
-const APP_SHELL_URLS = [
+// All LOCAL application files that are essential for the app shell.
+const LOCAL_APP_ASSETS = [
   '/',
-  '/index.html'
+  '/index.html',
+  '/manifest.json',
+  '/index.tsx',
+  '/App.tsx',
+  '/types.ts',
+  '/constants.ts',
+  '/context/AuthContext.tsx',
+  '/context/UserContext.tsx',
+  '/services/api.ts',
+  '/services/supabaseClient.ts',
+  '/components/icons.tsx',
+  '/components/layout/DashboardLayout.tsx',
+  '/components/layout/Header.tsx',
+  '/components/layout/Sidebar.tsx',
+  '/components/ui/Button.tsx',
+  '/components/ui/Card.tsx',
+  '/components/ui/InstallAppModal.tsx',
+  '/components/ui/Modal.tsx',
+  '/components/ui/UserNameDisplay.tsx',
+  '/pages/Login.tsx',
+  '/pages/ProjectDetails.tsx',
+  '/pages/ProjectsList.tsx',
+  '/pages/dashboards/AdminDashboard.tsx',
+  '/pages/dashboards/DesignerDashboard.tsx',
+  '/pages/dashboards/CustomerDashboard.tsx',
+  '/pages/admin/AdminOverview.tsx',
+  '/pages/admin/AdminSettings.tsx',
+  '/pages/admin/AttendanceLogs.tsx',
+  '/pages/admin/FinancialReports.tsx',
+  '/pages/admin/UserManagement.tsx',
+  '/pages/designer/LeaveManagement.tsx',
+  '/pages/designer/MyAttendance.tsx',
+  '/pages/designer/MyCalendar.tsx',
+  '/pages/designer/TaskBoard.tsx',
+  '/pages/designer/TeamCalendar.tsx',
+  '/pages/designer/WorkDiary.tsx',
+  '/pages/customer/BillingHistory.tsx',
+  '/pages/customer/MyAccount.tsx',
+  '/pages/shared/CommunityHub.tsx',
+  '/pages/shared/CommunityFeed.tsx',
+  '/pages/shared/DownloadCenter.tsx',
+  '/pages/shared/ProjectWall.tsx',
+  '/pages/shared/SupportPage.tsx',
+  '/components/ProjectStatusBar.tsx',
+  '/components/admin/CreateProjectModal.tsx',
+  '/components/admin/CreateTemplateModal.tsx',
+  '/components/admin/CreateUserModal.tsx',
+  '/components/admin/EditUserModal.tsx',
+  '/components/admin/SqlInstructionModal.tsx',
+  '/components/auth/ForgotPasswordModal.tsx',
+  '/components/chat/ChatComponent.tsx',
+  '/components/chat/MessageBubble.tsx',
+  '/components/customer/PaymentReminderModal.tsx',
+  '/components/customer/ProjectGanttChart.tsx',
+  '/components/dashboard/TestimonialFlow.tsx',
+  '/components/design/DesignAnnotationModal.tsx',
+  '/components/designer/AddProductModal.tsx',
+  '/components/designer/GeneratePOModal.tsx',
+  '/components/designer/TaskCard.tsx',
+  '/components/feed/CommentSection.tsx',
+  '/components/feed/CreatePost.tsx',
+  '/components/feed/CreatePostModal.tsx',
+  '/components/feed/PostCard.tsx'
 ];
 
-// On install, cache the minimal, un-hashed app shell.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Caching app shell');
-        return cache.addAll(APP_SHELL_URLS);
+        console.log('[Service Worker] Pre-caching local app assets.');
+        return cache.addAll(LOCAL_APP_ASSETS);
       })
-      .then(() => self.skipWaiting()) // Activate immediately.
+      .then(() => self.skipWaiting())
   );
 });
 
-// On activate, clean up all old caches to remove stale files.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Take control of the page immediately.
+    }).then(() => self.clients.claim())
   );
 });
 
-// On fetch, handle requests with a robust caching strategy.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  
+  // Always go to the network for Supabase API calls.
+  if (request.url.includes('supabase.co')) {
+    return;
+  }
 
-  // For navigation requests (opening the app), use a Network-First strategy.
-  // This ensures the user gets the latest version if they're online,
-  // but the app still loads from the cache if they're offline.
-  if (request.mode === 'navigate') {
+  // For local files and navigation, use a "Cache First, then network" strategy.
+  // This ensures the app loads instantly offline from the pre-cached assets.
+  const url = new URL(request.url);
+  const isLocalAsset = url.origin === self.location.origin && LOCAL_APP_ASSETS.includes(url.pathname);
+
+  if (request.mode === 'navigate' || isLocalAsset) {
     event.respondWith(
-      fetch(request)
-        .catch(() => caches.match('/index.html'))
+      caches.match(request)
+        .then(cachedResponse => cachedResponse || fetch(request))
     );
     return;
   }
 
-  // For all other requests (assets like JS, CSS, fonts, manifest),
-  // use a "Stale-While-Revalidate" strategy.
+  // For everything else (esm.sh, cloudinary, fonts), use "Stale-While-Revalidate".
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      // 1. Return the cached response immediately if it exists.
-      // 2. In the background, fetch a fresh version from the network.
-      const fetchPromise = fetch(request).then((networkResponse) => {
-        // If the network request is successful, update the cache with the new version.
-        caches.open(CACHE_NAME).then((cache) => {
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.match(request).then((cachedResponse) => {
+        const fetchPromise = fetch(request).then((networkResponse) => {
           cache.put(request, networkResponse.clone());
+          return networkResponse;
         });
-        return networkResponse;
+        return cachedResponse || fetchPromise;
       });
-
-      // Return the cached response right away if we have it,
-      // otherwise, wait for the network response.
-      return cachedResponse || fetchPromise;
     })
   );
 });
