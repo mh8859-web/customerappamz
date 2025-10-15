@@ -2,9 +2,7 @@ const CACHE_NAME = 'amaz-interiors-cache-v1';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/icon/192.png',
-  '/icon/512.png'
+  '/manifest.json'
 ];
 
 // Install the service worker and cache the app shell
