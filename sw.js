@@ -1,68 +1,91 @@
-const CACHE_NAME = 'amaz-pm-cache-v12-shell';
-const urlsToCache = [
+// A unique cache name to force updates when the service worker changes.
+const CACHE_NAME = 'amaz-pm-cache-v30-final';
+
+// The essential files needed for the app to start. This is the "app shell".
+const APP_SHELL_URLS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  'https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png',
-  'https://res.cloudinary.com/dzvmyhpff/image/upload/w_512,h_512,c_pad/v1759808706/highqualiamaz_etnjtt.png'
+  '/manifest.json'
 ];
 
-// Install event: cache the app shell
+// On install, pre-cache the app shell.
 self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Install');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('[Service Worker] Caching app shell');
-        return cache.addAll(urlsToCache);
+        console.log('[Service Worker] Pre-caching app shell');
+        return cache.addAll(APP_SHELL_URLS);
       })
-      .then(() => self.skipWaiting()) // Activate immediately
+      .then(() => {
+        // Force the waiting service worker to become the active one.
+        return self.skipWaiting();
+      })
   );
 });
 
-// Activate event: clean up old caches
+// On activate, clean up old caches and take control.
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activate');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+        // Delete all caches that are not our current one.
+        cacheNames.filter(name => name !== CACHE_NAME).map(name => {
+          console.log('[Service Worker] Deleting old cache:', name);
+          return caches.delete(name);
         })
       );
-    }).then(() => self.clients.claim()) // Take control of pages
+    }).then(() => {
+      // Take control of all open clients (pages) immediately.
+      return self.clients.claim();
+    })
   );
 });
 
-// Fetch event: serve from cache first for the app shell, otherwise network.
+// On fetch, apply caching strategies.
 self.addEventListener('fetch', (event) => {
-  // For navigation requests (e.g., loading the page), use a network-first strategy
-  // to ensure users get the latest HTML, but fall back to the cache if offline.
-  if (event.request.mode === 'navigate') {
+  const { request } = event;
+
+  // For navigation requests (loading a page), use a network-first strategy.
+  // This ensures the user gets the latest version of the app if they are online.
+  if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      fetch(request)
+        .then(response => {
+          // If the network response is good, cache it for offline use.
+          if (response.ok) {
+            const resClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request.url, resClone));
+          }
+          return response;
+        })
         .catch(() => {
-          // If the network fails, serve the cached index.html.
+          // If the network fails (i.e., the user is offline),
+          // serve the main index.html from the cache. This is the offline fallback.
+          console.log('[Service Worker] Network failed, serving /index.html from cache for navigation.');
           return caches.match('/index.html');
         })
     );
-    return;
   }
-  
-  // For other requests (JS, CSS, images), use a cache-first strategy.
-  // This is safe because we only pre-cache the app shell, not dynamic assets.
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // If we have a cached response for one of our shell assets, return it.
-        if (response) {
-          return response;
+  // For all other requests (like JS, CSS, images, fonts), use a cache-first strategy.
+  else {
+    event.respondWith(
+      caches.match(request).then(cachedResponse => {
+        // If the resource is in the cache, return it immediately.
+        if (cachedResponse) {
+          return cachedResponse;
         }
-
-        // Otherwise, go to the network.
-        // We don't cache the response here to avoid caching old, hashed assets.
-        return fetch(event.request);
+        // If not in the cache, fetch it from the network.
+        return fetch(request).then(networkResponse => {
+          // If we get a valid response, clone it and put it in the cache for next time.
+          if (networkResponse && networkResponse.ok) {
+             const resClone = networkResponse.clone();
+             caches.open(CACHE_NAME).then(cache => cache.put(request, resClone));
+          }
+          return networkResponse;
+        });
       })
-  );
+    );
+  }
 });

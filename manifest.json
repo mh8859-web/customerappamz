@@ -16,7 +16,7 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "id": "/",
   "display_override": ["window-controls-overlay", "standalone"],
   "display": "standalone",
