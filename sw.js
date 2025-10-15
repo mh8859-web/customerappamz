@@ -1,42 +1,68 @@
-const CACHE_NAME = 'amaz-pm-cache-v11-passthrough'; // New version to force update
+const CACHE_NAME = 'amaz-pm-cache-v12-shell';
+const urlsToCache = [
+  '/',
+  '/index.html',
+  '/manifest.json',
+  'https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png',
+  'https://res.cloudinary.com/dzvmyhpff/image/upload/w_512,h_512,c_pad/v1759808706/highqualiamaz_etnjtt.png'
+];
 
-// This event fires when the service worker is first installed.
+// Install event: cache the app shell
 self.addEventListener('install', (event) => {
-  // By calling skipWaiting(), the new service worker activates immediately
-  // instead of waiting for the old one to be garbage collected.
-  event.waitUntil(self.skipWaiting());
-  console.log('[Service Worker] V11 Installed and skipping waiting.');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[Service Worker] Caching app shell');
+        return cache.addAll(urlsToCache);
+      })
+      .then(() => self.skipWaiting()) // Activate immediately
+  );
 });
 
-// This event fires when the new service worker is activated.
+// Activate event: clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    // Get all the cache keys (cache names).
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          // If a cache name is not our current one, delete it.
-          // This aggressively removes all old, broken caches.
           if (cacheName !== CACHE_NAME) {
             console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => {
-      // Tell the active service worker to take control of the page immediately.
-      console.log('[Service Worker] V11 Activated and claimed clients.');
-      return self.clients.claim();
-    })
+    }).then(() => self.clients.claim()) // Take control of pages
   );
 });
 
-// This event fires for every network request.
+// Fetch event: serve from cache first for the app shell, otherwise network.
 self.addEventListener('fetch', (event) => {
-  // By NOT calling event.respondWith(), we are letting the browser
-  // handle the request as it normally would. The service worker
-  // does not intercept the request at all. This makes the app
-  // online-only but guarantees it will never get stuck on a loading screen
-  // due to a bad cache.
-  // This is a "pass-through" or "no-op" (no-operation) fetch listener.
+  // For navigation requests (e.g., loading the page), use a network-first strategy
+  // to ensure users get the latest HTML, but fall back to the cache if offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          // If the network fails, serve the cached index.html.
+          return caches.match('/index.html');
+        })
+    );
+    return;
+  }
+  
+  // For other requests (JS, CSS, images), use a cache-first strategy.
+  // This is safe because we only pre-cache the app shell, not dynamic assets.
+  event.respondWith(
+    caches.match(event.request)
+      .then((response) => {
+        // If we have a cached response for one of our shell assets, return it.
+        if (response) {
+          return response;
+        }
+
+        // Otherwise, go to the network.
+        // We don't cache the response here to avoid caching old, hashed assets.
+        return fetch(event.request);
+      })
+  );
 });
