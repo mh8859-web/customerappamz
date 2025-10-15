@@ -18,6 +18,7 @@
   ],
   "start_url": "/",
   "id": "/",
+  "display_override": ["standalone"],
   "display": "standalone",
   "scope": "/",
   "theme_color": "#1D9BF0",

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'amaz-interiors-cache-v4';
+const CACHE_NAME = 'amaz-interiors-cache-v5';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
@@ -22,13 +22,6 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
-  
-  // For requests to esm.sh, always go to the network.
-  // Caching these dynamic modules can be very tricky and lead to outdated code.
-  if (event.request.url.startsWith('https://esm.sh/')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
 
   event.respondWith(
     caches.match(event.request)
@@ -41,8 +34,8 @@ self.addEventListener('fetch', event => {
         // Not in cache - fetch from network, then cache it
         return fetch(event.request).then(
           networkResponse => {
-            // Check if we received a valid response
-            if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+            // Check if we received a valid response. We don't cache non-200 responses.
+            if (!networkResponse || networkResponse.status !== 200) {
               return networkResponse;
             }
 
@@ -54,12 +47,20 @@ self.addEventListener('fetch', event => {
 
             caches.open(CACHE_NAME)
               .then(cache => {
-                cache.put(event.request, responseToCache);
+                // We only cache 'basic' (same-origin) and 'cors' responses.
+                // This prevents caching opaque responses from CDNs that can cause issues.
+                if(responseToCache.type === 'basic' || responseToCache.type === 'cors') {
+                    cache.put(event.request, responseToCache);
+                }
               });
 
             return networkResponse;
           }
-        );
+        ).catch(error => {
+            // This catch handles network errors, such as when offline.
+            // You could return a custom offline page here if you had one cached.
+            console.log('Fetch failed; returning offline page instead.', error);
+        });
       })
   );
 });
@@ -72,6 +73,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
