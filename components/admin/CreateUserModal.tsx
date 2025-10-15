@@ -17,10 +17,11 @@ interface CreateUserModalProps {
   }) => Promise<void>;
 }
 
-const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+const FormField: React.FC<{label: string, children: React.ReactNode, description?: string}> = ({label, children, description}) => (
   <div>
       <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
       {children}
+      {description && <p className="mt-1 text-xs text-text-secondary">{description}</p>}
   </div>
 );
 
@@ -32,6 +33,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     password: '',
     verified: false,
   });
+  const [mobileNumber, setMobileNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState('');
@@ -46,24 +48,60 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
         password: '',
         verified: false,
       });
+      setMobileNumber('');
       setShowPassword(false);
       setPasswordError('');
       setIsSubmitting(false);
     }
   }, [isOpen]);
 
+  // Auto-generates User ID and Password for Customers based on mobile number
+  useEffect(() => {
+    if (formData.role === 'Customer') {
+        const digits = mobileNumber.replace(/\D/g, '');
+        if (digits.length === 10) {
+            const newUserId = digits.substring(0, 5);
+            const newPassword = `@${digits.substring(digits.length - 5)}`;
+            setFormData(prev => ({
+                ...prev,
+                userId: newUserId,
+                password: newPassword,
+            }));
+        } else {
+            // Clear if mobile number is not 10 digits
+            setFormData(prev => ({
+                ...prev,
+                userId: '',
+                password: '',
+            }));
+        }
+    }
+  }, [mobileNumber, formData.role]);
+
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const target = e.target;
-    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+    const { name, value } = target;
+
+    if (name === 'role') {
+        // If role changes, reset dependent fields
+        setFormData(prev => ({
+            ...prev,
+            role: value as UserRole,
+            userId: '',
+            password: ''
+        }));
+        setMobileNumber('');
+    } else if (target instanceof HTMLInputElement && target.type === 'checkbox') {
         setFormData(prev => ({ ...prev, [target.name]: target.checked }));
     } else {
-        setFormData(prev => ({ ...prev, [target.name]: target.value }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password.length < 6) {
+    if (formData.role !== 'Customer' && formData.password.length < 6) {
         setPasswordError('Password must be at least 6 characters.');
         return;
     }
@@ -87,37 +125,76 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
                     {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
             </FormField>
-            <FormField label="User ID">
-                <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required placeholder="Create a unique ID" />
-                 <p className="mt-1 text-xs text-text-secondary">This is the unique ID the user will use to log in.</p>
-            </FormField>
+            
+            {formData.role === 'Customer' ? (
+                 <FormField label="Mobile Number">
+                    <input 
+                        type="tel" 
+                        name="mobileNumber" 
+                        value={mobileNumber} 
+                        onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            if (digits.length <= 10) {
+                                setMobileNumber(digits);
+                            }
+                        }} 
+                        className={formInputClasses}
+                        placeholder="Enter 10-digit mobile"
+                        maxLength={10}
+                        required 
+                    />
+                </FormField>
+            ) : (
+                <FormField label="User ID">
+                    <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required placeholder="Create a unique ID" />
+                </FormField>
+            )}
         </div>
+        
+        {formData.role === 'Customer' && (
+            <FormField 
+              label="User ID"
+              description="Auto-generated from first 5 digits of mobile."
+            >
+                <input type="text" name="userId" value={formData.userId} className={`${formInputClasses} bg-secondary cursor-not-allowed`} required readOnly />
+            </FormField>
+        )}
+        
+        {formData.role !== 'Customer' && formData.role !== 'Admin' && (
+            <p className="mt-1 text-xs text-text-secondary">This is the unique ID the user will use to log in.</p>
+        )}
+
 
         <FormField label="Password">
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword || formData.role === 'Customer' ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={(e) => {
                     handleChange(e);
                     if (passwordError) setPasswordError('');
                 }}
-                className={`${formInputClasses} pr-10`}
+                className={`${formInputClasses} ${formData.role !== 'Customer' ? 'pr-10' : ''}`}
                 required
+                readOnly={formData.role === 'Customer'}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-secondary hover:text-text-primary"
-              >
-                {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-              </button>
+              {formData.role !== 'Customer' && (
+                <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-secondary hover:text-text-primary"
+                >
+                    {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </button>
+              )}
             </div>
             {passwordError ? (
                 <p className="mt-1 text-xs text-red-400">{passwordError}</p>
             ) : (
-                <p className="mt-1 text-xs text-text-secondary">Must be at least 6 characters.</p>
+                <p className="mt-1 text-xs text-text-secondary">
+                    {formData.role === 'Customer' ? 'Auto-generated: @ + last 5 digits of mobile.' : 'Must be at least 6 characters.'}
+                </p>
             )}
         </FormField>
         

@@ -43,55 +43,6 @@ export const MOCK_PROJECT_TEMPLATES: ProjectTemplate[] = [];
 
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [];
 
-export const MOCK_POSTS: Post[] = [
-    {
-        id: 'post-1',
-        authorId: 'DESIGNER_1', // Placeholder
-        content: 'Absolutely thrilled with how the mood board for the #JapandiLiving project is coming together! The blend of natural textures and minimalist design is creating such a serene vibe. What do you all think? ✨',
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        reactions: [{ type: 'love', userId: 'ADMIN_1' }, { type: 'idea', userId: 'CUSTOMER_1' }],
-        isPinned: true,
-        postType: 'standard',
-        tags: ['#JapandiLiving'],
-        visibility: 'everyone',
-    },
-    {
-        id: 'post-2',
-        authorId: 'CUSTOMER_1', // Placeholder
-        content: "Just saw the latest 3D renders for our kitchen and I'm speechless! It's exactly what we dreamed of. Can't wait to see it come to life!",
-        mediaUrl: 'https://images.unsplash.com/photo-1600585152225-358b54e50ae8?q=80&w=2070&auto=format&fit=crop',
-        mediaType: 'image',
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        reactions: [{ type: 'love', userId: 'DESIGNER_1' }],
-        postType: 'standard',
-        tags: [],
-        visibility: 'everyone',
-    },
-    {
-        id: 'post-3',
-        authorId: 'ADMIN_1', // Placeholder
-        content: "Team, let's give a huge shoutout to our sourcing partners for finding this incredible marble slab. It's going to be the centerpiece of the Hillside Estate project. #LuxuryDesign #Materials",
-        createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-        reactions: [{ type: 'kudos', userId: 'DESIGNER_1' }],
-        postType: 'standard',
-        tags: ['#LuxuryDesign', '#Materials'],
-        visibility: 'team_only',
-    }
-];
+export const MOCK_POSTS: Post[] = [];
 
-export const MOCK_FEED_COMMENTS: FeedComment[] = [
-    {
-        id: 'comment-1',
-        postId: 'post-1',
-        authorId: 'ADMIN_1', // Placeholder
-        content: 'This looks amazing! The client is going to love it.',
-        createdAt: new Date(Date.now() - 86400000 * 1.9).toISOString(),
-    },
-    {
-        id: 'comment-2',
-        postId: 'post-1',
-        authorId: 'CUSTOMER_1', // Placeholder
-        content: 'Wow! So excited 😍',
-        createdAt: new Date(Date.now() - 86400000 * 1.8).toISOString(),
-    }
-];
+export const MOCK_FEED_COMMENTS: FeedComment[] = [];

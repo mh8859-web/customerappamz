@@ -74,30 +74,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []); // The empty dependency array ensures this effect runs only once on component mount.
 
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
-    // Step 1: Find the user's profile using their custom User ID to get their real email.
-    const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('email') // Select the actual email address
-        .eq('user_id', userId)
-        .single();
-    
-    if (profileError || !userProfile) {
-        // This is the custom error condition for the Login page.
-        console.error("AUTHENTICATION FAILED: Step 1 of 2. Could not find a user profile in the 'users' table with user_id = " + userId + ". Please ensure the user exists and the 'user_id' column is set correctly.");
-        return { success: false, error: 'USER_NOT_FOUND' };
-    }
+    // By standardizing the email format, we can attempt to sign in directly
+    // without a preliminary lookup. This is more efficient and secure.
+    const proxyEmail = `user-${userId}@amaz-interiors.app`;
 
-    // Step 2: Use the fetched email to sign in with Supabase Auth.
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userProfile.email, // Use the real email from the database
-      password,
+    const { error } = await supabase.auth.signInWithPassword({
+      email: proxyEmail,
+      password: password,
     });
 
-    if (signInError) {
-        console.error("AUTHENTICATION FAILED: Step 2 of 2. User profile found, but password was incorrect.", signInError);
-        return { success: false, error: 'INVALID_PASSWORD' };
+    if (error) {
+      // Supabase returns "Invalid login credentials" for both non-existent users
+      // and incorrect passwords, which is good security practice. We log the
+      // specific error for debugging but show a generic message to the user.
+      console.error("AUTHENTICATION FAILED:", error.message);
+      if (error.message.includes("Invalid login credentials")) {
+         return { success: false, error: 'INVALID_CREDENTIALS' };
+      }
+      return { success: false, error: 'UNKNOWN_ERROR' };
     }
-    
+
+    // A successful login will trigger the onAuthStateChange listener,
+    // which will then fetch the user profile and update the application state.
     return { success: true, error: null };
   };
 
