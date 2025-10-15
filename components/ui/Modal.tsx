@@ -1,4 +1,5 @@
 import React, { ReactNode } from 'react';
+import { XMarkIcon } from '../icons';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,18 +13,20 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4"
+      className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4 transition-opacity duration-300"
       onClick={onClose}
     >
       <div 
-        className="bg-surface/80 backdrop-blur-md rounded-xl shadow-soft border border-border-color w-full max-w-lg p-6 transform transition-all"
+        className="bg-surface rounded-2xl shadow-modal w-full max-w-lg transform modal-content-animation"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center border-b border-border-color pb-4 mb-4">
-          <h2 className="text-xl font-bold text-text-headline">{title}</h2>
-          <button onClick={onClose} className="text-text-muted hover:text-text-headline text-2xl font-light">&times;</button>
+        <div className="flex justify-between items-center border-b border-border-color p-5">
+          <h2 className="text-xl font-display font-semibold text-text-primary">{title}</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary rounded-full p-1.5 bg-secondary hover:bg-secondary-hover">
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
-        <div>
+        <div className="p-6">
           {children}
         </div>
       </div>

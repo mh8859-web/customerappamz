@@ -40,7 +40,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, curre
 
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 pt-2 border-t border-border-color">
             {/* New Comment Input */}
             <div className="flex items-start gap-2">
                 <img src={currentUser.avatarUrl} alt="You" className="w-8 h-8 rounded-full" />
@@ -50,7 +50,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, curre
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         placeholder="Write a comment..."
-                        className="w-full bg-secondary text-text-primary px-3 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="w-full bg-secondary border border-transparent text-text-primary placeholder:text-text-secondary/80 px-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
                     />
                 </form>
             </div>

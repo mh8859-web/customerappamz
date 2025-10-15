@@ -1,15 +1,24 @@
 import React, { useState } from 'react';
-import { User } from '../../types';
+import { User, Project, Post } from '../../types';
 import Card from '../ui/Card';
 import { PhotoIcon, VideoCameraIcon } from '../icons';
 import CreatePostModal from './CreatePostModal';
 
 interface CreatePostProps {
   user: User;
-  onCreatePost: (content: string, mediaFile?: File, addPoll?: boolean) => void;
+  projects: Project[];
+  onCreatePost: (
+    content: string, 
+    mediaFile?: File, 
+    addPoll?: boolean,
+    projectId?: string,
+    postType?: Post['postType'],
+    showcaseDetails?: Post['showcaseDetails'],
+    beforeMediaFile?: File
+  ) => void;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ user, onCreatePost }) => {
+const CreatePost: React.FC<CreatePostProps> = ({ user, projects, onCreatePost }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
@@ -18,10 +27,8 @@ const CreatePost: React.FC<CreatePostProps> = ({ user, onCreatePost }) => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 user={user}
-                onCreatePost={(content, mediaFile, addPoll) => {
-                    onCreatePost(content, mediaFile, addPoll);
-                    setIsModalOpen(false);
-                }}
+                projects={projects}
+                onCreatePost={onCreatePost}
             />
             <Card>
                 <div className="flex items-center gap-3">

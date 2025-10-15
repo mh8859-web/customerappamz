@@ -11,6 +11,13 @@ interface CreateProjectModalProps {
   onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => void;
 }
 
+const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+  <div>
+      <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
+      {children}
+  </div>
+);
+
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
   const { user: adminUser } = useAuth();
   const { users } = useUsers();
@@ -53,54 +60,47 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     });
   };
 
-  const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
-    <div>
-        <label className="block text-sm font-medium text-text-headline mb-1">{label}</label>
-        {children}
-    </div>
-  );
-
-  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+  const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface placeholder:text-text-secondary/80";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Project">
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField label="Project Name">
-          <input type="text" name="title" value={formData.title} onChange={handleChange} className={inputClasses} required />
+          <input type="text" name="title" value={formData.title} onChange={handleChange} className={formInputClasses} required />
         </FormField>
         <FormField label="Description">
-          <textarea name="description" value={formData.description} onChange={handleChange} className={inputClasses} rows={3} required />
+          <textarea name="description" value={formData.description} onChange={handleChange} className={formInputClasses} rows={3} required />
         </FormField>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Client">
-                <select name="customerId" value={formData.customerId} onChange={handleChange} className={inputClasses} required>
+                <select name="customerId" value={formData.customerId} onChange={handleChange} className={formInputClasses} required>
                     <option value="">Select a client</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
                 </select>
             </FormField>
             <FormField label="Designer">
-                <select name="designerId" value={formData.designerId} onChange={handleChange} className={inputClasses} required>
+                <select name="designerId" value={formData.designerId} onChange={handleChange} className={formInputClasses} required>
                     <option value="">Assign a designer</option>
                     {designers.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
                 </select>
             </FormField>
         </div>
         <FormField label="Site Location / Address">
-          <input type="text" name="address" value={formData.address} onChange={handleChange} className={inputClasses} required />
+          <input type="text" name="address" value={formData.address} onChange={handleChange} className={formInputClasses} required />
         </FormField>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Total Budget (₹)">
-              <input type="number" name="budgetDisplay" value={formData.budgetDisplay} onChange={handleChange} className={inputClasses} required />
+              <input type="number" name="budgetDisplay" value={formData.budgetDisplay} onChange={handleChange} className={formInputClasses} required />
             </FormField>
             <FormField label="Area (sqft)">
-              <input type="number" name="areaSqft" value={formData.areaSqft} onChange={handleChange} className={inputClasses} required />
+              <input type="number" name="areaSqft" value={formData.areaSqft} onChange={handleChange} className={formInputClasses} required />
             </FormField>
         </div>
         <FormField label="Start Date">
-          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={inputClasses} required />
+          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={formInputClasses} required />
         </FormField>
         <FormField label="Initial Quote (PDF)">
-            <input type="file" accept=".pdf" className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/20 file:text-accent hover:file:bg-accent/30`}/>
+            <input type="file" accept=".pdf" className={`${formInputClasses} file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20`}/>
         </FormField>
         <div className="flex justify-end pt-4 gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>

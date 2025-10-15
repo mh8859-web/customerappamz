@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { User, UserRole } from '../../types';
@@ -11,6 +11,13 @@ interface EditUserModalProps {
   onUpdate: (userId: string, updates: Partial<User>) => Promise<void>;
 }
 
+const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
+  <div>
+      <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
+      {children}
+  </div>
+);
+
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, onUpdate }) => {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -21,8 +28,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // This effect now correctly populates the form only when the modal opens with a user.
-    // It no longer re-runs on every keystroke, which fixes the input focus bug.
     if (isOpen && user) {
       setFormData({
         fullName: user.fullName,
@@ -31,20 +36,18 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
         verified: user.verified || false,
       });
     } else if (!isOpen) {
-      // Reset submitting state when the modal closes.
       setIsSubmitting(false);
     }
   }, [user, isOpen]);
 
-  // FIX(line 43): Added a type guard to ensure `e.target` is an HTMLInputElement before accessing its `checked` property, resolving a TypeScript error.
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-     const { name, value, type } = e.target;
-    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
-        setFormData(prev => ({ ...prev, [name]: e.target.checked }));
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.target;
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+        setFormData(prev => ({ ...prev, [target.name]: target.checked }));
     } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [target.name]: target.value }));
     }
-  };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,14 +67,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     onClose();
   };
   
-  const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
-    <div>
-        <label className="block text-sm font-medium text-text-headline mb-1">{label}</label>
-        {children}
-    </div>
-  );
-
-  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+  const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface placeholder:text-text-secondary/80";
 
   if (!user) return null;
 
@@ -79,23 +75,23 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     <Modal isOpen={isOpen} onClose={onClose} title={`Edit User: ${user.fullName}`}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <FormField label="Full Name">
-          <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} required />
+          <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={formInputClasses} required />
         </FormField>
         <FormField label="Role">
-            <select name="role" value={formData.role} onChange={handleChange} className={inputClasses} required>
+            <select name="role" value={formData.role} onChange={handleChange} className={formInputClasses} required>
                 {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
             </select>
         </FormField>
         <FormField label="User ID">
-            <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required />
+            <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required />
         </FormField>
          <FormField label="Email (System - Cannot be changed)">
-            <input type="email" value={user.email} readOnly className={`${inputClasses} bg-surface cursor-not-allowed text-text-muted`} />
+            <input type="email" value={user.email} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
         </FormField>
         
         <div className="flex items-center">
             <input type="checkbox" id="edit-verified" name="verified" checked={formData.verified} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
-            <label htmlFor="edit-verified" className="ml-2 block text-sm text-text-headline">
+            <label htmlFor="edit-verified" className="ml-2 block text-sm text-text-primary">
                 Mark as Verified
             </label>
         </div>

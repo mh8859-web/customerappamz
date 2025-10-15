@@ -1,3 +1,4 @@
+
 export type UserRole = 'Admin' | 'Designer' | 'Customer';
 
 export type ProjectStage = 
@@ -217,15 +218,30 @@ export interface Poll {
   options: PollOption[];
 }
 
+export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
+export type Reaction = { type: ReactionType; userId: string };
+
 export interface Post {
   id: string;
   authorId: string;
   content: string;
+  createdAt: string;
+  
+  // New Community Hub Features
+  reactions: Reaction[];
+  poll?: Poll;
+  isPinned?: boolean;
+  projectId?: string;
+  postType: 'standard' | 'showcase' | 'before_after';
+  showcaseDetails?: {
+    style: string;
+    materials: string;
+    palette: string;
+  };
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
-  likes: string[];
-  createdAt: string;
-  poll?: Poll;
+  beforeMediaUrl?: string;
+  tags?: string[];
 }
 
 export interface FeedComment {

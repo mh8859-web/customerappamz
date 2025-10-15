@@ -15,16 +15,19 @@ interface StatCardProps {
     title: string;
     value: string | number;
     icon: React.ReactNode;
+    color: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon }) => (
-    <Card className="flex items-center p-4">
-        <div className="p-3 bg-accent-blue-light rounded-xl">
+// FIX: The `React.cloneElement` call was causing a TypeScript error because the icon components do not accept a 'style' prop.
+// The icons use `currentColor` for their stroke, so we can set the color on the parent `div` and it will be inherited.
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
+    <Card className="flex items-center p-5">
+        <div className={`p-3 rounded-xl`} style={{ backgroundColor: `${color}20`, color }}>
            {icon}
         </div>
         <div className="ml-4">
-            <p className="text-sm text-text-secondary">{title}</p>
-            <p className="text-2xl font-bold text-text-primary">{value}</p>
+            <p className="text-sm text-text-secondary font-medium">{title}</p>
+            <p className="text-2xl font-bold font-display text-text-primary">{value}</p>
         </div>
     </Card>
 );
@@ -36,6 +39,9 @@ const AdminDashboard: React.FC = () => {
   const { users, loading: usersLoading } = useUsers();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  
+  const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
+
 
   const handleCreateProject = (newProject: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
     // In a real app, this would be an API call.
@@ -85,24 +91,13 @@ const AdminDashboard: React.FC = () => {
     return <div>Loading dashboard...</div>;
   }
 
-  const totalProjects = MOCK_PROJECTS.length;
   const currentProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
   const activeDesigners = users.filter(u => u.role === 'Designer').length;
-  const activeCustomers = users.filter(u => u.role === 'Customer').length;
 
   const thisMonthRevenue = MOCK_MILESTONES
     .filter(m => m.statusDisplay === 'Paid' && new Date(m.paidDateDisplay || '').getMonth() === new Date().getMonth())
     .reduce((sum, m) => sum + m.amountDisplay, 0);
 
-  const lastMonth = new Date();
-  lastMonth.setMonth(lastMonth.getMonth() - 1);
-  
-  const lastMonthRevenue = MOCK_MILESTONES
-    .filter(m => m.statusDisplay === 'Paid' && new Date(m.paidDateDisplay || '').getMonth() === lastMonth.getMonth())
-    .reduce((sum, m) => sum + m.amountDisplay, 0);
-
-  const averageProjectValue = MOCK_PROJECTS.length > 0 ? MOCK_PROJECTS.reduce((sum, p) => sum + p.budgetDisplay, 0) / MOCK_PROJECTS.length : 0;
-  
   const recentProjects = [...MOCK_PROJECTS].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
   
   const designerActivity = MOCK_ACTIVITY_LOGS.filter(log => users.find(u => u.id === log.actorId)?.role === 'Designer').slice(0, 4);
@@ -122,39 +117,31 @@ const AdminDashboard: React.FC = () => {
       />
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <h1 className="text-3xl font-bold text-text-primary">Admin Dashboard</h1>
+          <h1 className="text-3xl font-bold font-display text-text-primary">Admin Dashboard</h1>
           <Button onClick={() => setCreateModalOpen(true)}>+ Create New Project</Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Total Projects" value={totalProjects} icon={<BriefcaseIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Current Projects" value={currentProjects} icon={<BriefcaseIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Active Designers" value={activeDesigners} icon={<UsersIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Active Customers" value={activeCustomers} icon={<UsersIcon className="w-6 h-6 text-accent" />} />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="This Month Revenue" value={`₹${thisMonthRevenue.toLocaleString()}`} icon={<DollarSignIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Last Month Revenue" value={`₹${lastMonthRevenue.toLocaleString()}`} icon={<DollarSignIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Avg. Project Value" value={`₹${Math.round(averageProjectValue/1000)}k`} icon={<BriefcaseIcon className="w-6 h-6 text-accent" />} />
-          <StatCard title="Pending Approvals" value="3" icon={<CheckCircleIcon className="w-6 h-6 text-accent" />} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <StatCard title="Active Projects" value={currentProjects} color="#1D9BF0" icon={<BriefcaseIcon className="w-6 h-6" />} />
+          <StatCard title="This Month Revenue" value={`₹${thisMonthRevenue.toLocaleString()}`} color="#00BA7C" icon={<DollarSignIcon className="w-6 h-6" />} />
+          <StatCard title="Active Designers" value={activeDesigners} color="#F97316" icon={<UsersIcon className="w-6 h-6" />} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">Revenue Trend</h2>
-            <div style={{ height: '250px' }}>
+            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Revenue Trend</h2>
+            <div style={{ height: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                        <XAxis dataKey="name" stroke="#65676B" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #DADDE1', borderRadius: '8px' }} cursor={{fill: '#1877F2', fillOpacity: 0.1}}/>
-                        <Bar dataKey="revenue" fill="#1877F2" radius={[4, 4, 0, 0]} />
+                    <BarChart data={revenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                        <XAxis dataKey="name" stroke="#536471" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} cursor={{fill: '#1D9BF0', fillOpacity: 0.1}}/>
+                        <Bar dataKey="revenue" fill="#1D9BF0" radius={[6, 6, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
           </Card>
           <Card>
-              <h2 className="text-xl font-semibold text-text-primary mb-4">Live Designer Activity</h2>
+              <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Live Designer Activity</h2>
               <ul className="space-y-4">
                   {designerActivity.map(log => (
                       <li key={log.id} className="text-sm">
@@ -169,27 +156,27 @@ const AdminDashboard: React.FC = () => {
           
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2">
-                  <h2 className="text-xl font-semibold text-text-primary mb-4">Recently Created Projects</h2>
+                  <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Recently Created Projects</h2>
                   <div className="space-y-3">
                       {recentProjects.map(p => (
-                          <div key={p.id} className="bg-page-bg p-3 rounded-xl flex justify-between items-center">
+                          <div key={p.id} className="bg-page-bg p-4 rounded-xl flex justify-between items-center">
                               <div>
                                   <p className="font-semibold text-text-primary">{p.title}</p>
                                   <p className="text-sm text-text-secondary">{users.find(u => u.id === p.customerId)?.fullName}</p>
                               </div>
-                              <Button variant="secondary" className="px-3 py-1 text-xs">Assign</Button>
+                              <Button variant="secondary" className="!px-4 !text-sm">Assign</Button>
                           </div>
                       ))}
                   </div>
               </Card>
               <div className="space-y-6">
                   <Card>
-                    <h2 className="text-xl font-semibold text-text-primary mb-4 flex items-center gap-2"><MegaphoneIcon className="w-5 h-5"/> Company Announcements</h2>
+                    <h2 className="text-xl font-semibold font-display text-text-primary mb-4 flex items-center gap-2"><MegaphoneIcon className="w-5 h-5"/> Company Announcements</h2>
                     <textarea 
                         value={announcement}
                         onChange={(e) => setAnnouncement(e.target.value)}
                         placeholder="Send an announcement to your team..."
-                        className="w-full bg-page-bg border border-border-color rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                        className={formInputClasses}
                         rows={3}
                     />
                     <Button onClick={handleSendAnnouncement} className="w-full mt-2" disabled={!announcement.trim()}>Send Announcement</Button>

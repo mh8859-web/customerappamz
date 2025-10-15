@@ -80,13 +80,11 @@ const UserManagement: React.FC = () => {
       
       // 5. Refresh the user list to show the new user.
       await refetchUsers(); 
+      setCreateUserModalOpen(false); // Close modal only after all operations succeed
     } catch (error) {
         alert(`Failed to create user: ${(error as Error).message}`);
         console.error(error);
-    } finally {
-        // This ensures the modal always closes, which will trigger the useEffect
-        // in the modal to reset its internal state, fixing the "stuck" UI.
-        setCreateUserModalOpen(false);
+        setCreateUserModalOpen(false); // Ensure modal closes even on failure
     }
   };
 
@@ -161,72 +159,43 @@ const UserManagement: React.FC = () => {
       />
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <h1 className="text-3xl font-bold text-text-headline">User Management</h1>
+          <h1 className="text-3xl font-bold font-display text-text-primary">User Management</h1>
           <Button onClick={() => setCreateUserModalOpen(true)}>+ Add User</Button>
         </div>
         
-        <Card>
-          {/* Mobile View */}
-          <div className="md:hidden space-y-4">
-            {users.map((user: User) => (
-              <div key={user.id} className="bg-primary-bg p-4 rounded-xl">
-                <div className="flex items-center gap-4 mb-3">
-                  <img src={user.avatarUrl} alt={user.fullName} className="w-10 h-10 rounded-full" />
-                  <div>
-                    <UserNameDisplay user={user} className="font-bold text-text-headline" />
-                    <p className="text-sm text-text-muted">{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        user.role === 'Admin' ? 'bg-accent/20 text-accent' :
-                        user.role === 'Designer' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-green-500/20 text-green-400'
-                      }`}>
-                        {user.role}
-                      </span>
-                  <div className="flex gap-2">
-                      <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                      <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400" onClick={() => handleDeleteUser(user)}>Delete</Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Desktop View */}
-          <div className="hidden md:block overflow-x-auto">
+        <Card className="!p-0">
+          <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-text-muted uppercase bg-primary-bg">
+              <thead className="text-xs text-text-secondary uppercase">
                 <tr>
-                  <th scope="col" className="px-6 py-3">Name</th>
-                  <th scope="col" className="px-6 py-3">Email (System)</th>
-                  <th scope="col" className="px-6 py-3">User ID</th>
-                  <th scope="col" className="px-6 py-3">Role</th>
-                  <th scope="col" className="px-6 py-3">Actions</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">Name</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">Email (System)</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">User ID</th>
+                  <th scope="col" className="px-6 py-4 font-semibold">Role</th>
+                  <th scope="col" className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map((user: User) => (
-                  <tr key={user.id} className="border-b border-border-color">
-                    <td className="px-6 py-4 font-medium text-text-headline">
-                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-medium"/>
+                {users.map((user: User, index: number) => (
+                  <tr key={user.id} className={`border-t border-border-color ${index === 0 ? 'border-t-0' : ''}`}>
+                    <td className="px-6 py-4 font-medium text-text-primary">
+                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-semibold"/>
                     </td>
-                    <td className="px-6 py-4">{user.email}</td>
-                    <td className="px-6 py-4 font-mono">{user.userId}</td>
+                    <td className="px-6 py-4 text-text-secondary">{user.email}</td>
+                    <td className="px-6 py-4 font-mono text-text-secondary">{user.userId}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        user.role === 'Admin' ? 'bg-accent/20 text-accent' :
-                        user.role === 'Designer' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-green-500/20 text-green-400'
+                        user.role === 'Admin' ? 'bg-brand-blue/20 text-brand-blue' :
+                        user.role === 'Designer' ? 'bg-orange-500/20 text-orange-500' :
+                        'bg-green-500/20 text-green-500'
                       }`}>
                         {user.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                          <Button variant="secondary" className="px-3 py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                          <Button variant="secondary" className="px-3 py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-400" onClick={() => handleDeleteUser(user)}>Delete</Button>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex gap-2 justify-end">
+                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
+                          <Button variant="secondary" className="!px-3 !py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-500" onClick={() => handleDeleteUser(user)}>Delete</Button>
                       </div>
                     </td>
                   </tr>

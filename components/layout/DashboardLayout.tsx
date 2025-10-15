@@ -4,12 +4,16 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
-const DashboardLayout: React.FC = () => {
+interface DashboardLayoutProps {
+  setInstallModalOpen: (isOpen: boolean) => void;
+}
+
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ setInstallModalOpen }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-screen bg-page-bg text-text-secondary">
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} setInstallModalOpen={setInstallModalOpen} />
 
       <div className="flex flex-col flex-1 overflow-y-auto">
         <Header setSidebarOpen={setSidebarOpen} />

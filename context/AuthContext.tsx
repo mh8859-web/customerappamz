@@ -104,8 +104,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    setLoading(true);
+    try {
+        await supabase.auth.signOut();
+        setUser(null);
+    } catch (error) {
+        console.error("Error during logout:", error);
+        setUser(null); // Still attempt to clear local session
+    } finally {
+        setLoading(false);
+    }
   };
   
   const updateUser = (updates: Partial<User>) => {

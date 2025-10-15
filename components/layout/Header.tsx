@@ -63,13 +63,11 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
 
   const handleClockToggle = () => {
     if (isClockedIn) {
-      // Clock Out
       setIsClockedIn(false);
       setClockInTime(null);
       setElapsedTime('00:00:00');
       alert('Clocked out!');
     } else {
-      // Clock In
       navigator.geolocation.getCurrentPosition(position => {
         const { latitude, longitude } = position.coords;
         alert(`Clocked in at location: ${latitude}, ${longitude}`);
@@ -98,7 +96,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
         )}
         <Button 
             onClick={handleClockToggle} 
-            className={`px-4 py-2 text-sm ${isClockedIn ? '!bg-red-500 hover:!bg-red-600' : ''}`}
+            className={`text-sm ${isClockedIn ? '!bg-red-500 hover:!bg-red-600' : ''}`}
         >
             {isClockedIn ? 'Clock Out' : 'Clock In'}
         </Button>
@@ -106,7 +104,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   );
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between h-20 px-4 md:px-8 bg-surface border-b border-border-color shadow-subtle">
+    <header className="sticky top-0 z-10 flex items-center justify-between h-20 px-4 md:px-8 bg-surface/80 backdrop-blur-md border-b border-border-color/50">
       <div className="flex items-center">
         <button onClick={() => setSidebarOpen(true)} className="text-text-secondary md:hidden mr-4">
           <MenuIcon className="w-6 h-6" />
@@ -116,14 +114,14 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           <input 
             type="text" 
             placeholder="Search..." 
-            className="w-64 pl-11 pr-4 py-2.5 bg-secondary border-transparent rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+            className="w-80 pl-11 pr-4 py-2.5 bg-secondary border-transparent rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setTimeout(() => setIsSearchFocused(false), 150)} // Delay to allow click on results
           />
            {isSearchFocused && (searchResults.projects.length > 0 || searchResults.users.length > 0) && (
-            <div className="absolute top-full mt-2 w-96 bg-surface border border-border-color rounded-xl shadow-card z-50 overflow-hidden">
+            <div className="absolute top-full mt-2 w-96 bg-surface border border-border-color rounded-2xl shadow-card z-50 overflow-hidden">
                 {searchResults.projects.length > 0 && (
                     <div>
                         <h3 className="text-xs uppercase text-text-secondary p-3 font-bold">Projects</h3>
@@ -131,7 +129,9 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
                             {searchResults.projects.slice(0, 3).map(project => (
                                 <li key={project.id}>
                                     <Link to={`/projects/${project.id}`} onClick={clearSearch} className="flex items-center gap-3 px-3 py-2 hover:bg-secondary transition-colors">
-                                        <BriefcaseIcon className="w-5 h-5 text-accent"/>
+                                        <div className="p-2 bg-secondary rounded-full">
+                                          <BriefcaseIcon className="w-5 h-5 text-brand-blue"/>
+                                        </div>
                                         <div>
                                             <p className="text-sm font-semibold text-text-primary">{project.title}</p>
                                             <p className="text-xs text-text-secondary">{users.find(u => u.id === project.customerId)?.fullName}</p>
@@ -168,29 +168,33 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
       <div className="flex items-center space-x-2 sm:space-x-4">
         {user?.role === 'Designer' && renderDesignerClock()}
 
-        <button className="relative p-2 rounded-full hover:bg-secondary transition-colors">
+        <button className="relative p-2.5 rounded-full hover:bg-secondary transition-colors">
           <BellIcon className="w-6 h-6 text-text-primary" />
-          <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface"></span>
+          <span className="absolute top-1.5 right-1.5 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface"></span>
         </button>
         
         <div className="relative" ref={profileRef}>
-          <button onClick={() => setProfileOpen(!isProfileOpen)} className="flex items-center space-x-3 p-1 rounded-lg hover:bg-secondary transition-colors">
+          <button onClick={() => setProfileOpen(!isProfileOpen)} className="flex items-center space-x-2 p-1 rounded-full hover:bg-secondary transition-colors">
             <img src={user?.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
-            <div className="hidden md:block">
-              <UserNameDisplay user={user} textClassName="font-semibold text-text-primary" />
-              <p className="text-sm text-text-secondary">{user?.role}</p>
-            </div>
-            <ChevronDownIcon className={`w-5 h-5 text-text-secondary hidden md:block transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
           
           {isProfileOpen && (
-            <div className="absolute top-full right-0 mt-2 w-48 bg-surface border border-border-color rounded-xl shadow-card z-20">
+            <div className="absolute top-full right-0 mt-2 w-64 bg-surface border border-border-color rounded-2xl shadow-card z-20">
               <div className="p-2">
-                <Link to="/account" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-text-primary">
+                 <div className="border-b border-border-color p-2 mb-2">
+                    <Link to="/account" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 p-2 rounded-xl hover:bg-secondary">
+                      <img src={user?.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
+                      <div>
+                          <UserNameDisplay user={user} textClassName="font-semibold text-text-primary" />
+                          <p className="text-sm text-text-secondary">View Profile</p>
+                      </div>
+                    </Link>
+                 </div>
+                <Link to="/account" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-text-primary font-medium">
                   <UserCircleIcon className="w-5 h-5" />
                   My Account
                 </Link>
-                <button onClick={() => { logout(); setProfileOpen(false); }} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-red-500">
+                <button onClick={() => { logout(); setProfileOpen(false); }} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-red-500 font-medium">
                   <LogOutIcon className="w-5 h-5" />
                   Logout
                 </button>

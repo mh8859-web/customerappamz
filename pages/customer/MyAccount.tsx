@@ -150,12 +150,6 @@ const MyAccount: React.FC = () => {
                     </div>
                 </div>
             </Card>
-
-            <Card>
-                <h2 className="text-xl font-bold text-text-headline mb-4">Change Password</h2>
-                <p className="text-sm text-text-muted mb-4">For security, password changes are handled through a password reset link sent to your email.</p>
-                <Button variant="secondary">Send Password Reset Link</Button>
-            </Card>
         </div>
     );
 };
