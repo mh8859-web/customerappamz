@@ -141,15 +141,17 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
+      // The service worker is the cause of the infinite loading bug.
+      // This script will find any active service worker and unregister it.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(err => {
-              console.log('ServiceWorker registration failed: ', err);
-            });
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Old service worker unregistered.');
+          }
+          if (registrations.length > 0) {
+            window.location.reload();
+          }
         });
       }
     </script>
