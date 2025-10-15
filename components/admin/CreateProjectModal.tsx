@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { Project } from '../../types';
@@ -14,7 +14,7 @@ interface CreateProjectModalProps {
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
   const { user: adminUser } = useAuth();
   const { users } = useUsers();
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     title: '',
     description: '',
     customerId: '',
@@ -23,7 +23,15 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     budgetDisplay: '',
     areaSqft: '',
     startDate: '',
-  });
+  };
+  const [formData, setFormData] = useState(initialFormData);
+
+  useEffect(() => {
+    // Reset form data when the modal is closed to prevent stale input
+    if (!isOpen) {
+      setFormData(initialFormData);
+    }
+  }, [isOpen]);
 
   const clients = users.filter(u => u.role === 'Customer');
   const designers = users.filter(u => u.role === 'Designer');
