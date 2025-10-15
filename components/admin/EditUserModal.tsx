@@ -35,7 +35,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     }
   }, [user, isOpen]);
 
-  // FIX: Added type guard to ensure `e.target` is an HTMLInputElement before accessing 'checked' property.
+  // FIX: Added a type guard to ensure `e.target` is an HTMLInputElement before accessing its `checked` property, resolving a TypeScript error.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
      const { name, value, type } = e.target;
     if (type === 'checkbox' && e.target instanceof HTMLInputElement) {

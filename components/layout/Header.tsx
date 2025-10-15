@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, ClockIcon, BriefcaseIcon, UsersIcon } from '../icons';
+import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, ClockIcon, BriefcaseIcon, UsersIcon, UserCircleIcon, LogOutIcon } from '../icons';
 import Button from '../ui/Button';
 import { MOCK_PROJECTS } from '../../services/mockData';
 import { Link } from 'react-router-dom';
@@ -12,7 +12,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { users } = useUsers();
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
@@ -20,6 +20,8 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ projects: any[], users: any[] }>({ projects: [], users: [] });
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isProfileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let timer: number;
@@ -46,6 +48,18 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
       setSearchResults({ projects: [], users: [] });
     }
   }, [searchQuery, users]);
+  
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleClockToggle = () => {
     if (isClockedIn) {
@@ -159,14 +173,31 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           <span className="absolute top-1 right-1 block w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-surface"></span>
         </button>
         
-        <Link to="/account" className="flex items-center space-x-3 p-1 rounded-lg hover:bg-secondary transition-colors">
-          <img src={user?.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
-          <div className="hidden md:block">
-            <UserNameDisplay user={user} textClassName="font-semibold text-text-primary" />
-            <p className="text-sm text-text-secondary">{user?.role}</p>
-          </div>
-          <ChevronDownIcon className="w-5 h-5 text-text-secondary hidden md:block" />
-        </Link>
+        <div className="relative" ref={profileRef}>
+          <button onClick={() => setProfileOpen(!isProfileOpen)} className="flex items-center space-x-3 p-1 rounded-lg hover:bg-secondary transition-colors">
+            <img src={user?.avatarUrl} alt="User Avatar" className="w-10 h-10 rounded-full object-cover" />
+            <div className="hidden md:block">
+              <UserNameDisplay user={user} textClassName="font-semibold text-text-primary" />
+              <p className="text-sm text-text-secondary">{user?.role}</p>
+            </div>
+            <ChevronDownIcon className={`w-5 h-5 text-text-secondary hidden md:block transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+          </button>
+          
+          {isProfileOpen && (
+            <div className="absolute top-full right-0 mt-2 w-48 bg-surface border border-border-color rounded-xl shadow-card z-20">
+              <div className="p-2">
+                <Link to="/account" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-text-primary">
+                  <UserCircleIcon className="w-5 h-5" />
+                  My Account
+                </Link>
+                <button onClick={() => { logout(); setProfileOpen(false); }} className="flex items-center gap-3 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-secondary text-red-500">
+                  <LogOutIcon className="w-5 h-5" />
+                  Logout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

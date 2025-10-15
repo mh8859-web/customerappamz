@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { useUsers } from './context/UserContext';
 import Login from './pages/Login';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
@@ -22,6 +23,7 @@ import TaskBoard from './pages/designer/TaskBoard';
 import MyCalendar from './pages/designer/MyCalendar';
 import FinancialReports from './pages/admin/FinancialReports';
 import TeamCalendar from './pages/designer/TeamCalendar';
+import CommunityHub from './pages/shared/CommunityHub';
 
 const FullPageSpinner: React.FC = () => (
   <div className="flex items-center justify-center min-h-screen bg-page-bg">
@@ -30,10 +32,14 @@ const FullPageSpinner: React.FC = () => (
 );
 
 const App: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { loading: usersLoading } = useUsers();
+
+  if (authLoading || (user && usersLoading)) {
+    return <FullPageSpinner />;
+  }
 
   const renderDashboard = () => {
-    // This function is only called when we know `user` exists.
     if (!user) return <Navigate to="/login" />;
     switch (user.role) {
       case 'Admin':
@@ -50,59 +56,53 @@ const App: React.FC = () => {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/login" element={
-          // If auth is resolved and user is logged in, redirect from login page.
-          // Otherwise, show login page. This prevents FOUC for logged-in users.
-          !loading && user ? <Navigate to="/" /> : <Login />
-        } />
-        <Route path="/" element={
-          // This is the protected route wrapper. It shows a spinner during auth check,
-          // then either shows the app layout or redirects to login.
-          loading ? <FullPageSpinner /> : (user ? <DashboardLayout /> : <Navigate to="/login" />)
-        }>
-          {/* All child routes are now protected and will only render if a user exists. */}
-          {user && (
-            <>
-              <Route index element={renderDashboard()} />
-              <Route path="projects" element={<ProjectsList />} />
-              <Route path="projects/:projectId" element={<ProjectDetails />} />
-              <Route path="support" element={<SupportPage />} />
-              <Route path="account" element={<MyAccount />} />
-              
-              {/* Admin Routes */}
-              {user.role === 'Admin' && (
-                <>
-                  <Route path="overview" element={<AdminOverview />} />
-                  <Route path="users" element={<UserManagement />} />
-                  <Route path="attendance" element={<AttendanceLogs />} />
-                  <Route path="reports" element={<FinancialReports />} />
-                  <Route path="settings" element={<AdminSettings />} />
-                </>
-              )}
+        {user ? (
+          <Route path="/" element={<DashboardLayout />}>
+            <Route index element={renderDashboard()} />
+            <Route path="hub" element={<CommunityHub />} />
+            <Route path="projects" element={<ProjectsList />} />
+            <Route path="projects/:projectId" element={<ProjectDetails />} />
+            <Route path="support" element={<SupportPage />} />
+            <Route path="account" element={<MyAccount />} />
 
-              {/* Designer Routes */}
-              {user.role === 'Designer' && (
-                <>
-                  <Route path="task-board" element={<TaskBoard />} />
-                  <Route path="my-calendar" element={<MyCalendar />} />
-                  <Route path="team-calendar" element={<TeamCalendar />} />
-                  <Route path="leave" element={<LeaveManagement />} />
-                  <Route path="daily-work" element={<DailyWork />} />
-                  <Route path="my-attendance" element={<MyAttendance />} />
-                </>
-              )}
+            {/* Admin Routes */}
+            {user.role === 'Admin' && (
+              <>
+                <Route path="overview" element={<AdminOverview />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="attendance" element={<AttendanceLogs />} />
+                <Route path="reports" element={<FinancialReports />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </>
+            )}
 
-              {/* Customer Routes */}
-              {user.role === 'Customer' && (
-                <>
+            {/* Designer Routes */}
+            {user.role === 'Designer' && (
+              <>
+                <Route path="task-board" element={<TaskBoard />} />
+                <Route path="my-calendar" element={<MyCalendar />} />
+                <Route path="team-calendar" element={<TeamCalendar />} />
+                <Route path="leave" element={<LeaveManagement />} />
+                <Route path="daily-work" element={<DailyWork />} />
+                <Route path="my-attendance" element={<MyAttendance />} />
+              </>
+            )}
+
+            {/* Customer Routes */}
+            {user.role === 'Customer' && (
+              <>
                 <Route path="billing" element={<BillingHistory />} />
-                </>
-              )}
+              </>
+            )}
 
-              <Route path="*" element={<Navigate to="/" />} />
-            </>
-          )}
-        </Route>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        ) : (
+          <>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        )}
       </Routes>
     </HashRouter>
   );

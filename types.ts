@@ -205,3 +205,33 @@ export interface Announcement {
     target: 'Designers' | 'Customers' | 'All';
     createdAt: string;
 }
+
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[];
+}
+
+export interface Poll {
+  question: string;
+  options: PollOption[];
+}
+
+export interface Post {
+  id: string;
+  authorId: string;
+  content: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  likes: string[];
+  createdAt: string;
+  poll?: Poll;
+}
+
+export interface FeedComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}

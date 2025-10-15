@@ -22,6 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     Admin: [
       { to: '/', icon: <HomeIcon className="w-5 h-5" />, label: 'Dashboard' },
       { to: '/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Overview' },
+      { to: '/hub', icon: <UsersIcon className="w-5 h-5" />, label: 'Community Hub' },
       { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
       { to: '/users', icon: <UsersIcon className="w-5 h-5" />, label: 'User Management' },
       { to: '/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     ],
     Designer: [
       { to: '/', icon: <HomeIcon className="w-5 h-5" />, label: 'Dashboard' },
+      { to: '/hub', icon: <UsersIcon className="w-5 h-5" />, label: 'Community Hub' },
       { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'My Projects' },
       { to: '/task-board', icon: <LayoutGridIcon className="w-5 h-5" />, label: 'Task Board' },
       { to: '/my-calendar', icon: <CalendarIcon className="w-5 h-5" />, label: 'My Calendar' },
@@ -44,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     ],
     Customer: [
       { to: '/', icon: <HomeIcon className="w-5 h-5" />, label: 'My Project' },
+      { to: '/hub', icon: <UsersIcon className="w-5 h-5" />, label: 'Community Hub' },
       { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Project Archive' },
       { to: '/billing', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Billing History' },
       { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },

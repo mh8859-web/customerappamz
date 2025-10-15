@@ -56,27 +56,37 @@
         display: inline-flex;
         align-items: center;
       }
-      .verified-tooltip {
+      .verification-popover {
         position: absolute;
-        bottom: 125%;
+        bottom: calc(100% + 12px);
         left: 50%;
-        transform: translateX(-50%);
-        background-color: #050505;
-        color: #FFFFFF;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        white-space: nowrap;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s, visibility 0.2s;
-        pointer-events: none;
-        z-index: 10;
+        width: 300px;
+        background-color: #FFFFFF;
         border: 1px solid #DADDE1;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 20;
+        opacity: 0;
+        transform: translateX(-50%) scale(0.95);
+        transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+        pointer-events: none;
       }
-      .verified-badge-container:hover .verified-tooltip {
+      .verification-popover.open {
         opacity: 1;
-        visibility: visible;
+        transform: translateX(-50%) scale(1);
+        pointer-events: auto;
+      }
+      .verification-popover::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 8px solid transparent;
+          border-right: 8px solid transparent;
+          border-top: 8px solid #FFFFFF;
       }
       .spinner {
         width: 48px;
