@@ -11,8 +11,8 @@ import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icon
 
 const CommunityHub: React.FC = () => {
     const { user } = useAuth();
-    const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-    const [comments, setComments] = useState<FeedComment[]>(MOCK_FEED_COMMENTS);
+    const [posts, setPosts] = useState<Post[]>(() => [...MOCK_POSTS]);
+    const [comments, setComments] = useState<FeedComment[]>(() => [...MOCK_FEED_COMMENTS]);
     const [postToDelete, setPostToDelete] = useState<string | null>(null);
     const [layout, setLayout] = useState<'list' | 'grid'>('list');
     const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -82,23 +82,14 @@ const CommunityHub: React.FC = () => {
             tags
         };
 
-        MOCK_POSTS.unshift(newPost);
         setPosts(prevPosts => [newPost, ...prevPosts]);
     };
 
     const handlePinToggle = (postId: string) => {
         setPosts(prevPosts =>
-            prevPosts.map(post => {
-                if (post.id === postId) {
-                    const updatedPost = { ...post, isPinned: !post.isPinned };
-                    const postInMock = MOCK_POSTS.find(p => p.id === postId);
-                    if (postInMock) {
-                        postInMock.isPinned = updatedPost.isPinned;
-                    }
-                    return updatedPost;
-                }
-                return post;
-            })
+            prevPosts.map(post => 
+                post.id === postId ? { ...post, isPinned: !post.isPinned } : post
+            )
         );
     };
 
@@ -117,12 +108,6 @@ const CommunityHub: React.FC = () => {
                                 : option
                         )
                     };
-                    
-                    const postInMock = MOCK_POSTS.find(p => p.id === postId);
-                    if (postInMock) {
-                        postInMock.poll = newPoll;
-                    }
-                    
                     return { ...post, poll: newPoll };
                 }
                 return post;
@@ -147,11 +132,6 @@ const CommunityHub: React.FC = () => {
                         newReactions.push({ userId: user.id, type: reaction });
                     }
                     
-                    const postInMock = MOCK_POSTS.find(p => p.id === postId);
-                    if (postInMock) {
-                        postInMock.reactions = newReactions;
-                    }
-
                     return { ...post, reactions: newReactions };
                 }
                 return post;
@@ -167,21 +147,13 @@ const CommunityHub: React.FC = () => {
             content,
             createdAt: new Date().toISOString(),
         };
-        MOCK_FEED_COMMENTS.push(newComment);
         setComments(prev => [...prev, newComment]);
     };
     
     const confirmDeletePost = () => {
         if (!postToDelete) return;
         setPosts(prev => prev.filter(p => p.id !== postToDelete));
-        const postIndex = MOCK_POSTS.findIndex(p => p.id === postToDelete);
-        if (postIndex > -1) MOCK_POSTS.splice(postIndex, 1);
         setComments(prev => prev.filter(c => c.postId !== postToDelete));
-        const commentsToRemove = MOCK_FEED_COMMENTS.filter(c => c.postId === postToDelete);
-        commentsToRemove.forEach(c => {
-            const commentIndex = MOCK_FEED_COMMENTS.findIndex(mc => mc.id === c.id);
-            if (commentIndex > -1) MOCK_FEED_COMMENTS.splice(commentIndex, 1);
-        });
         setPostToDelete(null);
     };
 
@@ -211,9 +183,9 @@ const CommunityHub: React.FC = () => {
                         <button onClick={() => setLayout('grid')} className={`p-1.5 rounded-md ${layout === 'grid' ? 'bg-surface shadow-sm' : ''}`}><Squares2X2Icon className="w-5 h-5"/></button>
                      </div>
                      {activeTag && (
-                        <div className="flex items-center gap-2 bg-accent-blue-light text-accent text-sm font-semibold px-3 py-1.5 rounded-lg">
+                        <div className="flex items-center gap-2 bg-brand-blue/10 text-brand-blue text-sm font-semibold px-3 py-1.5 rounded-lg">
                             <span>Filtering by: #{activeTag}</span>
-                            <button onClick={() => setActiveTag(null)} className="bg-accent/20 rounded-full p-0.5"><XMarkIcon className="w-4 h-4"/></button>
+                            <button onClick={() => setActiveTag(null)} className="bg-brand-blue/20 rounded-full p-0.5"><XMarkIcon className="w-4 h-4"/></button>
                         </div>
                      )}
                 </div>

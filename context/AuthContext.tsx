@@ -26,8 +26,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (error) {
       console.error('Error fetching user profile:', error);
-      await supabase.auth.signOut();
+      // Don't sign out here, as it can cause loops. Let the listener handle it.
       setUser(null);
+      return null;
     } else if (data) {
       // Map database snake_case to application camelCase
       const userProfile: User = {
@@ -41,20 +42,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           userId: data.user_id,
       };
       setUser(userProfile);
+      return userProfile;
     }
+    return null;
   };
   
   useEffect(() => {
-    setLoading(true);
+    // Check for an active session on initial load
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await fetchUserProfile(session.user);
+      }
+      setLoading(false);
+    };
 
+    checkSession();
+
+    // Listen for auth state changes (login, logout)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          await fetchUserProfile(session.user);
-        } else {
+        if (event === 'SIGNED_OUT') {
           setUser(null);
+        } else if (session?.user) {
+          // A user session exists, fetch their profile if we don't have it yet.
+          // This handles login events.
+          if (!user || user.id !== session.user.id) {
+            await fetchUserProfile(session.user);
+          }
         }
-        setLoading(false);
       }
     );
 

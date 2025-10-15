@@ -24,7 +24,7 @@ export const getUsers = async (): Promise<User[]> => {
         fullName: user.full_name,
         email: user.email,
         role: user.role,
-        avatarUrl: user.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name)}&background=4FD1C5&color=1A202C`,
+        avatarUrl: user.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
         verified: !!user.verified, // FIX: Ensure verified is always a boolean to fix display bug.
         verificationRequested: user.verification_requested,
         userId: user.user_id,
