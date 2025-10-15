@@ -1,4 +1,4 @@
-const CACHE_NAME = 'amaz-interiors-cache-v2';
+const CACHE_NAME = 'amaz-interiors-cache-v4';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
