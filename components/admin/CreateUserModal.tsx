@@ -107,7 +107,12 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     }
     setPasswordError('');
     setIsSubmitting(true);
-    await onCreate(formData);
+    await onCreate({
+        ...formData,
+        fullName: formData.fullName.trim(),
+        userId: formData.userId.trim().toLowerCase(),
+        password: formData.password.trim(),
+    });
   };
   
   const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-accent focus:bg-surface placeholder:text-text-secondary/80";
@@ -145,7 +150,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
                     />
                 </FormField>
             ) : (
-                <FormField label="User ID">
+                <FormField label="User ID" description="This is the unique ID the user will use to log in.">
                     <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required placeholder="Create a unique ID" />
                 </FormField>
             )}
@@ -159,11 +164,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
                 <input type="text" name="userId" value={formData.userId} className={`${formInputClasses} bg-secondary cursor-not-allowed`} required readOnly />
             </FormField>
         )}
-        
-        {formData.role !== 'Customer' && formData.role !== 'Admin' && (
-            <p className="mt-1 text-xs text-text-secondary">This is the unique ID the user will use to log in.</p>
-        )}
-
 
         <FormField label="Password">
             <div className="relative">

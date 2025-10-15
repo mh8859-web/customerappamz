@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon } from '../icons';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -29,10 +29,12 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
       { to: '/overview', icon: <TrendingUpIcon className="w-6 h-6" />, label: 'Overview' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
+      { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Projects' },
       { to: '/users', icon: <UsersIcon className="w-6 h-6" />, label: 'User Management' },
       { to: '/attendance', icon: <ClockIcon className="w-6 h-6" />, label: 'Attendance' },
       { to: '/reports', icon: <PieChartIcon className="w-6 h-6" />, label: 'Financial Reports' },
+      { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support Tickets' },
       { to: '/settings', icon: <SettingsIcon className="w-6 h-6" />, label: 'Settings' },
@@ -40,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
     Designer: [
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
+      { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'My Projects' },
       { to: '/task-board', icon: <LayoutGridIcon className="w-6 h-6" />, label: 'Task Board' },
       { to: '/my-calendar', icon: <CalendarIcon className="w-6 h-6" />, label: 'My Calendar' },
@@ -47,14 +50,17 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
       { to: '/daily-work', icon: <ClipboardIcon className="w-6 h-6" />, label: 'Daily Work' },
       { to: '/my-attendance', icon: <ClockIcon className="w-6 h-6" />, label: 'My Attendance' },
       { to: '/leave', icon: <CalendarIcon className="w-6 h-6" />, label: 'Leave' },
+      { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support' },
     ],
     Customer: [
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'My Project' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
+      { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Project Archive' },
       { to: '/billing', icon: <CreditCardIcon className="w-6 h-6" />, label: 'Billing History' },
+      { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Help & Support' },
     ],

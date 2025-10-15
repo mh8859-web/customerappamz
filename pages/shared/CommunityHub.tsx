@@ -3,12 +3,11 @@ import { useAuth } from '../../context/AuthContext';
 import { MOCK_POSTS, MOCK_FEED_COMMENTS, MOCK_PROJECTS } from '../../services/mockData';
 import { Post, FeedComment, Poll, Project, ReactionType, User, PostVisibility } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
-import PostCard from '../../components/feed/PostCard';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
 import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icons';
 import { useUsers } from '../../context/UserContext';
+import CommunityFeed from './CommunityFeed';
 
 const CommunityHub: React.FC = () => {
     const { user } = useAuth();
@@ -230,34 +229,21 @@ const CommunityHub: React.FC = () => {
                      )}
                 </div>
 
-                <div className={layout === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 gap-2' : 'space-y-4'}>
-                    {sortedAndFilteredPosts.length > 0 ? (
-                        sortedAndFilteredPosts.map(post => (
-                            <PostCard
-                                key={post.id}
-                                post={post}
-                                comments={comments.filter(c => c.postId === post.id)}
-                                currentUser={user}
-                                projects={MOCK_PROJECTS}
-                                layout={layout}
-                                onReact={handleReact}
-                                onAddComment={handleAddComment}
-                                onDelete={setPostToDelete}
-                                onVote={handleVote}
-                                onPinToggle={handlePinToggle}
-                                onTagClick={handleTagClick}
-                            />
-                        ))
-                    ) : (
-                        <Card className="text-center py-12 col-span-full">
-                            <h3 className="text-xl font-semibold text-text-primary">No posts found!</h3>
-                            <p className="text-text-secondary mt-2">
-                                {activeTag ? `There are no posts with the tag #${activeTag}.` : "Be the first to share something."}
-                            </p>
-                            {activeTag && <Button variant="secondary" className="mt-4" onClick={() => setActiveTag(null)}>Clear Filter</Button>}
-                        </Card>
-                    )}
-                </div>
+                <CommunityFeed
+                    posts={sortedAndFilteredPosts}
+                    comments={comments}
+                    currentUser={user}
+                    projects={MOCK_PROJECTS}
+                    layout={layout}
+                    activeTag={activeTag}
+                    onReact={handleReact}
+                    onAddComment={handleAddComment}
+                    onDelete={setPostToDelete}
+                    onVote={handleVote}
+                    onPinToggle={handlePinToggle}
+                    onTagClick={handleTagClick}
+                    onClearFilter={() => setActiveTag(null)}
+                />
             </div>
         </>
     );

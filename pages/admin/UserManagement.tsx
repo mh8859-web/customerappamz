@@ -64,9 +64,11 @@ const UserManagement: React.FC = () => {
       }
       
       if (user) {
-          // 4. The trigger creates the user profile, but we must manually update it
-          // to set the userId (custom User ID) and the verified status.
+          // 4. The trigger creates the user profile, but we now explicitly set all
+          // necessary fields to make the process more robust against trigger failures.
           const { error: updateError } = await updateRecord('users', user.id, {
+              full_name: newUser.fullName,
+              role: newUser.role,
               user_id: newUser.userId,
               verified: newUser.verified,
           });

@@ -9,6 +9,7 @@ interface AuthContextType {
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
+  sendPasswordReset: (userId: string) => Promise<{ success: boolean; error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,21 +75,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []); // The empty dependency array ensures this effect runs only once on component mount.
 
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
-    // By standardizing the email format, we can attempt to sign in directly
-    // without a preliminary lookup. This is more efficient and secure.
-    const proxyEmail = `user-${userId}@amaz-interiors.app`;
+    const trimmedUserId = userId.trim().toLowerCase();
+    const trimmedPassword = password.trim();
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: proxyEmail,
-      password: password,
+    // Step 1: Find the user in the public.users table by their user_id to get their actual email.
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('email')
+      .eq('user_id', trimmedUserId)
+      .single();
+
+    // Step 2: If no profile exists for that user_id, it's an invalid credential.
+    if (profileError || !userProfile) {
+      console.error("Login failed: No user profile found for user_id:", trimmedUserId);
+      return { success: false, error: 'INVALID_CREDENTIALS' };
+    }
+
+    // Step 3: Use the ACTUAL email from the profile for authentication.
+    // This is the key fix: it works for both "real" emails and "proxy" emails.
+    const actualEmail = userProfile.email;
+    if (!actualEmail) {
+        console.error("Login failed: User profile has no email for user_id:", trimmedUserId);
+        return { success: false, error: 'UNKNOWN_ERROR' };
+    }
+    
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: actualEmail,
+      password: trimmedPassword,
     });
 
-    if (error) {
-      // Supabase returns "Invalid login credentials" for both non-existent users
-      // and incorrect passwords, which is good security practice. We log the
-      // specific error for debugging but show a generic message to the user.
-      console.error("AUTHENTICATION FAILED:", error.message);
-      if (error.message.includes("Invalid login credentials")) {
+    // Step 4: Handle authentication errors.
+    if (signInError) {
+      console.error("AUTHENTICATION FAILED:", signInError.message);
+      if (signInError.message.includes("Invalid login credentials")) {
          return { success: false, error: 'INVALID_CREDENTIALS' };
       }
       return { success: false, error: 'UNKNOWN_ERROR' };
@@ -116,12 +135,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(prevUser => prevUser ? { ...prevUser, ...updates } : null);
   };
 
+  const sendPasswordReset = async (userId: string): Promise<{ success: boolean; error: string | null }> => {
+    if (!userId.trim()) {
+      return { success: false, error: 'User ID cannot be empty.' };
+    }
+    const trimmedUserId = userId.trim().toLowerCase();
+    
+    // Find the user's actual email to send the reset link to.
+    const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('email')
+        .eq('user_id', trimmedUserId)
+        .single();
+    
+    // If no user is found, we don't throw an error to prevent user enumeration.
+    // The success message will handle this case gracefully.
+    if (profileError || !userProfile?.email) {
+        console.warn("Password reset attempted for non-existent user_id:", trimmedUserId);
+        return { success: true, error: null };
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email);
+
+    if (error) {
+        console.error("Password reset error:", error.message);
+    }
+
+    // Always return success to prevent user enumeration attacks.
+    return { success: true, error: null };
+  };
+
   const value = {
     user,
     loading,
     login,
     logout,
     updateUser,
+    sendPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

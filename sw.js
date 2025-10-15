@@ -2,8 +2,9 @@ const CACHE_NAME = 'amaz-interiors-cache-v1';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
-  // Add other critical assets here if they are static and local
-  'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp'
+  '/manifest.json',
+  '/icon/192.png',
+  '/icon/512.png'
 ];
 
 // Install the service worker and cache the app shell

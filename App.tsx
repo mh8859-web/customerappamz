@@ -25,6 +25,8 @@ import FinancialReports from './pages/admin/FinancialReports';
 import TeamCalendar from './pages/designer/TeamCalendar';
 import CommunityHub from './pages/shared/CommunityHub';
 import InstallAppModal from './components/ui/InstallAppModal';
+import DownloadCenter from './pages/shared/DownloadCenter';
+import ProjectWall from './pages/shared/ProjectWall';
 
 const FullPageSpinner: React.FC = () => (
   <div className="flex items-center justify-center min-h-screen bg-page-bg">
@@ -68,6 +70,8 @@ const App: React.FC = () => {
               <Route path="projects/:projectId" element={<ProjectDetails />} />
               <Route path="support" element={<SupportPage />} />
               <Route path="account" element={<MyAccount />} />
+              <Route path="downloads" element={<DownloadCenter />} />
+              <Route path="project-wall" element={<ProjectWall />} />
 
               {/* Admin Routes */}
               {user.role === 'Admin' && (

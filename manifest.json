@@ -4,20 +4,20 @@
   "description": "A premium, luxury, mobile-responsive Interior Project Management web app that connects Admin, Designers, and Customers for seamless project tracking, design approvals, and communication.",
   "icons": [
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp",
+      "src": "/icon/192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp",
+      "src": "/icon/512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
-  "id": "/?utm_source=pwa",
+  "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "display_override": [
     "window-controls-overlay",
@@ -43,9 +43,9 @@
       "url": "/#/projects",
       "icons": [
         {
-          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp",
+          "src": "/icon/192.png",
           "sizes": "192x192",
-          "type": "image/webp"
+          "type": "image/png"
         }
       ]
     },
@@ -56,9 +56,9 @@
       "url": "/#/hub",
       "icons": [
         {
-          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp",
+          "src": "/icon/192.png",
           "sizes": "192x192",
-          "type": "image/webp"
+          "type": "image/png"
         }
       ]
     }

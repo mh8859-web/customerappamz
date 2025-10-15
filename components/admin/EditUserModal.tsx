@@ -53,9 +53,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     e.preventDefault();
     if (user) {
         const updates: Partial<User> = {};
-        if (formData.fullName !== user.fullName) updates.fullName = formData.fullName;
+        const trimmedFullName = formData.fullName.trim();
+
+        if (trimmedFullName !== user.fullName) updates.fullName = trimmedFullName;
         if (formData.role !== user.role) updates.role = formData.role;
-        if (formData.userId !== user.userId) updates.userId = formData.userId;
+        // User ID is no longer editable, so it's not included in the updates
         if (formData.verified !== user.verified) updates.verified = formData.verified;
         
         if (Object.keys(updates).length > 0) {
@@ -82,8 +84,8 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
                 {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
             </select>
         </FormField>
-        <FormField label="User ID">
-            <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required />
+        <FormField label="User ID (Cannot be changed)">
+            <input type="text" name="userId" value={formData.userId} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
         </FormField>
          <FormField label="Email (System - Cannot be changed)">
             <input type="email" value={user.email} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
