@@ -18,7 +18,6 @@
   ],
   "start_url": "/",
   "id": "/",
-  "display_override": ["window-controls-overlay", "standalone"],
   "display": "standalone",
   "scope": "/",
   "theme_color": "#1D9BF0",
