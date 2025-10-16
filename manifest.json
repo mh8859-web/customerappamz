@@ -19,10 +19,6 @@
   "start_url": "/",
   "id": "/",
   "display": "standalone",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone"
-  ],
   "scope": "/",
   "theme_color": "#1D9BF0",
   "background_color": "#F7F9FA",
@@ -79,5 +75,13 @@
       "form_factor": "wide",
       "label": "Project Details View on Desktop"
     }
-  ]
+  ],
+  "display_override": ["standalone"],
+  "file_handlers": [],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [],
+  "share_target": {},
+  "edge_side_panel": {}
 }

@@ -1,6 +1,6 @@
-// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-final)
+// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-final-fix)
 
-const CACHE_VERSION = 'v-final';
+const CACHE_VERSION = 'v-final-fix';
 const STATIC_CACHE = `amaz-pm-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `amaz-pm-dynamic-${CACHE_VERSION}`;
 
@@ -8,7 +8,8 @@ const DYNAMIC_CACHE = `amaz-pm-dynamic-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/offline.html'
+  '/offline.html',
+  '/manifest.json' // Explicitly cache the manifest
 ];
 
 // 1. Install Event: Pre-cache the essential app shell.
@@ -49,8 +50,8 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Ignore requests to Supabase or other external APIs
-  if (url.hostname.includes('supabase.co') || url.hostname.includes('cloudinary.com')) {
+  // Let browser handle requests to external APIs/CDNs
+  if (url.origin !== self.location.origin) {
     return;
   }
 
@@ -59,13 +60,6 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then(response => {
-           // If the network is successful, update the cache with the new index.html
-           return caches.open(STATIC_CACHE).then(cache => {
-             cache.put('/index.html', response.clone());
-             return response;
-           });
-        })
         .catch(() => {
           // If the network fails, serve the cached index.html. This is the key to offline launch.
           return caches.match('/index.html')
@@ -81,7 +75,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For all other requests (JS, CSS, fonts), use a Stale-While-Revalidate strategy.
+  // For all other requests (JS, CSS, fonts, manifest), use a Stale-While-Revalidate strategy.
   // This serves content from the cache instantly for speed, then updates the cache from the network.
   event.respondWith(
     caches.match(request)
@@ -98,7 +92,7 @@ self.addEventListener('fetch', event => {
             return networkResponse;
           })
           .catch(() => {
-             // If network fails, and we don't have a cached response, do nothing.
+             // If network fails and we don't have a cached response, do nothing.
              // The browser will show its default offline error for this specific asset.
           });
         
