@@ -1,11 +1,10 @@
 // --- THE DEFINITIVE, FINAL SERVICE WORKER ---
 // This file is the architecturally correct solution to the PWA loading issues.
 
-const CACHE_NAME = 'amaz-pm-cache-final-v2';
+const CACHE_NAME = 'amaz-pm-cache-final-v3';
+// Pre-cache only the most essential, static part of the app shell.
 const APP_SHELL_URLS = [
   '/index.html',
-  // We don't need to cache manifest.json here as the browser fetches it during install.
-  // The important part is that the fetch event for index.html is handled correctly.
 ];
 
 // --- INSTALL: Pre-cache the essential App Shell ---
@@ -56,6 +55,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.match('/index.html').then(response => {
         // If index.html is in the cache, return it. Otherwise, fetch it.
+        // This ensures the app shell always loads, even offline.
         return response || fetch('/index.html');
       })
     );
@@ -77,6 +77,8 @@ self.addEventListener('fetch', (event) => {
           // If the network fails, we've already returned the cached response (if it exists).
           // This ensures offline functionality for assets.
           console.warn(`[Service Worker] Fetch failed for: ${request.url}`, error);
+          // If there was no cached response and network failed, we must not return a failed promise.
+          // Let the browser show its default error.
         });
 
         // Return the cached version immediately if it exists, otherwise wait for the network.
