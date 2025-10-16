@@ -74,11 +74,7 @@ const CommunityHub: React.FC = () => {
     }, [posts, activeTag, user]);
 
     if (usersLoading || !user) {
-        return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="spinner"></div>
-            </div>
-        );
+        return null;
     }
 
     const handleCreatePost = (

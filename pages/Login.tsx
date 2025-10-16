@@ -112,7 +112,7 @@ const Login: React.FC = () => {
 
                 <div>
                   <Button type="submit" className="w-full !py-3.5 !text-lg !font-bold" disabled={loading}>
-                    {loading ? 'Signing In...' : 'Sign In'}
+                    Sign In
                   </Button>
                 </div>
               </form>

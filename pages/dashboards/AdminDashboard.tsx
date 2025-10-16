@@ -87,10 +87,6 @@ const AdminDashboard: React.FC = () => {
     alert('Announcement sent!');
   };
 
-  if (usersLoading) {
-    return <div>Loading dashboard...</div>;
-  }
-
   const currentProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
   const activeDesigners = users.filter(u => u.role === 'Designer').length;
 

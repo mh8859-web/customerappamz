@@ -1,7 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import { useUsers } from './context/UserContext';
 import Login from './pages/Login';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
@@ -27,18 +26,11 @@ import CommunityHub from './pages/shared/CommunityHub';
 import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 
-const FullPageSpinner: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-page-bg">
-    <div className="spinner"></div>
-  </div>
-);
-
 const App: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
-  const { loading: usersLoading } = useUsers();
 
-  if (authLoading || (user && usersLoading)) {
-    return <FullPageSpinner />;
+  if (authLoading) {
+    return null;
   }
 
   const renderDashboard = () => {

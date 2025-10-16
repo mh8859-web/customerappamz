@@ -190,12 +190,6 @@ const ProjectTemplates: React.FC = () => {
 }
 
 const AdminOverview: React.FC = () => {
-    const { loading: usersLoading } = useUsers();
-
-    if (usersLoading) {
-        return <div>Loading overview...</div>;
-    }
-
     return (
         <div className="space-y-8">
             <h1 className="text-3xl font-bold text-text-headline">Strategic Overview</h1>

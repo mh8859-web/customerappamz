@@ -59,10 +59,6 @@ const CustomerDashboard: React.FC = () => {
         // In a real app, this would trigger a re-fetch
     };
 
-    if (usersLoading) {
-        return <div>Loading dashboard...</div>;
-    }
-
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;
     }

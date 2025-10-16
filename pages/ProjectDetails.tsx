@@ -98,7 +98,7 @@ const ProjectDetails: React.FC = () => {
 
     }, [projectId, unifiedUpdateFeed, user]);
 
-    if (!project || !user || usersLoading) {
+    if (!project || !user) {
         return <div className="text-center text-text-headline">Project not found or user not loaded.</div>;
     }
 

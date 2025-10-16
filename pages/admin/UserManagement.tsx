@@ -134,10 +134,6 @@ const UserManagement: React.FC = () => {
       }
     }
   };
-  
-  if (loading) {
-      return <div>Loading users...</div>
-  }
 
   return (
     <>
