@@ -16,7 +16,7 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": ".",
+  "start_url": "/index.html",
   "display": "standalone",
   "scope": ".",
   "theme_color": "#1D9BF0",
@@ -36,7 +36,7 @@
       "name": "My Projects",
       "short_name": "Projects",
       "description": "View your ongoing and completed projects",
-      "url": "/#/projects",
+      "url": "/index.html#/projects",
       "icons": [
         {
           "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
@@ -49,7 +49,7 @@
       "name": "Community Hub",
       "short_name": "Hub",
       "description": "Connect with the community and see updates",
-      "url": "/#/hub",
+      "url": "/index.html#/hub",
       "icons": [
         {
           "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
