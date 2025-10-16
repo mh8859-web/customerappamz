@@ -1,86 +1,91 @@
-// sw.js - THE FINAL, ARCHITECTURALLY CORRECT SERVICE WORKER - v3
+// sw.js - robust PWA service worker (network-first for navigation + SWR for assets)
+const CACHE_NAME = 'amaz-pm-shell-v1';
+const ASSET_CACHE = 'amaz-pm-assets-v1';
+const OFFLINE_PAGE = '/offline.html';
 
-const CACHE_NAME = 'amaz-pm-final-v3'; // A new name to guarantee a fresh start
-const APP_SHELL_URLS = [
+// Files we want pre-cached (app shell)
+const PRECACHE = [
   '/',
   '/index.html',
-  // The manifest is fetched by the browser, not the service worker, so it doesn't need to be here.
+  OFFLINE_PAGE,
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-512.png'
 ];
 
-// --- INSTALL: Pre-cache the essential App Shell ---
-self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Install Event: Caching App Shell.');
+self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL_URLS))
-      .then(() => self.skipWaiting()) // Force activation immediately
-      .catch(error => {
-        console.error('[Service Worker] App Shell caching failed during install:', error);
-      })
+      .then(cache => cache.addAll(PRECACHE.map(u => new Request(u, {cache: 'reload'}))))
+      .then(() => self.skipWaiting())
   );
 });
 
-// --- ACTIVATE: Clean up old caches and take control ---
-self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activate Event: Cleaning up old caches and taking control.');
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME).map(name => {
-          console.log('[Service Worker] Deleting old cache:', name);
-          return caches.delete(name);
-        })
-      );
-    }).then(() => {
-      console.log('[Service Worker] Claiming clients now.');
-      return self.clients.claim(); // Take control of all open pages
-    })
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k !== CACHE_NAME && k !== ASSET_CACHE).map(k => caches.delete(k)));
+      if (self.registration && self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+      await self.clients.claim();
+    })()
   );
 });
 
-// --- FETCH: Intercept network requests ---
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
+// Helper: network timeout wrapper
+const networkWithTimeout = (request, ms) => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('network-timeout')), ms);
+    fetch(request).then(r => { clearTimeout(timer); resolve(r); }).catch(err => { clearTimeout(timer); reject(err); });
+  });
+};
 
-  // --- CORE FIX FOR SINGLE-PAGE APPS (SPA) ---
-  // If this is a navigation request (the user is trying to open a page),
-  // we MUST ALWAYS respond with the cached index.html. The client-side React Router
-  // will then read the URL and render the correct components.
-  // This prevents all "Page Not Found" errors and fixes the infinite loading screen.
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match('/index.html').then(response => {
-        // If index.html is in the cache, return it. Otherwise, fetch it as a fallback.
-        // This ensures the app shell always loads, even on first visit or if cache is cleared.
-        return response || fetch('/index.html');
-      }).catch(error => {
-        // This should not happen if install was successful, but as a last resort:
-        console.error('[Service Worker] Failed to serve index.html for navigation:', error);
-        // If cache fails for some reason, just try the network.
-        return fetch('/index.html');
-      })
-    );
-    return; // Stop processing for navigation requests.
+self.addEventListener('fetch', event => {
+  const req = event.request;
+
+  // Only handle GET
+  if (req.method !== 'GET') return;
+
+  // Navigation requests (SPA) -> network-first with cache/offline fallback
+  if (req.mode === 'navigate') {
+    event.respondWith((async () => {
+      // Try navigation preload (fast) first
+      const preload = await event.preloadResponse.catch(() => null);
+      if (preload) return preload;
+
+      try {
+        // Try network with a short timeout to avoid long spinner
+        const networkResponse = await networkWithTimeout(req, 7000);
+        // update cache with the fresh index.html (store under CACHE_NAME root '/')
+        const cache = await caches.open(CACHE_NAME);
+        try { cache.put('/', networkResponse.clone()); } catch (_) {}
+        return networkResponse;
+      } catch (err) {
+        // Network failed -> fallback to cached index or offline page
+        const cache = await caches.open(CACHE_NAME);
+        const cachedIndex = await cache.match('/index.html') || await cache.match('/');
+        if (cachedIndex) return cachedIndex;
+        const offline = await cache.match(OFFLINE_PAGE);
+        if (offline) return offline;
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
   }
-  
-  // For all other requests (JS, CSS, images from CDN, fonts, etc.), use a "Stale-While-Revalidate" strategy.
-  // This serves assets from the cache for speed, while simultaneously fetching an update in the background for the next visit.
-  // It provides a great balance of performance and freshness.
-  event.respondWith(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.match(request).then(cachedResponse => {
-        const fetchPromise = fetch(request).then(networkResponse => {
-          // If the fetch is successful, update the cache with the new version.
-          if (networkResponse.ok) {
-            cache.put(request, networkResponse.clone());
-          }
-          return networkResponse;
-        });
 
-        // Return the cached response immediately if it exists, otherwise wait for the network.
-        // The network fetch will happen in the background regardless.
-        return cachedResponse || fetchPromise;
-      });
-    })
-  );
+  // Non-navigation requests -> stale-while-revalidate using ASSET_CACHE
+  event.respondWith((async () => {
+    const cache = await caches.open(ASSET_CACHE);
+    const cached = await cache.match(req);
+    const networkPromise = fetch(req).then(networkResponse => {
+      if (networkResponse && networkResponse.ok) {
+        cache.put(req, networkResponse.clone()).catch(()=>{});
+      }
+      return networkResponse;
+    }).catch(() => null);
+
+    // Return cached if available, otherwise the network, otherwise cached
+    return cached || networkPromise || (await cache.match(req));
+  })());
 });

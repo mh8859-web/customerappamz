@@ -1,23 +1,23 @@
 {
   "name": "AMAZ Interiors Project Management",
   "short_name": "AMAZ PM",
-  "description": "A premium, luxury, mobile-responsive Interior Project Management web app that connects Admin, Designers, and Customers for seamless project tracking, design approvals, and communication.",
+  "description": "A premium, mobile-responsive Interior Project Management app for Admins, Designers, and Customers.",
   "icons": [
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+      "src": "/assets/icons/icon-192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_512,h_512,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+      "src": "/assets/icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
-  "id": "/",
+  "start_url": "/?source=pwa",
+  "id": "/?source=pwa",
   "display": "standalone",
   "scope": "/",
   "theme_color": "#1D9BF0",
@@ -30,7 +30,6 @@
     "productivity",
     "lifestyle"
   ],
-  "related_applications": [],
   "prefer_related_applications": false,
   "shortcuts": [
     {
@@ -40,7 +39,7 @@
       "url": "/#/projects",
       "icons": [
         {
-          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+          "src": "/assets/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -53,7 +52,7 @@
       "url": "/#/hub",
       "icons": [
         {
-          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+          "src": "/assets/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -62,24 +61,18 @@
   ],
   "screenshots": [
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1760541739/amaz-screenshot-mobile_k5b8il.png",
+      "src": "/assets/screenshots/amaz-screenshot-mobile.png",
       "type": "image/png",
       "sizes": "540x1170",
       "form_factor": "narrow",
       "label": "Project Dashboard on Mobile"
     },
     {
-      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1760541739/amaz-screenshot-desktop_q3jz5r.png",
+      "src": "/assets/screenshots/amaz-screenshot-desktop.png",
       "type": "image/png",
       "sizes": "1920x1080",
       "form_factor": "wide",
       "label": "Project Details View on Desktop"
     }
-  ],
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  },
-  "edge_side_panel": {
-    "preferred_width": 480
-  }
+  ]
 }
