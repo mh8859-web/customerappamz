@@ -1,6 +1,6 @@
-// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-final-fix-2)
+// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-network-first-fix)
 
-const CACHE_VERSION = 'v-final-fix-2';
+const CACHE_VERSION = 'v-network-first-fix';
 const STATIC_CACHE = `amaz-pm-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `amaz-pm-dynamic-${CACHE_VERSION}`;
 
@@ -8,8 +8,9 @@ const DYNAMIC_CACHE = `amaz-pm-dynamic-${CACHE_VERSION}`;
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/index.tsx', 
   '/offline.html',
-  '/manifest.json' // Explicitly cache the manifest
+  '/manifest.json'
 ];
 
 // 1. Install Event: Pre-cache the essential app shell.
@@ -19,13 +20,12 @@ self.addEventListener('install', event => {
     caches.open(STATIC_CACHE)
       .then(cache => {
         console.log('[SW] Caching App Shell:', APP_SHELL);
-        // Use 'reload' to ensure we get fresh files from the network, not the browser's HTTP cache.
         const cachePromises = APP_SHELL.map(url => {
           return cache.add(new Request(url, { cache: 'reload' }));
         });
         return Promise.all(cachePromises);
       })
-      .then(() => self.skipWaiting()) // Force the new service worker to become active.
+      .then(() => self.skipWaiting())
       .catch(error => console.error('[SW] App Shell caching failed:', error))
   );
 });
@@ -41,7 +41,7 @@ self.addEventListener('activate', event => {
           return caches.delete(key);
         }
       }));
-    }).then(() => self.clients.claim()) // Take control of all open pages immediately.
+    }).then(() => self.clients.claim())
   );
 });
 
@@ -50,56 +50,57 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Let browser handle requests to external APIs/CDNs
+  // Ignore cross-origin requests
   if (url.origin !== self.location.origin) {
     return;
   }
 
-  // ** CRITICAL FIX FOR SPA ROUTING **
-  // For all navigation requests (i.e., requests for HTML pages), always serve the
-  // cached index.html. This allows the client-side router (React Router) to handle
-  // the URL and display the correct page, preventing "Page Not Found" errors on refresh
-  // or when accessing deep links directly.
+  // For SPA navigation, always serve index.html. This is correct.
   if (request.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html')
-        .then(response => {
-          if (response) {
-            return response; // Serve the app shell from cache.
-          }
-          // If index.html is not in cache for some reason, try fetching it.
-          return fetch('/index.html'); 
-        })
-        .catch(() => {
-          // If everything fails, show the offline fallback page.
-          return caches.match('/offline.html');
-        })
+        .then(response => response || fetch('/index.html'))
+        .catch(() => caches.match('/offline.html'))
     );
     return;
   }
 
-  // For all other requests (JS, CSS, fonts, manifest), use a Stale-While-Revalidate strategy.
-  // This serves content from the cache instantly for speed, then updates the cache from the network.
+  // ** CRITICAL FIX: Network-first strategy for the main application script **
+  // This ensures users always get the latest version of the app logic if online.
+  if (url.pathname === '/index.tsx') {
+    event.respondWith(
+      caches.open(DYNAMIC_CACHE).then(cache => {
+        return fetch(request, { cache: 'reload' }) // Attempt to fetch from the network first
+          .then(networkResponse => {
+            // If successful, cache the new response and return it
+            cache.put(request, networkResponse.clone());
+            return networkResponse;
+          })
+          .catch(() => {
+            // If the network fails, return the cached version
+            return cache.match(request);
+          });
+      })
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for all other assets (CSS, images, etc.)
+  // This serves from cache for speed, but updates in the background.
   event.respondWith(
     caches.match(request)
       .then(cachedResponse => {
         const networkFetch = fetch(request)
           .then(networkResponse => {
-            // Check if the response is valid before caching
             if (networkResponse && networkResponse.status === 200) {
               caches.open(DYNAMIC_CACHE).then(cache => {
-                // Cache a clone of the successful network response for next time.
                 cache.put(request, networkResponse.clone());
               });
             }
             return networkResponse;
           })
-          .catch(() => {
-             // If network fails and we don't have a cached response, do nothing.
-             // The browser will show its default offline error for this specific asset.
-          });
+          .catch(() => { /* Network failed, but we might have a cached response */ });
         
-        // Return the cached response immediately if it exists, otherwise wait for the network.
         return cachedResponse || networkFetch;
       })
   );
