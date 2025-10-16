@@ -1,16 +1,16 @@
-
 import React from 'react';
 import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_ATTENDANCE_LOGS } from '../../services/mockData';
 import { AttendanceLog } from '../../types';
 import { MapPinIcon } from '../../components/icons';
+import { useData } from '../../context/DataContext';
 
 const MyAttendance: React.FC = () => {
     const { user } = useAuth();
-    if (!user) return null;
+    const { attendanceLogs, loading } = useData();
+    if (!user || loading) return null;
 
-    const myLogs = MOCK_ATTENDANCE_LOGS
+    const myLogs = attendanceLogs
         .filter(log => log.designerId === user.id)
         .sort((a, b) => new Date(b.clockIn).getTime() - new Date(a.clockIn).getTime());
 

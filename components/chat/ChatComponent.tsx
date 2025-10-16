@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Message } from '../../types';
-import { MOCK_MESSAGES } from '../../services/mockData';
 import { PaperclipIcon, SendIcon } from '../icons';
 import MessageBubble from './MessageBubble';
 import Card from '../ui/Card';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
+import { createRecord } from '../../services/api';
 
 interface ChatComponentProps {
   projectId: string;
@@ -13,39 +14,33 @@ interface ChatComponentProps {
 }
 
 const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, isReadOnly = false }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { findUserById } = useUsers();
+  const { messages, refetchData } = useData();
 
-  useEffect(() => {
-    // Filter messages for the current project and sort them by date
-    const projectMessages = MOCK_MESSAGES
-      .filter(m => m.chatId === projectId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    setMessages(projectMessages);
-  }, [projectId]);
+  const projectMessages = messages
+    .filter(m => m.chatId === projectId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   useEffect(() => {
     // Scroll to the bottom when new messages are added
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [projectMessages]);
 
-  const handleSendMessage = () => {
-    if (newMessage.trim() === '' || isReadOnly) return;
+  const handleSendMessage = async (attachments?: Message['attachments']) => {
+    if ((!newMessage.trim() && !attachments) || isReadOnly) return;
 
-    const messageToSend: Message = {
-      id: `msg-${Date.now()}`,
-      chatId: projectId,
-      senderId: currentUser.id,
+    const messageToSend = {
+      chat_id: projectId,
+      sender_id: currentUser.id,
       body: newMessage,
-      createdAt: new Date().toISOString(),
+      attachments: attachments || null,
     };
     
-    // In a real app, this would be an API call.
-    MOCK_MESSAGES.push(messageToSend);
-    setMessages(prev => [...prev, messageToSend]);
+    await createRecord('messages', messageToSend);
+    await refetchData();
     setNewMessage('');
   };
   
@@ -56,31 +51,20 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
 
     // In a real app, you would upload the file to a server and get a URL.
     // Here we'll just simulate it.
-    // FIX: Explicitly type `fileType` to match the Message attachment type.
     const fileType: 'image' | 'video' | 'file' = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'file';
     const newAttachment = {
         url: URL.createObjectURL(file),
         type: fileType,
         name: file.name
     };
-
-    const messageToSend: Message = {
-        id: `msg-${Date.now()}`,
-        chatId: projectId,
-        senderId: currentUser.id,
-        body: `Shared a file: ${file.name}`,
-        attachments: [newAttachment],
-        createdAt: new Date().toISOString(),
-    };
-
-    MOCK_MESSAGES.push(messageToSend);
-    setMessages(prev => [...prev, messageToSend]);
+    
+    handleSendMessage([newAttachment]);
   };
 
   return (
     <Card className="flex flex-col h-[70vh]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map(msg => (
+        {projectMessages.map(msg => (
           <MessageBubble
             key={msg.id}
             message={msg}
@@ -115,7 +99,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
               <PaperclipIcon className="w-5 h-5" />
             </button>
             <button 
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               className="p-2 text-text-muted hover:text-accent transition-colors rounded-full"
               aria-label="Send message"
               disabled={isReadOnly}

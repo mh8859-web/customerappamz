@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
+import { DataProvider } from './context/DataContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -16,7 +17,9 @@ root.render(
     <HashRouter>
       <AuthProvider>
         <UserProvider>
-          <App />
+          <DataProvider>
+            <App />
+          </DataProvider>
         </UserProvider>
       </AuthProvider>
     </HashRouter>

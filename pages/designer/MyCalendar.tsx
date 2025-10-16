@@ -1,26 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_TASKS, MOCK_SITE_VISITS, MOCK_LEAVE_REQUESTS } from '../../services/mockData';
 import Card from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/icons';
+import { useData } from '../../context/DataContext';
 
 const MyCalendar: React.FC = () => {
     const { user } = useAuth();
+    const { tasks, siteVisits, leaveRequests, loading } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const events = useMemo(() => {
-        if (!user) return [];
+        if (!user || loading) return [];
         
-        const taskEvents = MOCK_TASKS
+        const taskEvents = tasks
             .filter(t => t.assigneeId === user.id)
             .map(t => ({ date: new Date(t.dueDate), title: t.title, type: 'task' as const }));
 
-        const visitEvents = MOCK_SITE_VISITS
+        const visitEvents = siteVisits
             .filter(sv => sv.status === 'Scheduled') // Assuming designers see all scheduled visits
             .map(sv => ({ date: new Date(sv.scheduledAt), title: 'Site Visit', type: 'visit' as const }));
             
         const leaveEvents: { date: Date, title: string, type: 'leave' }[] = [];
-        MOCK_LEAVE_REQUESTS
+        leaveRequests
             .filter(l => l.designerId === user.id && l.status === 'Approved')
             .forEach(l => {
                 let day = new Date(l.startDate);
@@ -32,7 +33,7 @@ const MyCalendar: React.FC = () => {
             });
 
         return [...taskEvents, ...visitEvents, ...leaveEvents];
-    }, [user]);
+    }, [user, tasks, siteVisits, leaveRequests, loading]);
 
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -46,7 +47,7 @@ const MyCalendar: React.FC = () => {
     
     for (let day = 1; day <= daysInMonth; day++) {
         const thisDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-        const dayEvents = events.filter(e => e.date.toDateString() === thisDate.toDateString());
+        const dayEvents = events.filter(e => new Date(e.date).toDateString() === thisDate.toDateString());
         const isToday = thisDate.toDateString() === new Date().toDateString();
 
         calendarDays.push(

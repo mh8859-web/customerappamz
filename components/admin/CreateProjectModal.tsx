@@ -8,7 +8,7 @@ import { useUsers } from '../../context/UserContext';
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => void;
+  onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => Promise<void>;
 }
 
 const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
@@ -32,11 +32,13 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     startDate: '',
   };
   const [formData, setFormData] = useState(initialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Reset form data when the modal is closed to prevent stale input
     if (!isOpen) {
       setFormData(initialFormData);
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
@@ -48,11 +50,12 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminUser) return;
     
-    onCreate({
+    setIsSubmitting(true);
+    await onCreate({
         ...formData,
         budgetDisplay: parseInt(formData.budgetDisplay, 10),
         areaSqft: parseInt(formData.areaSqft, 10),
@@ -103,8 +106,10 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
             <input type="file" accept=".pdf" className={`${formInputClasses} file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20`}/>
         </FormField>
         <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit">Create Project</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Project'}
+          </Button>
         </div>
       </form>
     </Modal>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task } from '../../types';
-import { MOCK_PROJECTS } from '../../services/mockData';
+import { useData } from '../../context/DataContext';
 
 interface TaskCardProps {
   task: Task;
@@ -8,9 +8,11 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onDragStart }) => {
-  const project = MOCK_PROJECTS.find(p => p.id === task.projectId);
+  const { projects } = useData();
+  const project = projects.find(p => p.id === task.projectId);
   const dueDate = new Date(task.dueDate);
   const today = new Date();
+  today.setHours(0,0,0,0); // set to start of day for accurate comparison
   const isOverdue = dueDate < today && task.status !== 'Done';
   const isDueToday = dueDate.toDateString() === today.toDateString();
 

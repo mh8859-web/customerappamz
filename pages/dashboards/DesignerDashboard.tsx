@@ -1,38 +1,39 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_TASKS, MOCK_DESIGNS, MOCK_SITE_VISITS, MOCK_LEAVE_REQUESTS, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
 import Card from '../../components/ui/Card';
 import { Link, useNavigate } from 'react-router-dom';
 import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const DesignerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { findUserById, loading: usersLoading } = useUsers();
+  const { findUserById } = useUsers();
+  const { projects, tasks, designs, leaveRequests, announcements, loading } = useData();
   const navigate = useNavigate();
 
-  if (!user || usersLoading) return null;
+  if (!user || loading) return null;
 
-  const assignedProjects = MOCK_PROJECTS.filter(p => p.designerId === user.id);
-  const tasksDueToday = MOCK_TASKS.filter(t => t.assigneeId === user.id && t.status !== 'Done');
-  const awaitingApproval = MOCK_DESIGNS.filter(d => 
+  const assignedProjects = projects.filter(p => p.designerId === user.id);
+  const tasksDueToday = tasks.filter(t => t.assigneeId === user.id && t.status !== 'Done');
+  const awaitingApproval = designs.filter(d => 
     assignedProjects.some(p => p.id === d.projectId) && d.submittedForReview && !d.approved
   );
   
   const thisMonth = new Date().getMonth();
   
-  const tasksCompletedThisMonth = MOCK_TASKS.filter(t => 
+  const tasksCompletedThisMonth = tasks.filter(t => 
     t.assigneeId === user.id &&
     t.status === 'Done' &&
     new Date(t.dueDate).getMonth() === thisMonth
   ).length;
 
-  const approvedLeave = MOCK_LEAVE_REQUESTS.filter(l => l.designerId === user.id && l.status === 'Approved').length;
+  const approvedLeave = leaveRequests.filter(l => l.designerId === user.id && l.status === 'Approved').length;
   // Assuming a total of 12 leave days per year for this mock
   const remainingLeave = 12 - approvedLeave;
   
-  const latestAnnouncement = MOCK_ANNOUNCEMENTS
+  const latestAnnouncement = announcements
     .filter(a => a.target === 'Designers' || a.target === 'All')
     .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
@@ -96,7 +97,7 @@ const DesignerDashboard: React.FC = () => {
                     <li key={task.id} className="flex justify-between items-center bg-primary-bg p-3 rounded-xl">
                       <div>
                         <p className="text-text-headline text-sm">{task.title}</p>
-                        <p className="text-xs text-text-muted">{MOCK_PROJECTS.find(p=>p.id === task.projectId)?.title}</p>
+                        <p className="text-xs text-text-muted">{projects.find(p=>p.id === task.projectId)?.title}</p>
                       </div>
                     </li>
                   ))}
@@ -108,7 +109,7 @@ const DesignerDashboard: React.FC = () => {
               <ul className="space-y-3">
                 {awaitingApproval.slice(0, 2).map(design => (
                    <li key={design.id} className="text-text-headline text-sm bg-primary-bg p-3 rounded-xl">
-                     v{design.version} for {MOCK_PROJECTS.find(p => p.id === design.projectId)?.title}
+                     v{design.version} for {projects.find(p => p.id === design.projectId)?.title}
                    </li>
                 ))}
                 {awaitingApproval.length === 0 && <p className="text-sm text-text-muted">All clear!</p>}

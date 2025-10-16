@@ -1,19 +1,20 @@
 import React from 'react';
 import Card from '../../components/ui/Card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_EXPENSES } from '../../services/mockData';
+import { useData } from '../../context/DataContext';
 
 const FinancialReports: React.FC = () => {
+    const { projects, milestones, expenses, loading } = useData();
     
     const monthlyData: Record<string, { revenue: number, expenses: number }> = {};
 
-    MOCK_MILESTONES.filter(m => m.statusDisplay === 'Paid').forEach(m => {
+    milestones.filter(m => m.statusDisplay === 'Paid' && m.paidDateDisplay).forEach(m => {
         const month = new Date(m.paidDateDisplay!).toLocaleString('default', { month: 'short', year: 'numeric' });
         if (!monthlyData[month]) monthlyData[month] = { revenue: 0, expenses: 0 };
         monthlyData[month].revenue += m.amountDisplay;
     });
 
-    MOCK_EXPENSES.forEach(e => {
+    expenses.forEach(e => {
         const month = new Date(e.date).toLocaleString('default', { month: 'short', year: 'numeric' });
         if (!monthlyData[month]) monthlyData[month] = { revenue: 0, expenses: 0 };
         monthlyData[month].expenses += e.amount;
@@ -25,12 +26,12 @@ const FinancialReports: React.FC = () => {
         Expenses: monthlyData[month].expenses,
     })).sort((a,b) => new Date(a.name).getTime() - new Date(b.name).getTime());
     
-    const projectProfitabilityData = MOCK_PROJECTS.map(p => {
-        const revenue = MOCK_MILESTONES.filter(m => m.projectId === p.id && m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
-        const expenses = MOCK_EXPENSES.filter(e => e.projectId === p.id).reduce((sum, e) => sum + e.amount, 0);
+    const projectProfitabilityData = projects.map(p => {
+        const revenue = milestones.filter(m => m.projectId === p.id && m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
+        const projectExpenses = expenses.filter(e => e.projectId === p.id).reduce((sum, e) => sum + e.amount, 0);
         return {
             name: p.title,
-            profit: Math.max(0, revenue - expenses), // Don't show negative profit in pie chart
+            profit: Math.max(0, revenue - projectExpenses), // Don't show negative profit in pie chart
         }
     }).filter(p => p.profit > 0);
     
@@ -38,6 +39,10 @@ const FinancialReports: React.FC = () => {
     const totalRevenue = chartData.reduce((sum, d) => sum + d.Revenue, 0);
     const totalExpenses = chartData.reduce((sum, d) => sum + d.Expenses, 0);
     const netProfit = totalRevenue - totalExpenses;
+
+    if (loading) {
+        return <div>Loading financial reports...</div>;
+    }
 
     return (
         <div className="space-y-8">
@@ -88,7 +93,6 @@ const FinancialReports: React.FC = () => {
                                 fill="#8884d8"
                                 dataKey="profit"
                                 nameKey="name"
-                                // FIX: The 'percent' prop from recharts can be undefined. Defaulted to 0 to prevent a potential runtime error on multiplication.
                                 label={({ name, percent }) => `${name} (${((percent || 0) * 100).toFixed(0)}%)`}
                             >
                                 {projectProfitabilityData.map((entry, index) => (

@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
 import { Project, Milestone } from '../../types';
 import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
@@ -11,53 +10,58 @@ import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
+    const { projects, milestones, announcements, refetchData, loading: dataLoading } = useData();
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
 
-    const { project, milestones, designer, admin } = useMemo(() => {
-        if (!user) return { project: null, milestones: [], designer: null, admin: null };
-        const myProject = MOCK_PROJECTS.find(p => p.customerId === user.id && p.status === 'Active');
-        const projectMilestones = myProject ? MOCK_MILESTONES.filter(m => m.projectId === myProject.id) : [];
+    const { project, projectMilestones, designer, admin } = useMemo(() => {
+        if (!user) return { project: null, projectMilestones: [], designer: null, admin: null };
+        const myProject = projects.find(p => p.customerId === user.id && p.status === 'Active');
+        const projectMilestonesData = myProject ? milestones.filter(m => m.projectId === myProject.id) : [];
         const projectDesigner = myProject ? findUserById(myProject.designerId) : null;
         const projectAdmin = myProject ? findUserById(myProject.adminId) : null;
-        return { project: myProject, milestones: projectMilestones, designer: projectDesigner, admin: projectAdmin };
-    }, [user, findUserById]);
+        return { project: myProject, projectMilestones: projectMilestonesData, designer: projectDesigner, admin: projectAdmin };
+    }, [user, projects, milestones, findUserById]);
     
     const completedProject = useMemo(() => {
         if (!user) return null;
-        return MOCK_PROJECTS.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'completed');
-    }, [user]);
+        return projects.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'completed');
+    }, [user, projects]);
     
-    const latestAnnouncement = MOCK_ANNOUNCEMENTS
+    const latestAnnouncement = announcements
       .filter(a => a.target === 'Customers' || a.target === 'All')
       .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     
     useEffect(() => {
-        const reminderMilestone = milestones.find(m => m.statusDisplay === 'Completed');
+        const reminderMilestone = projectMilestones.find(m => m.statusDisplay === 'Completed');
         if (reminderMilestone) {
             setSelectedMilestone(reminderMilestone);
             setPaymentModalOpen(true);
         }
-    }, [milestones]);
+    }, [projectMilestones]);
     
     const handlePayNow = (milestone: Milestone) => {
         setSelectedMilestone(milestone);
         setPaymentModalOpen(true);
     };
 
-    const handlePaymentComplete = (milestoneId: string) => {
-        const milestoneIndex = MOCK_MILESTONES.findIndex(m => m.id === milestoneId);
-        if(milestoneIndex > -1){
-            MOCK_MILESTONES[milestoneIndex].statusDisplay = 'Paid';
-            MOCK_MILESTONES[milestoneIndex].paidDateDisplay = new Date().toISOString().split('T')[0];
+    const handlePaymentComplete = async (milestoneId: string) => {
+        // In a real app, this would be an API call
+        // For now, we simulate and refetch
+        const milestone = projectMilestones.find(m => m.id === milestoneId);
+        if (milestone) {
+            milestone.statusDisplay = 'Paid';
+            milestone.paidDateDisplay = new Date().toISOString().split('T')[0];
+            await refetchData(); // refetch to simulate update
         }
-        // Force re-render by creating a new object
-        // In a real app, this would trigger a re-fetch
     };
+
+    if (dataLoading || usersLoading) return null;
 
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;
@@ -73,7 +77,7 @@ const CustomerDashboard: React.FC = () => {
         );
     }
     
-    const totalPaid = milestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
+    const totalPaid = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
 
     return (
         <>

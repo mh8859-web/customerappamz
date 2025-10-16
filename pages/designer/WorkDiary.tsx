@@ -2,15 +2,18 @@ import React, { useState, useMemo } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_WORK_LOGS } from '../../services/mockData';
 import { WorkLog } from '../../types';
+import { useData } from '../../context/DataContext';
+import { createRecord } from '../../services/api';
 
 const DailyWork: React.FC = () => {
     const { user } = useAuth();
-    const [myLogs, setMyLogs] = useState<WorkLog[]>(() => 
-        MOCK_WORK_LOGS.filter(log => log.designerId === user?.id)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    );
+    const { projects, workLogs, refetchData, loading } = useData();
+    
+    const myLogs = useMemo(() => 
+        workLogs.filter(log => log.designerId === user?.id)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [workLogs, user]);
     
     const today = new Date().toISOString().split('T')[0];
     const [newLog, setNewLog] = useState({
@@ -20,8 +23,8 @@ const DailyWork: React.FC = () => {
     });
 
     const assignedProjects = useMemo(() => 
-        MOCK_PROJECTS.filter(p => p.designerId === user?.id && p.status === 'Active'),
-    [user?.id]);
+        projects.filter(p => p.designerId === user?.id && p.status === 'Active'),
+    [projects, user?.id]);
     
     const groupedLogs = useMemo(() => {
         return myLogs.reduce((acc: Record<string, WorkLog[]>, log) => {
@@ -39,22 +42,20 @@ const DailyWork: React.FC = () => {
         setNewLog(prev => ({...prev, [name]: value}));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newLog.projectId || !newLog.tasksCompleted || !newLog.hoursSpent || !user) return;
 
-        const logToAdd: WorkLog = {
-            id: `wl-${Date.now()}`,
-            designerId: user.id,
-            projectId: newLog.projectId,
+        const logToAdd = {
+            designer_id: user.id,
+            project_id: newLog.projectId,
             date: today,
-            tasksCompleted: newLog.tasksCompleted,
-            hoursSpent: parseFloat(newLog.hoursSpent)
+            tasks_completed: newLog.tasksCompleted,
+            hours_spent: parseFloat(newLog.hoursSpent)
         };
         
-        // Simulate API call
-        MOCK_WORK_LOGS.unshift(logToAdd);
-        setMyLogs(prev => [logToAdd, ...prev]);
+        await createRecord('work_logs', logToAdd);
+        await refetchData();
 
         // Reset form
         setNewLog({
@@ -65,6 +66,8 @@ const DailyWork: React.FC = () => {
     };
     
     const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+
+    if (loading) return null;
 
     return (
         <div className="space-y-6">
@@ -104,7 +107,7 @@ const DailyWork: React.FC = () => {
                                 <h3 className="text-lg font-semibold text-text-headline mb-2">{date}</h3>
                                 <div className="space-y-3 border-l-2 border-border-color pl-4">
                                 {groupedLogs[date].map(log => {
-                                    const project = MOCK_PROJECTS.find(p => p.id === log.projectId);
+                                    const project = projects.find(p => p.id === log.projectId);
                                     return (
                                     <div key={log.id} className="bg-primary-bg p-3 rounded-xl">
                                         <div className="flex justify-between items-center mb-1">

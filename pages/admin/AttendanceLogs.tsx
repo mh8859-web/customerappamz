@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
-import { MOCK_ATTENDANCE_LOGS, MOCK_PROJECTS, MOCK_WORK_LOGS } from '../../services/mockData';
 import { AttendanceLog, WorkLog } from '../../types';
 import { MapPinIcon } from '../../components/icons';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const AttendanceLogs: React.FC = () => {
   const { findUserById, loading: usersLoading } = useUsers();
+  const { attendanceLogs, workLogs, projects, loading: dataLoading } = useData();
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState<WorkLog[]>([]);
   const [selectedDesigner, setSelectedDesigner] = useState<string>('');
@@ -21,15 +22,15 @@ const AttendanceLogs: React.FC = () => {
   const handleViewLogClick = (log: AttendanceLog) => {
     const designer = findUserById(log.designerId);
     const logDate = formatDate(log.clockIn);
-    const workLogs = MOCK_WORK_LOGS.filter(wl => wl.designerId === log.designerId && wl.date === logDate);
+    const designerWorkLogs = workLogs.filter(wl => wl.designerId === log.designerId && wl.date === logDate);
     
-    setSelectedLogs(workLogs);
+    setSelectedLogs(designerWorkLogs);
     setSelectedDesigner(designer?.fullName || 'Unknown');
     setSelectedDate(new Date(log.clockIn).toLocaleDateString());
     setModalOpen(true);
   };
 
-  if (usersLoading) {
+  if (usersLoading || dataLoading) {
     return <div>Loading logs...</div>
   }
 
@@ -44,7 +45,7 @@ const AttendanceLogs: React.FC = () => {
         {selectedLogs.length > 0 ? (
           <div className="space-y-4">
             {selectedLogs.map(log => {
-              const project = MOCK_PROJECTS.find(p => p.id === log.projectId);
+              const project = projects.find(p => p.id === log.projectId);
               return (
                 <div key={log.id} className="bg-primary-bg p-4 rounded-xl border border-border-color">
                   <div className="flex justify-between items-center mb-2">
@@ -67,7 +68,7 @@ const AttendanceLogs: React.FC = () => {
         <Card>
           {/* Mobile View */}
           <div className="md:hidden space-y-4">
-            {MOCK_ATTENDANCE_LOGS.map((log: AttendanceLog) => {
+            {attendanceLogs.map((log: AttendanceLog) => {
               const designer = findUserById(log.designerId);
               return (
                 <div key={log.id} className="bg-primary-bg p-4 rounded-xl text-sm">
@@ -102,7 +103,7 @@ const AttendanceLogs: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_ATTENDANCE_LOGS.map((log: AttendanceLog) => {
+                {attendanceLogs.map((log: AttendanceLog) => {
                   const designer = findUserById(log.designerId);
                   return (
                     <tr key={log.id} className="border-b border-border-color">

@@ -1,17 +1,18 @@
 import React from 'react';
 import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_MILESTONES, MOCK_PROJECTS } from '../../services/mockData';
 import { Milestone } from '../../types';
 import Button from '../../components/ui/Button';
 import { DownloadIcon } from '../../components/icons';
+import { useData } from '../../context/DataContext';
 
 const BillingHistory: React.FC = () => {
     const { user } = useAuth();
-    if (!user) return null;
+    const { milestones, projects, loading } = useData();
+    if (!user || loading) return null;
 
-    const myProjectIds = MOCK_PROJECTS.filter(p => p.customerId === user.id).map(p => p.id);
-    const myMilestones = MOCK_MILESTONES
+    const myProjectIds = projects.filter(p => p.customerId === user.id).map(p => p.id);
+    const myMilestones = milestones
         .filter(m => myProjectIds.includes(m.projectId))
         .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 
@@ -22,7 +23,7 @@ const BillingHistory: React.FC = () => {
                 {/* Mobile View */}
                 <div className="md:hidden space-y-4">
                     {myMilestones.map((milestone: Milestone) => {
-                         const project = MOCK_PROJECTS.find(p => p.id === milestone.projectId);
+                         const project = projects.find(p => p.id === milestone.projectId);
                          return (
                             <div key={milestone.id} className="bg-primary-bg p-4 rounded-xl text-sm">
                                 <div className="flex justify-between items-start mb-2">
@@ -66,7 +67,7 @@ const BillingHistory: React.FC = () => {
                         </thead>
                         <tbody>
                             {myMilestones.map((milestone: Milestone) => {
-                                const project = MOCK_PROJECTS.find(p => p.id === milestone.projectId);
+                                const project = projects.find(p => p.id === milestone.projectId);
                                 return (
                                     <tr key={milestone.id} className="border-b border-border-color">
                                         <td className="px-6 py-4 font-medium text-text-headline">{milestone.title}</td>

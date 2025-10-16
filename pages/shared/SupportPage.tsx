@@ -1,15 +1,14 @@
-
-
 import React from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_SUPPORT_TICKETS, MOCK_PROJECTS } from '../../services/mockData';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const SupportPage: React.FC = () => {
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
+    const { supportTickets, projects, loading: dataLoading } = useData();
 
     const AdminView = () => (
         <Card>
@@ -17,9 +16,9 @@ const SupportPage: React.FC = () => {
             
             {/* Mobile View */}
             <div className="md:hidden space-y-3">
-                {MOCK_SUPPORT_TICKETS.map(ticket => {
+                {supportTickets.map(ticket => {
                     const submitter = findUserById(ticket.submittedBy);
-                    const project = MOCK_PROJECTS.find(p => p.id === ticket.projectId);
+                    const project = projects.find(p => p.id === ticket.projectId);
                     return (
                         <div key={ticket.id} className="bg-primary-bg p-4 rounded-xl text-sm">
                             <div className="flex justify-between items-start mb-2">
@@ -47,9 +46,9 @@ const SupportPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {MOCK_SUPPORT_TICKETS.map(ticket => {
+                        {supportTickets.map(ticket => {
                             const submitter = findUserById(ticket.submittedBy);
-                            const project = MOCK_PROJECTS.find(p => p.id === ticket.projectId);
+                            const project = projects.find(p => p.id === ticket.projectId);
                             return (
                                 <tr key={ticket.id} className="border-b border-border-color">
                                     <td className="px-6 py-4 font-medium text-text-headline">{ticket.subject}</td>
@@ -72,12 +71,10 @@ const SupportPage: React.FC = () => {
             <form className="space-y-4">
                 <div>
                     <label className="text-sm font-medium text-text-headline">Subject</label>
-                    {/* FIX: Standardized focus ring color for UI consistency */}
                     <input type="text" placeholder="e.g., Question about my invoice" className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" />
                 </div>
                 <div>
                     <label className="text-sm font-medium text-text-headline">Message</label>
-                    {/* FIX: Standardized focus ring color for UI consistency */}
                     <textarea rows={5} placeholder="Please describe your issue in detail..." className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent"></textarea>
                 </div>
                 <Button type="submit" className="w-full">Submit Ticket</Button>
@@ -85,7 +82,7 @@ const SupportPage: React.FC = () => {
         </Card>
     );
     
-    if (usersLoading) {
+    if (usersLoading || dataLoading) {
         return <div>Loading support...</div>;
     }
 

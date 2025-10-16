@@ -1,21 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { MOCK_PROJECTS, MOCK_DESIGNS, MOCK_QUOTES, MOCK_MILESTONES, MOCK_PROJECT_UPDATES, MOCK_WORK_LOGS, MOCK_ACTIVITY_LOGS, MOCK_FINAL_GALLERY_IMAGES, MOCK_PRODUCTS } from '../services/mockData';
-import Card from '../components/ui/Card';
-import { STAGE_DISPLAY_NAMES } from '../constants';
-import Button from '../components/ui/Button';
-import { useAuth } from '../context/AuthContext';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../types';
-import Modal from '../components/ui/Modal';
+import Card from '../../components/ui/Card';
+import { STAGE_DISPLAY_NAMES } from '../../constants';
+import Button from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext';
+import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../../components/icons';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../../types';
+import Modal from '../../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ChatComponent from '../components/chat/ChatComponent';
 import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import GeneratePOModal from '../components/designer/GeneratePOModal';
-import { useUsers } from '../context/UserContext';
-import UserNameDisplay from '../components/ui/UserNameDisplay';
+import { useUsers } from '../../context/UserContext';
+import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
+import { updateRecord, createRecord } from '../../services/api';
 
 type UnifiedUpdate = {
     id: string;
@@ -30,11 +31,9 @@ const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData, loading: dataLoading } = useData();
     
-    const [project, setProject] = useState<Project | undefined>(MOCK_PROJECTS.find(p => p.id === projectId));
-    const [designs, setDesigns] = useState<Design[]>(MOCK_DESIGNS.filter(d => d.projectId === projectId));
-    const [quotes, setQuotes] = useState<Quote[]>(MOCK_QUOTES.filter(q => q.projectId === projectId));
-    const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS.filter(p => p.projectId === projectId));
+    const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
     const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Live Updates');
     const [newUpdateMessage, setNewUpdateMessage] = useState('');
@@ -48,7 +47,7 @@ const ProjectDetails: React.FC = () => {
     const unifiedUpdateFeed = useMemo(() => {
         if (!projectId) return [];
 
-        const updates: UnifiedUpdate[] = MOCK_PROJECT_UPDATES
+        const updates: UnifiedUpdate[] = projectUpdates
             .filter(u => u.projectId === projectId)
             .map(u => ({
                 id: u.id,
@@ -58,7 +57,7 @@ const ProjectDetails: React.FC = () => {
                 timestamp: u.createdAt
             }));
         
-        const workLogs: UnifiedUpdate[] = MOCK_WORK_LOGS
+        const logs: UnifiedUpdate[] = workLogs
             .filter(w => w.projectId === projectId)
             .map(w => ({
                 id: w.id,
@@ -69,7 +68,7 @@ const ProjectDetails: React.FC = () => {
                 hours: w.hoursSpent,
             }));
 
-        const systemEvents: UnifiedUpdate[] = MOCK_ACTIVITY_LOGS
+        const systemEvents: UnifiedUpdate[] = activityLogs
             .filter(a => a.projectId === projectId)
             .map(a => ({
                 id: a.id,
@@ -79,137 +78,114 @@ const ProjectDetails: React.FC = () => {
                 timestamp: a.createdAt,
             }));
             
-        return [...updates, ...workLogs, ...systemEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    }, [projectId, findUserById]);
+        return [...updates, ...logs, ...systemEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [projectId, projectUpdates, workLogs, activityLogs, findUserById]);
     
-    const [feed, setFeed] = useState(unifiedUpdateFeed);
-
 
     useEffect(() => {
-        const currentProject = MOCK_PROJECTS.find(p => p.id === projectId);
+        const currentProject = projects.find(p => p.id === projectId);
         setProject(currentProject);
-        setDesigns(MOCK_DESIGNS.filter(d => d.projectId === projectId));
-        setQuotes(MOCK_QUOTES.filter(q => q.projectId === projectId));
-        setProducts(MOCK_PRODUCTS.filter(p => p.projectId === projectId));
-        setFeed(unifiedUpdateFeed);
         
-        const firstTab = (currentProject?.status === 'Completed' ? TABS[user!.role].includes('Final Gallery') ? 'Final Gallery' : 'Live Updates' : 'Live Updates')
-        setActiveTab(firstTab);
+        if(currentProject) {
+            const firstTab = (currentProject.status === 'Completed' && TABS[user!.role].includes('Final Gallery')) ? 'Final Gallery' : 'Live Updates';
+            setActiveTab(firstTab);
+        }
 
-    }, [projectId, unifiedUpdateFeed, user]);
+    }, [projectId, projects, user]);
 
-    if (!project || !user) {
-        return <div className="text-center text-text-headline">Project not found or user not loaded.</div>;
+    if (dataLoading || usersLoading || !project || !user) {
+        return <div className="text-center text-text-headline">Loading project details...</div>;
     }
 
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
-    const projectMilestones = MOCK_MILESTONES.filter(m => m.projectId === project.id);
+    const projectMilestones = milestones.filter(m => m.projectId === project.id);
+    const projectDesigns = designs.filter(d => d.projectId === project.id);
+    const projectQuotes = quotes.filter(q => q.projectId === project.id);
+    const projectProducts = products.filter(p => p.projectId === project.id);
 
-    const updateProjectState = (updates: Partial<Project>, actorId: string, actionDetails: string) => {
-        const newTimestamp = new Date().toISOString();
-        const updatedProject = { ...project, ...updates, updatedAt: newTimestamp };
-        setProject(updatedProject);
-    
-        const projectIndex = MOCK_PROJECTS.findIndex(p => p.id === project.id);
-        if (projectIndex > -1) {
-            MOCK_PROJECTS[projectIndex] = updatedProject;
+    const updateProjectState = async (updates: Partial<Project>, actorId: string, actionDetails: string) => {
+        const { error } = await updateRecord('projects', project.id, updates);
+        if (error) {
+            alert(`Error updating project: ${error.message}`);
+            return;
         }
     
-        const newLog: ActivityLog = {
-            id: `log-${Date.now()}`,
-            projectId: project.id,
-            actorId: actorId,
+        const newLog = {
+            project_id: project.id,
+            actor_id: actorId,
             action: 'UPDATE_STATUS',
             details: actionDetails,
-            createdAt: newTimestamp,
         };
-        MOCK_ACTIVITY_LOGS.unshift(newLog);
-    
-        const newFeedEntry: UnifiedUpdate = {
-            id: newLog.id,
-            type: 'system',
-            author: findUserById(actorId),
-            content: newLog.details,
-            timestamp: newLog.createdAt,
-        };
-        setFeed(prev => [newFeedEntry, ...prev]);
+        await createRecord('activity_logs', newLog);
+        
+        await refetchData();
     };
     
-    const handlePostUpdate = () => {
+    const handlePostUpdate = async () => {
         if (!newUpdateMessage.trim() || !user || isProjectReadOnly) return;
-        const newUpdate: ProjectUpdate = {
-            id: `pu-${Date.now()}`,
-            projectId: project.id,
-            authorId: user.id,
+        const newUpdate = {
+            project_id: project.id,
+            author_id: user.id,
             message: newUpdateMessage,
-            createdAt: new Date().toISOString()
         };
-        MOCK_PROJECT_UPDATES.push(newUpdate);
-        
-        const newFeedEntry: UnifiedUpdate = {
-            id: newUpdate.id,
-            type: 'update',
-            author: user,
-            content: newUpdate.message,
-            timestamp: newUpdate.createdAt
-        };
-        setFeed(prev => [newFeedEntry, ...prev]);
+        await createRecord('project_updates', newUpdate);
+        await refetchData();
         setNewUpdateMessage('');
     };
 
-    const handleApproveDesign = (designId: string) => {
-        setDesigns(designs.map(d => d.id === designId ? { ...d, approved: true } : d));
+    const handleApproveDesign = async (designId: string) => {
+        await updateRecord('designs', designId, { approved: true });
         if (project.stage === 'design_phase') {
             const details = `Approved a design concept. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_updated_quote']}.`;
-            updateProjectState({ stage: 'awaiting_updated_quote', progress: 35 }, user.id, details);
+            await updateProjectState({ stage: 'awaiting_updated_quote', progress: 35 }, user.id, details);
+        } else {
+            await refetchData();
         }
     };
     
-    const handleSubmitForReapproval = (designId: string) => {
-        setDesigns(designs.map(d => d.id === designId ? { ...d, submittedForReview: true, approved: false } : d));
+    const handleSubmitForReapproval = async (designId: string) => {
+        await updateRecord('designs', designId, { submitted_for_review: true, approved: false });
+        await refetchData();
         alert(`Design v${designs.find(d => d.id === designId)?.version} has been submitted to the client for re-approval.`);
     };
 
-    const handleUploadUpdatedQuote = () => {
-        const newQuote: Quote = {
-            id: `quote-${Date.now()}`,
-            projectId: project.id,
+    const handleUploadUpdatedQuote = async () => {
+        const newQuote = {
+            project_id: project.id,
             version: 'final',
-            fileUrl: 'dummy.pdf',
-            uploadedBy: user.id,
-            createdAt: new Date().toISOString(),
+            file_url: 'dummy.pdf',
+            uploaded_by: user.id,
         };
-        setQuotes(prev => [...prev, newQuote]);
-        MOCK_QUOTES.push(newQuote);
+        await createRecord('quotes', newQuote);
         const details = `Uploaded the final quote. Project moved to: ${STAGE_DISPLAY_NAMES['material_selection']}.`;
-        updateProjectState({ stage: 'material_selection', progress: 50 }, user.id, details);
+        await updateProjectState({ stage: 'material_selection', progress: 50 }, user.id, details);
     };
 
-    const handleCompleteMaterialSelection = () => {
+    const handleCompleteMaterialSelection = async () => {
         const details = `Marked material selection complete. Project moved to: ${STAGE_DISPLAY_NAMES['execution']}.`;
-        updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
+        await updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
     };
 
-    const handleMarkProjectDone = () => {
+    const handleMarkProjectDone = async () => {
         const details = `Marked project work as done. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_client_completion_approval']}.`;
-        updateProjectState({ stage: 'awaiting_client_completion_approval', progress: 90 }, user.id, details);
+        await updateProjectState({ stage: 'awaiting_client_completion_approval', progress: 90 }, user.id, details);
     };
 
-    const handleClientFinalApproval = () => {
+    const handleClientFinalApproval = async () => {
         const details = `Client provided final approval. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_admin_completion_approval']}.`;
-        updateProjectState({ stage: 'awaiting_admin_completion_approval', progress: 95 }, user.id, details);
+        await updateProjectState({ stage: 'awaiting_admin_completion_approval', progress: 95 }, user.id, details);
         setFinalApprovalModalOpen(false);
     };
 
-    const handleAdminFinalSignOff = () => {
+    const handleAdminFinalSignOff = async () => {
         const details = `Admin gave final sign-off. Project is now complete!`;
-        updateProjectState({ stage: 'completed', status: 'Completed', progress: 100 }, user.id, details);
+        await updateProjectState({ stage: 'completed', status: 'Completed', progress: 100 }, user.id, details);
     };
     
-    const handleClientDiscussionRequest = () => {
+    const handleClientDiscussionRequest = async () => {
         const details = `Client requested further discussion. Project reverted to: ${STAGE_DISPLAY_NAMES['execution']}.`;
-        updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
+        await updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
         setFinalApprovalModalOpen(false);
     };
     
@@ -218,35 +194,29 @@ const ProjectDetails: React.FC = () => {
         setAnnotationModalOpen(true);
     };
 
-    const handleSaveComments = (designId: string, newComments: Comment[]) => {
-        const designIndex = MOCK_DESIGNS.findIndex(d => d.id === designId);
-        if (designIndex > -1) {
-            MOCK_DESIGNS[designIndex].comments = newComments;
-            MOCK_DESIGNS[designIndex].submittedForReview = false; // Require designer to re-submit
-        }
-        setDesigns(prev => prev.map(d => d.id === designId ? {...d, comments: newComments, submittedForReview: false} : d));
+    const handleSaveComments = async (designId: string, newComments: Comment[]) => {
+        // In real app, you'd probably batch update/insert comments.
+        // For simplicity, we just update the design with the new comment array.
+        await updateRecord('designs', designId, { comments: newComments, submitted_for_review: false });
+        await refetchData();
     };
 
-    const handleCreateProduct = (newProductData: Omit<Product, 'id' | 'projectId'>) => {
-        const productToAdd: Product = {
+    const handleCreateProduct = async (newProductData: Omit<Product, 'id' | 'projectId'>) => {
+        const productToCreate = {
             ...newProductData,
-            id: `prod-${Date.now()}`,
-            projectId: project.id
+            project_id: project.id
         };
-        MOCK_PRODUCTS.push(productToAdd);
-        setProducts(prev => [...prev, productToAdd]);
+        await createRecord('products', productToCreate);
+        await refetchData();
         setAddProductModalOpen(false);
     };
 
-    const handleCommentStatusChange = (commentId: string, designId: string, status: 'Open' | 'Resolved') => {
-        const designIndex = MOCK_DESIGNS.findIndex(d => d.id === designId);
-        if (designIndex > -1) {
-            const commentIndex = MOCK_DESIGNS[designIndex].comments?.findIndex(c => c.id === commentId);
-            if (commentIndex !== undefined && commentIndex > -1 && MOCK_DESIGNS[designIndex].comments) {
-                MOCK_DESIGNS[designIndex].comments![commentIndex].status = status;
-                // Force a re-render by updating state
-                setDesigns([...MOCK_DESIGNS.filter(d => d.projectId === projectId)]);
-            }
+    const handleCommentStatusChange = async (commentId: string, designId: string, status: 'Open' | 'Resolved') => {
+        const design = projectDesigns.find(d => d.id === designId);
+        if (design && design.comments) {
+            const updatedComments = design.comments.map(c => c.id === commentId ? { ...c, status } : c);
+            await updateRecord('designs', designId, { comments: updatedComments });
+            await refetchData();
         }
     };
 
@@ -265,7 +235,7 @@ const ProjectDetails: React.FC = () => {
         }
     }
 
-    const totalSourcedCost = products.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
+    const totalSourcedCost = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
 
 
     const renderTabContent = () => {
@@ -305,7 +275,7 @@ const ProjectDetails: React.FC = () => {
 
                         <h2 className="text-xl font-bold text-text-headline mb-4">Update History</h2>
                         <div className="space-y-6">
-                            {feed.map(item => (
+                            {unifiedUpdateFeed.map(item => (
                                 <div key={item.id} className="flex gap-4">
                                     <div className="flex-shrink-0">
                                         <img src={item.author?.avatarUrl} alt={item.author?.fullName} className="w-10 h-10 rounded-full"/>
@@ -343,7 +313,7 @@ const ProjectDetails: React.FC = () => {
                                 <p className="text-xs text-center">Supports up to 5 concepts</p>
                             </Card>
                         )}
-                        {designs.map(d => (
+                        {projectDesigns.map(d => (
                              <Card key={d.id}>
                                 {d.type === 'image' ? (
                                     <img src={d.fileUrl} alt={`Design v${d.version}`} className="rounded-xl mb-4 aspect-video object-cover" />
@@ -399,7 +369,7 @@ const ProjectDetails: React.FC = () => {
                                     {!isProjectReadOnly && <Button onClick={() => setAddProductModalOpen(true)}>+ Add Product</Button>}
                                 </div>
                                 <div className="space-y-3">
-                                    {products.map(p => (
+                                    {projectProducts.map(p => (
                                         <div key={p.id} className="bg-primary-bg p-3 rounded-xl flex items-center gap-4">
                                             <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-lg object-cover" />
                                             <div className="flex-1">
@@ -441,7 +411,7 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 );
              case 'Feedback':
-                const allComments = designs.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
+                const allComments = projectDesigns.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
                 return (
                     <Card>
                         <h2 className="text-xl font-bold text-text-headline mb-4">Client Feedback</h2>
@@ -476,7 +446,7 @@ const ProjectDetails: React.FC = () => {
                      <Card>
                         <h2 className="text-xl font-bold text-text-headline mb-4">Quotes & Documents</h2>
                         <div className="space-y-3">
-                            {quotes.map(q => (
+                            {projectQuotes.map(q => (
                                 <div key={q.id} className="bg-primary-bg p-4 rounded-xl flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <FileTextIcon className="w-6 h-6 text-accent" />
@@ -571,7 +541,7 @@ const ProjectDetails: React.FC = () => {
                         <h2 className="text-xl font-bold text-text-headline mb-4">Final Project Gallery</h2>
                         <p className="text-text-muted mb-6">A showcase of the completed "{project.title}" project.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {MOCK_FINAL_GALLERY_IMAGES.filter(img => img.projectId === project.id).map(image => (
+                            {finalGalleryImages.filter(img => img.projectId === project.id).map(image => (
                                 <div key={image.id}>
                                     <img src={image.url} alt={image.caption} className="rounded-lg aspect-square object-cover" />
                                     <p className="text-sm text-center mt-2 text-text-muted">{image.caption}</p>
@@ -635,7 +605,7 @@ const ProjectDetails: React.FC = () => {
             <GeneratePOModal 
                 isOpen={isPOModalOpen}
                 onClose={() => setPOModalOpen(false)}
-                products={products}
+                products={projectProducts}
                 project={project}
             />
 

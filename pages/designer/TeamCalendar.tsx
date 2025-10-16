@@ -1,28 +1,38 @@
 import React, { useState, useMemo } from 'react';
-import { MOCK_TASKS, MOCK_SITE_VISITS, MOCK_LEAVE_REQUESTS } from '../../services/mockData';
 import Card from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/icons';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const TeamCalendar: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const { users, loading: usersLoading } = useUsers();
+    const { tasks, siteVisits, leaveRequests, loading: dataLoading } = useData();
     
-    const designerColors: Record<string, string> = {
-        'user-designer-1': 'bg-accent/20 text-accent',
-        'user-designer-2': 'bg-blue-500/20 text-blue-300',
-    };
+    const designerColors: Record<string, string> = {};
+    const colorClasses = ['bg-accent/20 text-accent', 'bg-blue-500/20 text-blue-300', 'bg-green-500/20 text-green-400', 'bg-purple-500/20 text-purple-400'];
+    let colorIndex = 0;
+    
+    users.forEach(user => {
+        if (user.role === 'Designer') {
+            designerColors[user.id] = colorClasses[colorIndex % colorClasses.length];
+            colorIndex++;
+        }
+    });
+
     const getDesignerColor = (id: string) => designerColors[id] || 'bg-gray-500/20 text-gray-300';
 
     const events = useMemo(() => {
-        const taskEvents = MOCK_TASKS.map(t => ({ 
+        if(dataLoading || usersLoading) return [];
+        
+        const taskEvents = tasks.map(t => ({ 
             date: new Date(t.dueDate), 
             title: t.title, 
             type: 'task' as const, 
             ownerId: t.assigneeId 
         }));
 
-        const visitEvents = MOCK_SITE_VISITS
+        const visitEvents = siteVisits
             .filter(sv => sv.status === 'Scheduled')
             .map(sv => ({ 
                 date: new Date(sv.scheduledAt), 
@@ -32,7 +42,7 @@ const TeamCalendar: React.FC = () => {
             }));
             
         const leaveEvents: { date: Date, title: string, type: 'leave', ownerId: string }[] = [];
-        MOCK_LEAVE_REQUESTS
+        leaveRequests
             .filter(l => l.status === 'Approved')
             .forEach(l => {
                 let day = new Date(l.startDate);
@@ -49,7 +59,7 @@ const TeamCalendar: React.FC = () => {
             });
 
         return [...taskEvents, ...visitEvents, ...leaveEvents];
-    }, []);
+    }, [dataLoading, usersLoading, tasks, siteVisits, leaveRequests]);
 
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -63,7 +73,7 @@ const TeamCalendar: React.FC = () => {
     
     for (let day = 1; day <= daysInMonth; day++) {
         const thisDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-        const dayEvents = events.filter(e => e.date.toDateString() === thisDate.toDateString());
+        const dayEvents = events.filter(e => new Date(e.date).toDateString() === thisDate.toDateString());
         const isToday = thisDate.toDateString() === new Date().toDateString();
 
         calendarDays.push(

@@ -1,17 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_TASKS, MOCK_PROJECTS } from '../../services/mockData';
 import { Task } from '../../types';
 import TaskCard from '../../components/designer/TaskCard';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
-import Card from '../../components/ui/Card';
+import { useData } from '../../context/DataContext';
+import { createRecord, updateRecord } from '../../services/api';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'For Review' | 'Done';
 
 const TaskBoard: React.FC = () => {
     const { user } = useAuth();
-    const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS.filter(t => t.assigneeId === user?.id));
+    const { tasks, projects, refetchData, loading } = useData();
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
     
     const [newTask, setNewTask] = useState({
@@ -22,6 +22,8 @@ const TaskBoard: React.FC = () => {
 
     const columns: TaskStatus[] = ['To Do', 'In Progress', 'For Review', 'Done'];
 
+    const userTasks = useMemo(() => tasks.filter(t => t.assigneeId === user?.id), [tasks, user]);
+
     const tasksByColumn = useMemo(() => {
         const grouped: Record<TaskStatus, Task[]> = {
             'To Do': [],
@@ -29,52 +31,45 @@ const TaskBoard: React.FC = () => {
             'For Review': [],
             'Done': []
         };
-        tasks.forEach(task => {
+        userTasks.forEach(task => {
             grouped[task.status].push(task);
         });
         return grouped;
-    }, [tasks]);
+    }, [userTasks]);
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, taskId: string) => {
         e.dataTransfer.setData("taskId", taskId);
     };
 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
         const taskId = e.dataTransfer.getData("taskId");
-        setTasks(prevTasks =>
-            prevTasks.map(task =>
-                task.id === taskId ? { ...task, status } : task
-            )
-        );
-        // Also update mock data to persist state across navigation
-        const taskIndex = MOCK_TASKS.findIndex(t => t.id === taskId);
-        if (taskIndex > -1) {
-            MOCK_TASKS[taskIndex].status = status;
-        }
+        await updateRecord('tasks', taskId, { status });
+        await refetchData();
     };
     
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
     };
 
-    const handleCreateTask = (e: React.FormEvent) => {
+    const handleCreateTask = async (e: React.FormEvent) => {
         e.preventDefault();
         if(!user || !newTask.title || !newTask.projectId || !newTask.dueDate) return;
 
-        const taskToAdd: Task = {
-            id: `task-${Date.now()}`,
+        const taskToAdd = {
             title: newTask.title,
-            projectId: newTask.projectId,
-            assigneeId: user.id,
-            status: 'To Do',
-            dueDate: newTask.dueDate,
+            project_id: newTask.projectId,
+            assignee_id: user.id,
+            status: 'To Do' as TaskStatus,
+            due_date: newTask.dueDate,
         };
 
-        MOCK_TASKS.push(taskToAdd);
-        setTasks(prev => [...prev, taskToAdd]);
+        await createRecord('tasks', taskToAdd);
+        await refetchData();
         setCreateModalOpen(false);
         setNewTask({ title: '', projectId: '', dueDate: '' });
     };
+
+    if (loading) return null;
 
     return (
         <>
@@ -88,7 +83,7 @@ const TaskBoard: React.FC = () => {
                         <label className="block text-sm font-medium text-text-headline mb-1">Project</label>
                         <select value={newTask.projectId} onChange={e => setNewTask({...newTask, projectId: e.target.value})} className="w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required>
                             <option value="" disabled>Select a project</option>
-                            {MOCK_PROJECTS.filter(p => p.designerId === user?.id).map(p => (
+                            {projects.filter(p => p.designerId === user?.id).map(p => (
                                 <option key={p.id} value={p.id}>{p.title}</option>
                             ))}
                         </select>

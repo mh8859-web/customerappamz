@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, ClockIcon, BriefcaseIcon, UsersIcon, UserCircleIcon, LogOutIcon } from '../icons';
 import Button from '../ui/Button';
-import { MOCK_PROJECTS } from '../../services/mockData';
 import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
@@ -14,6 +14,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const { user, logout } = useAuth();
   const { users } = useUsers();
+  const { projects } = useData();
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');
@@ -41,13 +42,13 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   useEffect(() => {
     if (searchQuery.length > 1) {
       const lowercasedQuery = searchQuery.toLowerCase();
-      const filteredProjects = MOCK_PROJECTS.filter(p => p.title.toLowerCase().includes(lowercasedQuery));
+      const filteredProjects = projects.filter(p => p.title.toLowerCase().includes(lowercasedQuery));
       const filteredUsers = users.filter(u => u.fullName.toLowerCase().includes(lowercasedQuery) && (u.role === 'Designer' || u.role === 'Customer'));
       setSearchResults({ projects: filteredProjects, users: filteredUsers });
     } else {
       setSearchResults({ projects: [], users: [] });
     }
-  }, [searchQuery, users]);
+  }, [searchQuery, users, projects]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

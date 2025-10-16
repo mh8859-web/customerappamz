@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_POSTS, MOCK_FEED_COMMENTS, MOCK_PROJECTS } from '../../services/mockData';
 import { Post, FeedComment, Poll, Project, ReactionType, User, PostVisibility } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
 import Modal from '../../components/ui/Modal';
@@ -8,35 +7,18 @@ import Button from '../../components/ui/Button';
 import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icons';
 import { useUsers } from '../../context/UserContext';
 import CommunityFeed from './CommunityFeed';
+import { useData } from '../../context/DataContext';
+// FIX: Import deleteRecord instead of the supabase client directly, and use it to delete posts.
+import { createRecord, updateRecord, deleteRecord } from '../../services/api';
 
 const CommunityHub: React.FC = () => {
     const { user } = useAuth();
     const { users, loading: usersLoading } = useUsers();
-    const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-    const [comments, setComments] = useState<FeedComment[]>(MOCK_FEED_COMMENTS);
+    const { posts, feedComments, projects, refetchData, loading: dataLoading } = useData();
+    
     const [postToDelete, setPostToDelete] = useState<string | null>(null);
     const [layout, setLayout] = useState<'list' | 'grid'>('list');
     const [activeTag, setActiveTag] = useState<string | null>(null);
-
-    // Hydrate mock data with real user IDs once users are loaded
-    useEffect(() => {
-        if (!usersLoading && users.length > 0) {
-            const admin = users.find(u => u.role === 'Admin');
-            const designer = users.find(u => u.role === 'Designer');
-            const customer = users.find(u => u.role === 'Customer');
-            
-            const hydrateId = (placeholder: string) => {
-                if (placeholder === 'ADMIN_1' && admin) return admin.id;
-                if (placeholder === 'DESIGNER_1' && designer) return designer.id;
-                if (placeholder === 'CUSTOMER_1' && customer) return customer.id;
-                return placeholder;
-            };
-
-            setPosts(prevPosts => prevPosts.map(p => ({ ...p, authorId: hydrateId(p.authorId) })));
-            setComments(prevComments => prevComments.map(c => ({ ...c, authorId: hydrateId(c.authorId) })));
-        }
-    }, [usersLoading, users]);
-
 
     const sortedAndFilteredPosts = useMemo(() => {
         if (!user) return [];
@@ -51,7 +33,7 @@ const CommunityHub: React.FC = () => {
                     return user.role === 'Designer';
                 case 'project_members': {
                     if (!post.projectId) return false;
-                    const project = MOCK_PROJECTS.find(p => p.id === post.projectId);
+                    const project = projects.find(p => p.id === post.projectId);
                     if (!project) return false;
                     return user.id === project.customerId || user.id === project.designerId;
                 }
@@ -71,13 +53,13 @@ const CommunityHub: React.FC = () => {
                 if (!a.isPinned && b.isPinned) return 1;
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
             });
-    }, [posts, activeTag, user]);
+    }, [posts, activeTag, user, projects]);
 
-    if (usersLoading || !user) {
+    if (usersLoading || dataLoading || !user) {
         return null;
     }
 
-    const handleCreatePost = (
+    const handleCreatePost = async (
         content: string, 
         mediaFile?: File, 
         addPoll?: boolean,
@@ -88,107 +70,87 @@ const CommunityHub: React.FC = () => {
         visibility?: PostVisibility
     ) => {
         let mediaUrl: string | undefined;
-        let mediaType: 'image' | 'video' | undefined;
         let beforeMediaUrl: string | undefined;
-        let poll: Poll | undefined;
-        const postId = `post-${Date.now()}`;
 
+        // In a real app, file uploads would be more robust
         if (mediaFile) {
             mediaUrl = URL.createObjectURL(mediaFile);
-            mediaType = mediaFile.type.startsWith('image/') ? 'image' : 'video';
         }
-
         if (beforeMediaFile) {
             beforeMediaUrl = URL.createObjectURL(beforeMediaFile);
         }
 
-        if (addPoll && mediaFile && mediaType === 'image' && user.role === 'Designer') {
-            poll = {
-                question: 'What do you think of this design?',
-                options: [
-                    { id: `${postId}-yes`, text: 'Yes, I like it!', votes: [] },
-                    { id: `${postId}-no`, text: 'No, not for me.', votes: [] },
-                ]
-            };
-        }
-
-        const tags = content.match(/#\w+/g) || [];
-
-        const newPost: Post = {
-            id: postId,
-            authorId: user.id,
+        const newPostData = {
+            author_id: user.id,
             content,
-            mediaUrl,
-            mediaType,
+            media_url: mediaUrl,
+            media_type: mediaFile?.type.startsWith('image/') ? 'image' : 'video',
+            before_media_url: beforeMediaUrl,
             reactions: [],
-            createdAt: new Date().toISOString(),
-            poll,
-            isPinned: false,
-            projectId,
-            postType: postType || 'standard',
-            showcaseDetails,
-            beforeMediaUrl,
-            tags,
+            is_pinned: false,
+            project_id: projectId || null,
+            post_type: postType || 'standard',
+            showcase_details: showcaseDetails,
+            tags: content.match(/#\w+/g) || [],
             visibility: visibility || 'everyone',
         };
         
-        MOCK_POSTS.unshift(newPost); // Persist to mock data
-        setPosts(prevPosts => [newPost, ...prevPosts]);
+        await createRecord('posts', newPostData);
+        await refetchData();
     };
 
-    const handlePinToggle = (postId: string) => {
-        const postIndex = MOCK_POSTS.findIndex(p => p.id === postId);
-        if(postIndex > -1) MOCK_POSTS[postIndex].isPinned = !MOCK_POSTS[postIndex].isPinned;
-
-        setPosts(prevPosts =>
-            prevPosts.map(post => 
-                post.id === postId ? { ...post, isPinned: !post.isPinned } : post
-            )
-        );
+    const handlePinToggle = async (postId: string) => {
+        const post = posts.find(p => p.id === postId);
+        if (post) {
+            await updateRecord('posts', postId, { is_pinned: !post.isPinned });
+            await refetchData();
+        }
     };
 
     const handleVote = (postId: string, optionId: string) => {
-        // Implementation for voting
+        // Voting logic would go here, updating the `poll` JSONB field.
     };
 
-    const handleReact = (postId: string, reaction: ReactionType) => {
-        const postIndex = MOCK_POSTS.findIndex(p => p.id === postId);
-        if (postIndex === -1) return;
-        
-        const existingReactionIndex = MOCK_POSTS[postIndex].reactions.findIndex(r => r.userId === user.id);
-        
+    const handleReact = async (postId: string, reaction: ReactionType) => {
+        const post = posts.find(p => p.id === postId);
+        if (!post) return;
+
+        const currentReactions = post.reactions || [];
+        const existingReactionIndex = currentReactions.findIndex(r => r.userId === user.id);
+        let updatedReactions;
+
         if (existingReactionIndex > -1) {
-            if (MOCK_POSTS[postIndex].reactions[existingReactionIndex].type === reaction) {
-                MOCK_POSTS[postIndex].reactions.splice(existingReactionIndex, 1);
+            if (currentReactions[existingReactionIndex].type === reaction) {
+                updatedReactions = currentReactions.filter(r => r.userId !== user.id);
             } else {
-                MOCK_POSTS[postIndex].reactions[existingReactionIndex].type = reaction;
+                updatedReactions = currentReactions.map(r => r.userId === user.id ? { ...r, type: reaction } : r);
             }
         } else {
-            MOCK_POSTS[postIndex].reactions.push({ userId: user.id, type: reaction });
+            updatedReactions = [...currentReactions, { userId: user.id, type: reaction }];
         }
         
-        setPosts([...MOCK_POSTS]);
+        await updateRecord('posts', postId, { reactions: updatedReactions });
+        await refetchData();
     };
 
-    const handleAddComment = (postId: string, content: string) => {
-        const newComment: FeedComment = {
-            id: `comment-${Date.now()}`,
-            postId,
-            authorId: user.id,
+    const handleAddComment = async (postId: string, content: string) => {
+        const newComment = {
+            post_id: postId,
+            author_id: user.id,
             content,
-            createdAt: new Date().toISOString(),
         };
-        MOCK_FEED_COMMENTS.push(newComment);
-        setComments(prev => [...prev, newComment]);
+        await createRecord('feed_comments', newComment);
+        await refetchData();
     };
     
-    const confirmDeletePost = () => {
+    const confirmDeletePost = async () => {
         if (!postToDelete) return;
-        const postIndex = MOCK_POSTS.findIndex(p => p.id === postToDelete);
-        if(postIndex > -1) MOCK_POSTS.splice(postIndex, 1);
-        
-        setPosts(prev => prev.filter(p => p.id !== postToDelete));
-        setComments(prev => prev.filter(c => c.postId !== postToDelete));
+        // FIX: Replaced direct supabase call with the abstracted deleteRecord function and added error handling.
+        const { error } = await deleteRecord('posts', postToDelete);
+        if (error) {
+            alert('Failed to delete post. Please try again.');
+        }
+        await refetchData();
         setPostToDelete(null);
     };
 
@@ -210,7 +172,7 @@ const CommunityHub: React.FC = () => {
                 </div>
             </Modal>
             <div className="max-w-3xl mx-auto space-y-6">
-                <CreatePost user={user} projects={MOCK_PROJECTS} onCreatePost={handleCreatePost} />
+                <CreatePost user={user} projects={projects} onCreatePost={handleCreatePost} />
 
                 <div className="flex justify-between items-center">
                      <div className="flex items-center gap-2 p-1 bg-secondary rounded-lg">
@@ -227,9 +189,9 @@ const CommunityHub: React.FC = () => {
 
                 <CommunityFeed
                     posts={sortedAndFilteredPosts}
-                    comments={comments}
+                    comments={feedComments}
                     currentUser={user}
-                    projects={MOCK_PROJECTS}
+                    projects={projects}
                     layout={layout}
                     activeTag={activeTag}
                     onReact={handleReact}

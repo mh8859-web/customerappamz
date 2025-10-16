@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MOCK_PROJECTS, MOCK_QUOTES } from '../services/mockData';
 import Card from '../components/ui/Card';
 import { Project, Quote } from '../types';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
+import { useData } from '../context/DataContext';
+import { createRecord } from '../services/api';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -51,41 +52,59 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 
 const ProjectsList: React.FC = () => {
   const { user } = useAuth();
+  const { projects, loading: dataLoading, refetchData } = useData();
   const { loading: usersLoading } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const navigate = useNavigate();
   
-  if (!user || usersLoading) return null;
+  if (!user || usersLoading || dataLoading) return null;
   
-  const handleCreateProject = (newProject: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
-    const projectToAdd: Project = {
-        ...newProject,
-        id: `proj-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        revenueDisplay: 0,
+  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => {
+    const projectToCreate = {
+        ...newProjectData,
+        // Convert camelCase to snake_case for DB
+        customer_id: newProjectData.customerId,
+        designer_id: newProjectData.designerId,
+        admin_id: newProjectData.adminId,
+        budget_display: newProjectData.budgetDisplay,
+        area_sqft: newProjectData.areaSqft,
+        start_date: newProjectData.startDate,
+        revenue_display: 0,
         progress: 10,
         status: 'Active',
         stage: 'design_phase',
     };
-    MOCK_PROJECTS.push(projectToAdd);
+    // remove camelCase keys
+    delete (projectToCreate as any).customerId;
+    delete (projectToCreate as any).designerId;
+    delete (projectToCreate as any).adminId;
+    delete (projectToCreate as any).budgetDisplay;
+    delete (projectToCreate as any).areaSqft;
+    delete (projectToCreate as any).startDate;
 
-    const initialQuote: Quote = {
-        id: `quote-${Date.now()}`,
-        projectId: projectToAdd.id,
+    const { data: newProject, error: projectError } = await createRecord('projects', projectToCreate);
+
+    if (projectError) {
+        alert(`Failed to create project: ${projectError.message}`);
+        return;
+    }
+
+    const initialQuote = {
+        project_id: newProject.id,
         version: 'initial',
-        fileUrl: 'dummy.pdf', // Mock file URL
-        uploadedBy: projectToAdd.adminId,
-        createdAt: new Date().toISOString(),
+        file_url: 'dummy.pdf', // Mock file URL
+        uploaded_by: newProject.admin_id,
     };
-    MOCK_QUOTES.push(initialQuote);
+    
+    await createRecord('quotes', initialQuote);
 
+    await refetchData();
     setCreateModalOpen(false);
-    navigate(`/projects/${projectToAdd.id}`);
+    navigate(`/projects/${newProject.id}`);
   };
 
-  const projectsForUser = MOCK_PROJECTS.filter(p => 
+  const projectsForUser = projects.filter(p => 
       user.role === 'Admin' || p.designerId === user.id || p.customerId === user.id
   );
 

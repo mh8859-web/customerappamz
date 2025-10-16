@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { MOCK_PROJECTS, MOCK_MILESTONES, MOCK_EXPENSES, MOCK_LEAVE_REQUESTS, MOCK_PROJECT_TEMPLATES } from '../../services/mockData';
-import { User, LeaveRequest, ProjectTemplate } from '../../types';
-import { DollarSignIcon, BriefcaseIcon, UsersIcon, CheckCircleIcon, FilePlusIcon } from '../../components/icons';
+import { LeaveRequest, ProjectTemplate } from '../../types';
+import { FilePlusIcon } from '../../components/icons';
 import CreateTemplateModal from '../../components/admin/CreateTemplateModal';
-import { useNavigate } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
+import { updateRecord, createRecord } from '../../services/api';
 
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
 
 const Financials: React.FC = () => {
-    const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'Active');
+    const { projects, milestones, expenses, loading } = useData();
+
+    if (loading) return <Card><h2 className="text-xl font-bold text-text-headline mb-4">Financial Oversight</h2><p>Loading financials...</p></Card>;
+
+    const activeProjects = projects.filter(p => p.status === 'Active');
 
     return (
         <Card>
             <h2 className="text-xl font-bold text-text-headline mb-4">Financial Oversight</h2>
             <div className="space-y-4">
                 {activeProjects.map(project => {
-                    const expenses = MOCK_EXPENSES.filter(e => e.projectId === project.id).reduce((sum, e) => sum + e.amount, 0);
-                    const billed = MOCK_MILESTONES.filter(m => m.projectId === project.id && m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
-                    const profit = billed - expenses;
-                    const profitability = project.budgetDisplay > 0 ? (expenses / project.budgetDisplay) * 100 : 0;
+                    const projectExpenses = expenses.filter(e => e.projectId === project.id).reduce((sum, e) => sum + e.amount, 0);
+                    const billed = milestones.filter(m => m.projectId === project.id && m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
+                    const profit = billed - projectExpenses;
+                    const profitability = project.budgetDisplay > 0 ? (projectExpenses / project.budgetDisplay) * 100 : 0;
 
                     return (
                         <div key={project.id} className="bg-primary-bg p-4 rounded-xl">
@@ -34,7 +38,7 @@ const Financials: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="text-text-muted">Expenses</p>
-                                    <p className="font-semibold text-red-400">{formatCurrency(expenses)}</p>
+                                    <p className="font-semibold text-red-400">{formatCurrency(projectExpenses)}</p>
                                 </div>
                                 <div>
                                     <p className="text-text-muted">Billed</p>
@@ -61,14 +65,12 @@ const Financials: React.FC = () => {
 
 const TeamManagement: React.FC = () => {
     const { users } = useUsers();
+    const { projects, leaveRequests, refetchData, loading } = useData();
     const designers = users.filter(u => u.role === 'Designer');
-    const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(MOCK_LEAVE_REQUESTS);
     
-    const handleLeaveRequest = (requestId: string, status: 'Approved' | 'Rejected') => {
-        setLeaveRequests(prev => prev.map(req => req.id === requestId ? {...req, status} : req));
-        // Also update the source mock data
-        const index = MOCK_LEAVE_REQUESTS.findIndex(req => req.id === requestId);
-        if(index > -1) MOCK_LEAVE_REQUESTS[index].status = status;
+    const handleLeaveRequest = async (requestId: string, status: 'Approved' | 'Rejected') => {
+        await updateRecord('leave_requests', requestId, { status });
+        await refetchData();
     };
     
     const pendingLeave = leaveRequests.filter(req => req.status === 'Pending');
@@ -79,7 +81,7 @@ const TeamManagement: React.FC = () => {
                 <h2 className="text-xl font-bold text-text-headline mb-4">Designer Workload</h2>
                 <div className="space-y-3">
                     {designers.map(designer => {
-                        const projectCount = MOCK_PROJECTS.filter(p => p.designerId === designer.id && p.status === 'Active').length;
+                        const projectCount = projects.filter(p => p.designerId === designer.id && p.status === 'Active').length;
                         return (
                             <div key={designer.id} className="flex items-center justify-between bg-primary-bg p-3 rounded-xl">
                                 <UserNameDisplay user={designer} showAvatar={true} imageSize="w-8 h-8" textClassName="font-semibold text-text-headline" />
@@ -91,7 +93,7 @@ const TeamManagement: React.FC = () => {
             </Card>
             <Card>
                 <h2 className="text-xl font-bold text-text-headline mb-4">Leave Requests</h2>
-                {pendingLeave.length > 0 ? (
+                {loading ? <p>Loading requests...</p> : pendingLeave.length > 0 ? (
                     <div className="space-y-3">
                         {pendingLeave.map(req => {
                             const designer = users.find(u => u.id === req.designerId);
@@ -121,6 +123,7 @@ const TeamManagement: React.FC = () => {
 
 const ClientDirectory: React.FC = () => {
     const { users } = useUsers();
+    const { projects } = useData();
     const clients = users.filter(u => u.role === 'Customer');
 
     return (
@@ -128,7 +131,7 @@ const ClientDirectory: React.FC = () => {
             <h2 className="text-xl font-bold text-text-headline mb-4">Client Directory</h2>
             <div className="space-y-3">
                 {clients.map(client => {
-                    const clientProjects = MOCK_PROJECTS.filter(p => p.customerId === client.id);
+                    const clientProjects = projects.filter(p => p.customerId === client.id);
                     const totalValue = clientProjects.reduce((sum, p) => sum + p.budgetDisplay, 0);
                     return (
                         <div key={client.id} className="flex items-center justify-between bg-primary-bg p-3 rounded-xl">
@@ -152,16 +155,12 @@ const ClientDirectory: React.FC = () => {
 };
 
 const ProjectTemplates: React.FC = () => {
+    const { projectTemplates, refetchData } = useData();
     const [isCreateTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
-    const [templates, setTemplates] = useState(MOCK_PROJECT_TEMPLATES);
 
-    const handleCreateTemplate = (template: Omit<ProjectTemplate, 'id'>) => {
-        const newTemplate: ProjectTemplate = {
-            id: `template-${Date.now()}`,
-            ...template,
-        };
-        MOCK_PROJECT_TEMPLATES.push(newTemplate);
-        setTemplates(prev => [...prev, newTemplate]);
+    const handleCreateTemplate = async (template: Omit<ProjectTemplate, 'id'>) => {
+        await createRecord('project_templates', template);
+        await refetchData();
         setCreateTemplateModalOpen(false);
     };
     
@@ -176,7 +175,7 @@ const ProjectTemplates: React.FC = () => {
                 <h2 className="text-xl font-bold text-text-headline mb-4">Project Templates</h2>
                 <p className="text-sm text-text-muted mb-4">Standardize your workflow by creating projects from templates.</p>
                 <div className="space-y-3">
-                    {templates.map(template => (
+                    {projectTemplates.map(template => (
                          <div key={template.id} className="bg-primary-bg p-3 rounded-xl">
                             <p className="font-semibold text-text-headline">{template.name}</p>
                             <p className="text-xs text-text-muted">{template.description}</p>

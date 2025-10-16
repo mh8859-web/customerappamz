@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { MOCK_PROJECTS, MOCK_ACTIVITY_LOGS, MOCK_MILESTONES, MOCK_TASKS, MOCK_QUOTES, MOCK_ANNOUNCEMENTS } from '../../services/mockData';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { BriefcaseIcon, DollarSignIcon, UsersIcon, CheckCircleIcon, MegaphoneIcon } from '../../components/icons';
@@ -10,6 +9,8 @@ import CreateProjectModal from '../../components/admin/CreateProjectModal';
 import { Project, Quote, Announcement } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
+import { createRecord } from '../../services/api';
 
 interface StatCardProps {
     title: string;
@@ -36,67 +37,70 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { users, loading: usersLoading } = useUsers();
+  const { users } = useUsers();
+  const { projects, activityLogs, milestones, announcements, loading, refetchData } = useData();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
 
-  const handleCreateProject = (newProject: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
-    // In a real app, this would be an API call.
-    // Here, we just add it to our mock data.
-    const projectToAdd: Project = {
-        ...newProject,
-        id: `proj-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        revenueDisplay: 0,
+  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
+    const projectToCreate = {
+        ...newProjectData,
+        revenue_display: 0,
         progress: 10,
         status: 'Active',
         stage: 'design_phase',
     };
-    MOCK_PROJECTS.push(projectToAdd);
 
-    // Create initial quote
-    const initialQuote: Quote = {
-        id: `quote-${Date.now()}`,
-        projectId: projectToAdd.id,
+    const { data: newProject, error: projectError } = await createRecord('projects', projectToCreate);
+
+    if (projectError) {
+        alert(`Failed to create project: ${projectError.message}`);
+        return;
+    }
+
+    const initialQuote = {
+        project_id: newProject.id,
         version: 'initial',
-        fileUrl: 'dummy.pdf', // Mock file URL
-        uploadedBy: projectToAdd.adminId,
-        createdAt: new Date().toISOString(),
+        file_url: 'dummy.pdf', // Mock file URL
+        uploaded_by: newProject.admin_id,
     };
-    MOCK_QUOTES.push(initialQuote);
-
+    
+    await createRecord('quotes', initialQuote);
+    
+    await refetchData();
     setCreateModalOpen(false);
-    navigate(`/projects/${projectToAdd.id}`);
+    navigate(`/projects/${newProject.id}`);
   };
 
-  const handleSendAnnouncement = () => {
+  const handleSendAnnouncement = async () => {
     if (!announcement.trim() || !user) return;
-    const newAnnouncement: Announcement = {
-      id: `announce-${Date.now()}`,
-      authorId: user.id,
+    const newAnnouncement = {
+      author_id: user.id,
       content: announcement,
       target: 'Designers', // For now, target designers. This could be a dropdown.
-      createdAt: new Date().toISOString(),
     };
-    MOCK_ANNOUNCEMENTS.unshift(newAnnouncement);
+
+    await createRecord('announcements', newAnnouncement);
+    await refetchData();
     setAnnouncement('');
     alert('Announcement sent!');
   };
 
-  const currentProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
+  if (loading) return null;
+
+  const currentProjects = projects.filter(p => p.status === 'Active').length;
   const activeDesigners = users.filter(u => u.role === 'Designer').length;
 
-  const thisMonthRevenue = MOCK_MILESTONES
+  const thisMonthRevenue = milestones
     .filter(m => m.statusDisplay === 'Paid' && new Date(m.paidDateDisplay || '').getMonth() === new Date().getMonth())
     .reduce((sum, m) => sum + m.amountDisplay, 0);
 
-  const recentProjects = [...MOCK_PROJECTS].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
+  const recentProjects = [...projects].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
   
-  const designerActivity = MOCK_ACTIVITY_LOGS.filter(log => users.find(u => u.id === log.actorId)?.role === 'Designer').slice(0, 4);
+  const designerActivity = activityLogs.filter(log => users.find(u => u.id === log.actorId)?.role === 'Designer').slice(0, 4);
 
   const revenueData = [
     { name: 'Jan', revenue: 40000 }, { name: 'Feb', revenue: 30000 },
@@ -142,7 +146,7 @@ const AdminDashboard: React.FC = () => {
                   {designerActivity.map(log => (
                       <li key={log.id} className="text-sm">
                           <p className="text-text-primary font-medium">{users.find(u => u.id === log.actorId)?.fullName}</p>
-                          <p className="text-text-secondary">{log.action.replace('_', ' ')} on {MOCK_PROJECTS.find(p=> p.id === log.projectId)?.title}</p>
+                          <p className="text-text-secondary">{log.action.replace('_', ' ')} on {projects.find(p=> p.id === log.projectId)?.title}</p>
                           <p className="text-xs text-text-secondary/70">{new Date(log.createdAt).toLocaleTimeString()}</p>
                       </li>
                   ))}
