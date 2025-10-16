@@ -47,24 +47,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   };
   
-  // This useEffect hook is the core of the authentication logic.
-  // It sets up a listener that reacts to any change in the user's authentication state.
+  // FIX: The onAuthStateChange listener has been wrapped in a try/finally block.
+  // This guarantees that the `loading` state is set to `false` even if fetching
+  // the user's profile fails due to corrupted session data or network errors.
+  // This resolves the "blank screen" issue where the app would get stuck in a loading state.
   useEffect(() => {
-    // onAuthStateChange fires an event upon initialization (if a session exists)
-    // and whenever the user signs in or out. This is our single source of truth.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        // If a session object exists, the user is authenticated.
-        if (session) {
-          // Fetch the detailed user profile from our public 'users' table.
-          await fetchUserProfile(session.user);
-        } else {
-          // If no session exists, the user is not authenticated.
-          setUser(null);
+        try {
+            if (session) {
+                await fetchUserProfile(session.user);
+            } else {
+                setUser(null);
+            }
+        } catch (error) {
+            console.error("Critical error during authentication state change:", error);
+            // If any part of the auth check fails, clear the session to be safe.
+            setUser(null);
+        } finally {
+            // This `finally` block ensures the app is never stuck in a loading state.
+            setLoading(false);
         }
-        // Once the session check is complete (either we found a user or not),
-        // we set loading to false. This unblocks the UI.
-        setLoading(false);
       }
     );
 

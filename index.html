@@ -129,6 +129,20 @@
   }
 }
 </script>
+<script>
+  // FIX: Force unregister any old service workers to prevent caching issues.
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for (let registration of registrations) {
+        registration.unregister()
+          .then(function() { console.log('Service Worker unregistered successfully.'); })
+          .catch(function(err) { console.error('Service Worker unregistration failed:', err); });
+      }
+    }).catch(function(err) {
+      console.error('Failed to get service worker registrations:', err);
+    });
+  }
+</script>
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
