@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
-import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
 import { DataProvider } from './context/DataContext';
+import AppInitializer from './components/AppInitializer';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -18,7 +18,7 @@ root.render(
       <AuthProvider>
         <UserProvider>
           <DataProvider>
-            <App />
+            <AppInitializer />
           </DataProvider>
         </UserProvider>
       </AuthProvider>

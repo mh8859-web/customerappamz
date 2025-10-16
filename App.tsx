@@ -27,11 +27,7 @@ import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 
 const App: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
-
-  if (authLoading) {
-    return null;
-  }
+  const { user } = useAuth();
 
   const renderDashboard = () => {
     if (!user) return <Navigate to="/login" />;

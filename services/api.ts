@@ -21,7 +21,7 @@ export const getUsers = async (): Promise<User[]> => {
     // Map snake_case columns to camelCase properties
     return data.map(user => ({
         id: user.id,
-        fullName: user.full_name,
+        fullName: user.full_name || 'Unnamed User',
         email: user.email,
         role: user.role,
         avatarUrl: user.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
