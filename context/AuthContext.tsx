@@ -47,13 +47,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   };
   
-  // FIX: The onAuthStateChange listener has been wrapped in a try/finally block.
-  // This guarantees that the `loading` state is set to `false` even if fetching
-  // the user's profile fails due to corrupted session data or network errors.
-  // This resolves the "blank screen" issue where the app would get stuck in a loading state.
   useEffect(() => {
+    // FIX: Added a timeout to ensure the app never gets stuck in a loading state.
+    // On a hard refresh, if the onAuthStateChange listener fails to fire for any reason,
+    // this timeout will force the loading state to false, preventing a permanent blank screen.
+    const authTimeout = setTimeout(() => {
+        if (loading) {
+            console.warn("Authentication timed out. Clearing loading state.");
+            setLoading(false);
+        }
+    }, 5000); // 5-second timeout
+
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        clearTimeout(authTimeout); // We got a response, so clear the safety timeout.
         try {
             if (session) {
                 await fetchUserProfile(session.user);
@@ -62,17 +69,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }
         } catch (error) {
             console.error("Critical error during authentication state change:", error);
-            // If any part of the auth check fails, clear the session to be safe.
             setUser(null);
         } finally {
-            // This `finally` block ensures the app is never stuck in a loading state.
             setLoading(false);
         }
       }
     );
 
-    // The cleanup function unsubscribes from the listener when the component unmounts.
     return () => {
+      clearTimeout(authTimeout);
       authListener.subscription.unsubscribe();
     };
   }, []); // The empty dependency array ensures this effect runs only once on component mount.
