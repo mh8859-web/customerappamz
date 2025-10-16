@@ -1,10 +1,10 @@
-// --- THE DEFINITIVE, FINAL SERVICE WORKER ---
-// This file is the architecturally correct solution to the PWA loading issues.
+// sw.js - THE FINAL, ARCHITECTURALLY CORRECT SERVICE WORKER - v3
 
-const CACHE_NAME = 'amaz-pm-cache-final-v3';
-// Pre-cache only the most essential, static part of the app shell.
+const CACHE_NAME = 'amaz-pm-final-v3'; // A new name to guarantee a fresh start
 const APP_SHELL_URLS = [
+  '/',
   '/index.html',
+  // The manifest is fetched by the browser, not the service worker, so it doesn't need to be here.
 ];
 
 // --- INSTALL: Pre-cache the essential App Shell ---
@@ -13,18 +13,14 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL_URLS))
-      .then(() => {
-        console.log('[Service Worker] Installation successful, activating immediately.');
-        // Force the waiting service worker to become the active service worker.
-        return self.skipWaiting();
-      })
+      .then(() => self.skipWaiting()) // Force activation immediately
       .catch(error => {
-        console.error('[Service Worker] App Shell caching failed:', error);
+        console.error('[Service Worker] App Shell caching failed during install:', error);
       })
   );
 });
 
-// --- ACTIVATE: Clean up old caches ---
+// --- ACTIVATE: Clean up old caches and take control ---
 self.addEventListener('activate', (event) => {
   console.log('[Service Worker] Activate Event: Cleaning up old caches and taking control.');
   event.waitUntil(
@@ -36,9 +32,8 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => {
-      // Tell the active service worker to take immediate control of all open clients.
       console.log('[Service Worker] Claiming clients now.');
-      return self.clients.claim();
+      return self.clients.claim(); // Take control of all open pages
     })
   );
 });
@@ -47,41 +42,43 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // --- CORE FIX FOR SINGLE-PAGE APPS ---
+  // --- CORE FIX FOR SINGLE-PAGE APPS (SPA) ---
   // If this is a navigation request (the user is trying to open a page),
-  // ALWAYS respond with the cached index.html. The client-side router will handle the rest.
-  // This prevents "Page Not Found" errors and fixes the infinite loading screen.
+  // we MUST ALWAYS respond with the cached index.html. The client-side React Router
+  // will then read the URL and render the correct components.
+  // This prevents all "Page Not Found" errors and fixes the infinite loading screen.
   if (request.mode === 'navigate') {
     event.respondWith(
       caches.match('/index.html').then(response => {
-        // If index.html is in the cache, return it. Otherwise, fetch it.
-        // This ensures the app shell always loads, even offline.
+        // If index.html is in the cache, return it. Otherwise, fetch it as a fallback.
+        // This ensures the app shell always loads, even on first visit or if cache is cleared.
         return response || fetch('/index.html');
+      }).catch(error => {
+        // This should not happen if install was successful, but as a last resort:
+        console.error('[Service Worker] Failed to serve index.html for navigation:', error);
+        // If cache fails for some reason, just try the network.
+        return fetch('/index.html');
       })
     );
-    return;
+    return; // Stop processing for navigation requests.
   }
-
-  // For all other requests (JS, CSS, images, etc.), use a "Stale-While-Revalidate" strategy.
-  // This makes the app feel instant and self-updates in the background.
+  
+  // For all other requests (JS, CSS, images from CDN, fonts, etc.), use a "Stale-While-Revalidate" strategy.
+  // This serves assets from the cache for speed, while simultaneously fetching an update in the background for the next visit.
+  // It provides a great balance of performance and freshness.
   event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(request).then(cachedResponse => {
+        const fetchPromise = fetch(request).then(networkResponse => {
           // If the fetch is successful, update the cache with the new version.
           if (networkResponse.ok) {
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
-        }).catch(error => {
-          // If the network fails, we've already returned the cached response (if it exists).
-          // This ensures offline functionality for assets.
-          console.warn(`[Service Worker] Fetch failed for: ${request.url}`, error);
-          // If there was no cached response and network failed, we must not return a failed promise.
-          // Let the browser show its default error.
         });
 
-        // Return the cached version immediately if it exists, otherwise wait for the network.
+        // Return the cached response immediately if it exists, otherwise wait for the network.
+        // The network fetch will happen in the background regardless.
         return cachedResponse || fetchPromise;
       });
     })
