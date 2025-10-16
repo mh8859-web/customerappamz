@@ -1,9 +1,11 @@
 // --- THE DEFINITIVE, FINAL SERVICE WORKER ---
 // This file is the architecturally correct solution to the PWA loading issues.
 
-const CACHE_NAME = 'amaz-pm-cache-final-fix';
+const CACHE_NAME = 'amaz-pm-cache-final-v2';
 const APP_SHELL_URLS = [
   '/index.html',
+  // We don't need to cache manifest.json here as the browser fetches it during install.
+  // The important part is that the fetch event for index.html is handled correctly.
 ];
 
 // --- INSTALL: Pre-cache the essential App Shell ---
@@ -14,6 +16,7 @@ self.addEventListener('install', (event) => {
       .then((cache) => cache.addAll(APP_SHELL_URLS))
       .then(() => {
         console.log('[Service Worker] Installation successful, activating immediately.');
+        // Force the waiting service worker to become the active service worker.
         return self.skipWaiting();
       })
       .catch(error => {
@@ -34,6 +37,7 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => {
+      // Tell the active service worker to take immediate control of all open clients.
       console.log('[Service Worker] Claiming clients now.');
       return self.clients.claim();
     })
@@ -49,7 +53,12 @@ self.addEventListener('fetch', (event) => {
   // ALWAYS respond with the cached index.html. The client-side router will handle the rest.
   // This prevents "Page Not Found" errors and fixes the infinite loading screen.
   if (request.mode === 'navigate') {
-    event.respondWith(caches.match('/index.html'));
+    event.respondWith(
+      caches.match('/index.html').then(response => {
+        // If index.html is in the cache, return it. Otherwise, fetch it.
+        return response || fetch('/index.html');
+      })
+    );
     return;
   }
 
@@ -64,6 +73,10 @@ self.addEventListener('fetch', (event) => {
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
+        }).catch(error => {
+          // If the network fails, we've already returned the cached response (if it exists).
+          // This ensures offline functionality for assets.
+          console.warn(`[Service Worker] Fetch failed for: ${request.url}`, error);
         });
 
         // Return the cached version immediately if it exists, otherwise wait for the network.
