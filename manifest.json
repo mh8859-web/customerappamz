@@ -19,10 +19,65 @@
   "start_url": "/",
   "id": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "scope": "/",
   "theme_color": "#1D9BF0",
   "background_color": "#F7F9FA",
   "orientation": "any",
   "lang": "en-US",
-  "dir": "ltr"
+  "dir": "ltr",
+  "categories": [
+    "business",
+    "productivity",
+    "lifestyle"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "shortcuts": [
+    {
+      "name": "My Projects",
+      "short_name": "Projects",
+      "description": "View your ongoing and completed projects",
+      "url": "/#/projects",
+      "icons": [
+        {
+          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Community Hub",
+      "short_name": "Hub",
+      "description": "Connect with the community and see updates",
+      "url": "/#/hub",
+      "icons": [
+        {
+          "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1760541739/amaz-screenshot-mobile_k5b8il.png",
+      "type": "image/png",
+      "sizes": "540x1170",
+      "form_factor": "narrow",
+      "label": "Project Dashboard on Mobile"
+    },
+    {
+      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1760541739/amaz-screenshot-desktop_q3jz5r.png",
+      "type": "image/png",
+      "sizes": "1920x1080",
+      "form_factor": "wide",
+      "label": "Project Details View on Desktop"
+    }
+  ]
 }
