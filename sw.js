@@ -1,6 +1,6 @@
-// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-final-fix)
+// sw.js - Architecturally Correct Service Worker for a Single-Page Application (v-final-fix-2)
 
-const CACHE_VERSION = 'v-final-fix';
+const CACHE_VERSION = 'v-final-fix-2';
 const STATIC_CACHE = `amaz-pm-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `amaz-pm-dynamic-${CACHE_VERSION}`;
 
@@ -55,21 +55,24 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For SPA navigation (requests for HTML documents), use a Network-Falling-Back-to-Cache strategy.
-  // CRITICAL: All navigation requests must fall back to serving '/index.html'.
+  // ** CRITICAL FIX FOR SPA ROUTING **
+  // For all navigation requests (i.e., requests for HTML pages), always serve the
+  // cached index.html. This allows the client-side router (React Router) to handle
+  // the URL and display the correct page, preventing "Page Not Found" errors on refresh
+  // or when accessing deep links directly.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      caches.match('/index.html')
+        .then(response => {
+          if (response) {
+            return response; // Serve the app shell from cache.
+          }
+          // If index.html is not in cache for some reason, try fetching it.
+          return fetch('/index.html'); 
+        })
         .catch(() => {
-          // If the network fails, serve the cached index.html. This is the key to offline launch.
-          return caches.match('/index.html')
-            .then(cachedResponse => {
-              if (cachedResponse) {
-                return cachedResponse;
-              }
-              // If index.html is not in the cache, serve the offline fallback page.
-              return caches.match('/offline.html');
-            });
+          // If everything fails, show the offline fallback page.
+          return caches.match('/offline.html');
         })
     );
     return;
