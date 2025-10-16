@@ -18,10 +18,20 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user: authUser, loading: authLoading } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
+    // This function is now wrapped in a try/catch/finally block.
+    // This is a critical fix to prevent the app from getting stuck on the loading screen
+    // if the API call to fetch users fails for any reason (e.g., network error, RLS policy).
+    // The 'finally' block GUARANTEES that loading is set to false, resolving the infinite loading state.
     setLoading(true);
-    const userList = await getUsers();
-    setUsers(userList);
-    setLoading(false);
+    try {
+        const userList = await getUsers();
+        setUsers(userList);
+    } catch (error) {
+        console.error("UserContext: Failed to fetch users.", error);
+        setUsers([]); // Clear users on error to prevent using stale or incorrect data.
+    } finally {
+        setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
