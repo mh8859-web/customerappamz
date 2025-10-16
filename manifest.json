@@ -1,78 +1,38 @@
 {
   "name": "AMAZ Interiors Project Management",
   "short_name": "AMAZ PM",
-  "description": "A premium, mobile-responsive Interior Project Management app for Admins, Designers, and Customers.",
-  "icons": [
-    {
-      "src": "/assets/icons/icon-192.png",
-      "type": "image/png",
-      "sizes": "192x192",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/assets/icons/icon-512.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
-    }
-  ],
-  "start_url": "/?source=pwa",
-  "id": "/?source=pwa",
-  "display": "standalone",
+  "description": "A premium, luxury, mobile-responsive Interior Project Management web app.",
+  "start_url": "/index.html?source=pwa",
   "scope": "/",
+  "id": "/index.html",
+  "display": "standalone",
   "theme_color": "#1D9BF0",
   "background_color": "#F7F9FA",
-  "orientation": "any",
-  "lang": "en-US",
-  "dir": "ltr",
-  "categories": [
-    "business",
-    "productivity",
-    "lifestyle"
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
   ],
-  "prefer_related_applications": false,
   "shortcuts": [
     {
       "name": "My Projects",
       "short_name": "Projects",
-      "description": "View your ongoing and completed projects",
-      "url": "/#/projects",
-      "icons": [
-        {
-          "src": "/assets/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
+      "url": "/#/projects"
     },
     {
       "name": "Community Hub",
       "short_name": "Hub",
-      "description": "Connect with the community and see updates",
-      "url": "/#/hub",
-      "icons": [
-        {
-          "src": "/assets/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/assets/screenshots/amaz-screenshot-mobile.png",
-      "type": "image/png",
-      "sizes": "540x1170",
-      "form_factor": "narrow",
-      "label": "Project Dashboard on Mobile"
-    },
-    {
-      "src": "/assets/screenshots/amaz-screenshot-desktop.png",
-      "type": "image/png",
-      "sizes": "1920x1080",
-      "form_factor": "wide",
-      "label": "Project Details View on Desktop"
+      "url": "/#/hub"
     }
   ]
 }
