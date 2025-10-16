@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import Card from '../../components/ui/Card';
-import { STAGE_DISPLAY_NAMES } from '../../constants';
-import Button from '../../components/ui/Button';
-import { useAuth } from '../../context/AuthContext';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../../types';
-import Modal from '../../components/ui/Modal';
+import Card from '../components/ui/Card';
+import { STAGE_DISPLAY_NAMES } from '../constants';
+import Button from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
+import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../types';
+import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ChatComponent from '../components/chat/ChatComponent';
 import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import GeneratePOModal from '../components/designer/GeneratePOModal';
-import { useUsers } from '../../context/UserContext';
-import UserNameDisplay from '../../components/ui/UserNameDisplay';
-import { useData } from '../../context/DataContext';
-import { updateRecord, createRecord } from '../../services/api';
+import { useUsers } from '../context/UserContext';
+import UserNameDisplay from '../components/ui/UserNameDisplay';
+import { useData } from '../context/DataContext';
+import { updateRecord, createRecord } from '../services/api';
 
 type UnifiedUpdate = {
     id: string;
