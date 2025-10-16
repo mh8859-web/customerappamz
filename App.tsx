@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import { useUsers } from './context/UserContext';
 import Login from './pages/Login';
@@ -24,7 +24,6 @@ import MyCalendar from './pages/designer/MyCalendar';
 import FinancialReports from './pages/admin/FinancialReports';
 import TeamCalendar from './pages/designer/TeamCalendar';
 import CommunityHub from './pages/shared/CommunityHub';
-import InstallAppModal from './components/ui/InstallAppModal';
 import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 
@@ -37,7 +36,6 @@ const FullPageSpinner: React.FC = () => (
 const App: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const { loading: usersLoading } = useUsers();
-  const [isInstallModalOpen, setInstallModalOpen] = useState(false);
 
   if (authLoading || (user && usersLoading)) {
     return <FullPageSpinner />;
@@ -58,62 +56,57 @@ const App: React.FC = () => {
   };
 
   return (
-    <>
-      <InstallAppModal isOpen={isInstallModalOpen} onClose={() => setInstallModalOpen(false)} />
-      <HashRouter>
-        <Routes>
-          {user ? (
-            <Route path="/" element={<DashboardLayout setInstallModalOpen={setInstallModalOpen} />}>
-              <Route index element={renderDashboard()} />
-              <Route path="hub" element={<CommunityHub />} />
-              <Route path="projects" element={<ProjectsList />} />
-              <Route path="projects/:projectId" element={<ProjectDetails />} />
-              <Route path="support" element={<SupportPage />} />
-              <Route path="account" element={<MyAccount />} />
-              <Route path="downloads" element={<DownloadCenter />} />
-              <Route path="project-wall" element={<ProjectWall />} />
+    <Routes>
+      {user ? (
+        <Route path="/" element={<DashboardLayout />}>
+          <Route index element={renderDashboard()} />
+          <Route path="hub" element={<CommunityHub />} />
+          <Route path="projects" element={<ProjectsList />} />
+          <Route path="projects/:projectId" element={<ProjectDetails />} />
+          <Route path="support" element={<SupportPage />} />
+          <Route path="account" element={<MyAccount />} />
+          <Route path="downloads" element={<DownloadCenter />} />
+          <Route path="project-wall" element={<ProjectWall />} />
 
-              {/* Admin Routes */}
-              {user.role === 'Admin' && (
-                <>
-                  <Route path="overview" element={<AdminOverview />} />
-                  <Route path="users" element={<UserManagement />} />
-                  <Route path="attendance" element={<AttendanceLogs />} />
-                  <Route path="reports" element={<FinancialReports />} />
-                  <Route path="settings" element={<AdminSettings />} />
-                </>
-              )}
-
-              {/* Designer Routes */}
-              {user.role === 'Designer' && (
-                <>
-                  <Route path="task-board" element={<TaskBoard />} />
-                  <Route path="my-calendar" element={<MyCalendar />} />
-                  <Route path="team-calendar" element={<TeamCalendar />} />
-                  <Route path="leave" element={<LeaveManagement />} />
-                  <Route path="daily-work" element={<DailyWork />} />
-                  <Route path="my-attendance" element={<MyAttendance />} />
-                </>
-              )}
-
-              {/* Customer Routes */}
-              {user.role === 'Customer' && (
-                <>
-                  <Route path="billing" element={<BillingHistory />} />
-                </>
-              )}
-
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Route>
-          ) : (
+          {/* Admin Routes */}
+          {user.role === 'Admin' && (
             <>
-              <Route path="/login" element={<Login />} />
-              <Route path="*" element={<Navigate to="/login" replace />} />
+              <Route path="overview" element={<AdminOverview />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="attendance" element={<AttendanceLogs />} />
+              <Route path="reports" element={<FinancialReports />} />
+              <Route path="settings" element={<AdminSettings />} />
             </>
           )}
-        </Routes>
-      </HashRouter>
-    </>
+
+          {/* Designer Routes */}
+          {user.role === 'Designer' && (
+            <>
+              <Route path="task-board" element={<TaskBoard />} />
+              <Route path="my-calendar" element={<MyCalendar />} />
+              <Route path="team-calendar" element={<TeamCalendar />} />
+              <Route path="leave" element={<LeaveManagement />} />
+              <Route path="daily-work" element={<DailyWork />} />
+              <Route path="my-attendance" element={<MyAttendance />} />
+            </>
+          )}
+
+          {/* Customer Routes */}
+          {user.role === 'Customer' && (
+            <>
+              <Route path="billing" element={<BillingHistory />} />
+            </>
+          )}
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      ) : (
+        <>
+          <Route path="/login" element={<Login />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </>
+      )}
+    </Routes>
   );
 };
 
