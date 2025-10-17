@@ -13,10 +13,12 @@ import { useData } from '../../context/DataContext';
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
-    const { findUserById } = useUsers();
-    const { projects, milestones, announcements, refetchData } = useData();
+    const { findUserById, loading: usersLoading } = useUsers();
+    const { projects, milestones, announcements, refetchData, loading: dataLoading } = useData();
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+
+    const isLoading = usersLoading || dataLoading;
 
     const { project, projectMilestones, designer, admin } = useMemo(() => {
         if (!user) return { project: null, projectMilestones: [], designer: null, admin: null };
@@ -59,6 +61,24 @@ const CustomerDashboard: React.FC = () => {
             await refetchData(); // refetch to simulate update
         }
     };
+    
+    if (isLoading) {
+        return (
+            <div className="space-y-8 animate-pulse-fast">
+                <div className="h-8 bg-secondary rounded w-1/2"></div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="h-40 bg-secondary rounded-2xl"></div>
+                        <div className="h-32 bg-secondary rounded-2xl"></div>
+                    </div>
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="h-32 bg-secondary rounded-2xl"></div>
+                        <div className="h-24 bg-secondary rounded-2xl"></div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
 
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;
@@ -67,8 +87,8 @@ const CustomerDashboard: React.FC = () => {
     if (!project) {
         return (
             <div className="text-center">
-                <h1 className="text-2xl font-bold text-text-headline">Welcome, {user?.fullName}!</h1>
-                <p className="text-text-muted">You do not have any active projects at the moment.</p>
+                <h1 className="text-2xl font-bold font-display text-text-primary">Welcome, {user?.fullName}!</h1>
+                <p className="text-text-secondary mt-2">You do not have any active projects at the moment.</p>
                 <Button className="mt-4" onClick={() => window.location.hash = '/projects'}>View Archived Projects</Button>
             </div>
         );
@@ -85,14 +105,14 @@ const CustomerDashboard: React.FC = () => {
                 onPaymentSuccess={handlePaymentComplete}
             />
             <div className="space-y-8">
-                <h1 className="text-3xl font-bold text-text-headline">Welcome, {user?.fullName.split(' ')[0]}!</h1>
+                <h1 className="text-3xl font-bold font-display text-text-primary">Welcome, {user?.fullName.split(' ')[0]}!</h1>
                  
                  {latestAnnouncement && (
                     <Card className="!p-4 bg-brand-blue/10 border-brand-blue/30 flex items-start gap-3">
                         <MegaphoneIcon className="w-5 h-5 text-brand-blue flex-shrink-0 mt-1"/>
                         <div>
                             <h3 className="font-bold text-brand-blue">An Update from AMAZ Interiors</h3>
-                            <p className="text-sm text-text-headline">{latestAnnouncement.content}</p>
+                            <p className="text-sm text-text-primary">{latestAnnouncement.content}</p>
                         </div>
                     </Card>
                 )}
@@ -100,8 +120,8 @@ const CustomerDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                         <Card>
-                            <h2 className="text-xl font-semibold text-text-headline mb-4">Project: {project.title}</h2>
-                            <p className="text-sm text-text-muted mb-4">{project.description}</p>
+                            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Project: {project.title}</h2>
+                            <p className="text-sm text-text-secondary mb-4">{project.description}</p>
                             <div className="text-right">
                                 <Link to={`/projects/${project.id}`}>
                                     <Button>View Project Details</Button>
@@ -109,21 +129,21 @@ const CustomerDashboard: React.FC = () => {
                             </div>
                         </Card>
                          <Card>
-                            <h2 className="text-xl font-semibold text-text-headline mb-4">Financial Overview</h2>
+                            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Financial Overview</h2>
                              <div className="flex items-center gap-6">
                                 <div className="relative w-24 h-24">
                                     <svg className="w-full h-full" viewBox="0 0 36 36">
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#CFD9DE" strokeWidth="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#EFF3F4" strokeWidth="3" />
                                         <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1D9BF0" strokeWidth="3" strokeDasharray={`${(totalPaid / project.budgetDisplay) * 100}, 100`} />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-lg font-bold text-text-headline">{Math.round((totalPaid / project.budgetDisplay) * 100)}%</span>
-                                        <span className="text-xs text-text-muted">Paid</span>
+                                        <span className="text-lg font-bold text-text-primary">{Math.round((totalPaid / project.budgetDisplay) * 100)}%</span>
+                                        <span className="text-xs text-text-secondary">Paid</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-text-muted">Total Paid: <span className="font-bold text-text-headline">₹{totalPaid.toLocaleString()}</span></p>
-                                    <p className="text-text-muted">Total Budget: <span className="font-bold text-text-headline">₹{project.budgetDisplay.toLocaleString()}</span></p>
+                                    <p className="text-text-secondary">Total Paid: <span className="font-bold text-text-primary">₹{totalPaid.toLocaleString()}</span></p>
+                                    <p className="text-text-secondary">Total Budget: <span className="font-bold text-text-primary">₹{project.budgetDisplay.toLocaleString()}</span></p>
                                 </div>
                              </div>
                         </Card>
@@ -131,14 +151,14 @@ const CustomerDashboard: React.FC = () => {
 
                     <div className="lg:col-span-1 space-y-6">
                         <Card>
-                            <h2 className="text-xl font-semibold text-text-headline mb-4">My Project Team</h2>
+                            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">My Project Team</h2>
                             <div className="space-y-3">
                                 {designer && (
                                     <div className="flex items-center gap-3">
                                         <img src={designer.avatarUrl} alt={designer.fullName} className="w-10 h-10 rounded-full" />
                                         <div>
-                                            <UserNameDisplay user={designer} textClassName="font-semibold text-text-headline" />
-                                            <p className="text-sm text-text-muted">Lead Designer</p>
+                                            <UserNameDisplay user={designer} textClassName="font-semibold text-text-primary" />
+                                            <p className="text-sm text-text-secondary">Lead Designer</p>
                                         </div>
                                     </div>
                                 )}
@@ -146,15 +166,15 @@ const CustomerDashboard: React.FC = () => {
                                      <div className="flex items-center gap-3">
                                         <img src={admin.avatarUrl} alt={admin.fullName} className="w-10 h-10 rounded-full" />
                                         <div>
-                                            <UserNameDisplay user={admin} textClassName="font-semibold text-text-headline" />
-                                            <p className="text-sm text-text-muted">Project Admin</p>
+                                            <UserNameDisplay user={admin} textClassName="font-semibold text-text-primary" />
+                                            <p className="text-sm text-text-secondary">Project Admin</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </Card>
                          <Card>
-                            <h2 className="text-xl font-semibold text-text-headline mb-4">Key Documents</h2>
+                            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Key Documents</h2>
                             <div className="space-y-2">
                                 <Button variant="secondary" className="w-full !justify-start !p-2 text-sm flex gap-2"><DownloadIcon className="w-4 h-4"/> Initial Quote</Button>
                                 <Button variant="secondary" className="w-full !justify-start !p-2 text-sm flex gap-2"><DownloadIcon className="w-4 h-4"/> Final Approved Quote</Button>

@@ -12,14 +12,25 @@ import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
-interface StatCardProps {
-    title: string;
-    value: string | number;
-    icon: React.ReactNode;
-    color: string;
-}
+const SkeletonCard = () => (
+    <Card className="flex items-center p-5 animate-pulse-fast">
+        <div className="p-3 rounded-xl bg-secondary h-12 w-12"></div>
+        <div className="ml-4 space-y-2">
+            <div className="h-4 bg-secondary rounded w-24"></div>
+            <div className="h-8 bg-secondary rounded w-32"></div>
+        </div>
+    </Card>
+);
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
+const SkeletonList = () => (
+  <div className="space-y-3">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="bg-secondary p-4 rounded-xl h-16 animate-pulse-fast"></div>
+    ))}
+  </div>
+);
+
+const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; color: string; }> = ({ title, value, icon, color }) => (
     <Card className="flex items-center p-5">
         <div className={`p-3 rounded-xl`} style={{ backgroundColor: `${color}20`, color }}>
            {icon}
@@ -34,10 +45,12 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { users } = useUsers();
-  const { projects, activityLogs, milestones, announcements, refetchData } = useData();
+  const { users, loading: usersLoading } = useUsers();
+  const { projects, activityLogs, milestones, announcements, refetchData, loading: dataLoading } = useData();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
+  
+  const isLoading = usersLoading || dataLoading;
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
@@ -116,52 +129,68 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <StatCard title="Active Projects" value={currentProjects} color="#1D9BF0" icon={<BriefcaseIcon className="w-6 h-6" />} />
-          <StatCard title="This Month Revenue" value={`₹${thisMonthRevenue.toLocaleString()}`} color="#00BA7C" icon={<DollarSignIcon className="w-6 h-6" />} />
-          <StatCard title="Active Designers" value={activeDesigners} color="#F97316" icon={<UsersIcon className="w-6 h-6" />} />
+            {isLoading ? (
+                <>
+                    <SkeletonCard />
+                    <SkeletonCard />
+                    <SkeletonCard />
+                </>
+            ) : (
+                <>
+                    <StatCard title="Active Projects" value={currentProjects} color="#1D9BF0" icon={<BriefcaseIcon className="w-6 h-6" />} />
+                    <StatCard title="This Month Revenue" value={`₹${thisMonthRevenue.toLocaleString()}`} color="#00BA7C" icon={<DollarSignIcon className="w-6 h-6" />} />
+                    <StatCard title="Active Designers" value={activeDesigners} color="#F97316" icon={<UsersIcon className="w-6 h-6" />} />
+                </>
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2">
             <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Revenue Trend</h2>
             <div style={{ height: '300px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                        <XAxis dataKey="name" stroke="#536471" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} cursor={{fill: '#1D9BF0', fillOpacity: 0.1}}/>
-                        <Bar dataKey="revenue" fill="#1D9BF0" radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {isLoading ? <div className="h-full bg-secondary rounded-xl animate-pulse-fast"></div> : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={revenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                            <XAxis dataKey="name" stroke="#536471" fontSize={12} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} cursor={{fill: '#1D9BF0', fillOpacity: 0.1}}/>
+                            <Bar dataKey="revenue" fill="#1D9BF0" radius={[6, 6, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
             </div>
           </Card>
           <Card>
               <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Live Designer Activity</h2>
-              <ul className="space-y-4">
-                  {designerActivity.map(log => (
-                      <li key={log.id} className="text-sm">
-                          <p className="text-text-primary font-medium">{users.find(u => u.id === log.actorId)?.fullName}</p>
-                          <p className="text-text-secondary">{log.action.replace('_', ' ')} on {projects.find(p=> p.id === log.projectId)?.title}</p>
-                          <p className="text-xs text-text-secondary/70">{new Date(log.createdAt).toLocaleTimeString()}</p>
-                      </li>
-                  ))}
-              </ul>
+              {isLoading ? <SkeletonList /> : (
+                <ul className="space-y-4">
+                    {designerActivity.map(log => (
+                        <li key={log.id} className="text-sm">
+                            <p className="text-text-primary font-medium">{users.find(u => u.id === log.actorId)?.fullName}</p>
+                            <p className="text-text-secondary">{log.action.replace('_', ' ')} on {projects.find(p=> p.id === log.projectId)?.title}</p>
+                            <p className="text-xs text-text-secondary/70">{new Date(log.createdAt).toLocaleTimeString()}</p>
+                        </li>
+                    ))}
+                </ul>
+              )}
           </Card>
         </div>
           
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2">
                   <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Recently Created Projects</h2>
-                  <div className="space-y-3">
-                      {recentProjects.map(p => (
-                          <div key={p.id} className="bg-page-bg p-4 rounded-xl flex justify-between items-center">
-                              <div>
-                                  <p className="font-semibold text-text-primary">{p.title}</p>
-                                  <p className="text-sm text-text-secondary">{users.find(u => u.id === p.customerId)?.fullName}</p>
-                              </div>
-                              <Button variant="secondary" className="!px-4 !text-sm">Assign</Button>
-                          </div>
-                      ))}
-                  </div>
+                  {isLoading ? <SkeletonList /> : (
+                    <div className="space-y-3">
+                        {recentProjects.map(p => (
+                            <div key={p.id} className="bg-page-bg p-4 rounded-xl flex justify-between items-center">
+                                <div>
+                                    <p className="font-semibold text-text-primary">{p.title}</p>
+                                    <p className="text-sm text-text-secondary">{users.find(u => u.id === p.customerId)?.fullName}</p>
+                                </div>
+                                <Button variant="secondary" className="!px-4 !text-sm">Assign</Button>
+                            </div>
+                        ))}
+                    </div>
+                  )}
               </Card>
               <div className="space-y-6">
                   <Card>

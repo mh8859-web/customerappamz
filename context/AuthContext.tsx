@@ -5,16 +5,14 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean; // <-- NEW: Critical state to track initial auth check
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
-  sendPasswordReset: (userId: string) => Promise<{ success: boolean; error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper function to fetch and map a user profile from the 'users' table.
-// This function has no side effects.
 const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
     const { data, error } = await supabase
         .from('users')
@@ -42,22 +40,34 @@ const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | nu
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true); // Start as true
 
   useEffect(() => {
-    // On initial app load, check for an existing session.
     const initializeSession = async () => {
+      try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
             const profile = await fetchAndMapProfile(session.user);
-            setUser(profile); // If profile is null, user is effectively logged out.
+            setUser(profile);
         }
+      } catch (e) {
+        console.error("Error initializing session:", e);
+        setUser(null);
+      } finally {
+        setLoading(false); // Auth check is complete
+      }
     };
     
     initializeSession();
 
-    // Listen for auth events that happen outside the app's direct control, like logout.
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          setLoading(true);
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+          setLoading(false);
+        }
         if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -94,15 +104,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return { success: false, error: 'INVALID_CREDENTIALS' };
         }
 
-        // After successful auth, fetch the user profile to complete the login process.
         const userProfile = await fetchAndMapProfile(data.user);
         
         if (userProfile) {
-            setUser(userProfile); // Set the user state for the app
+            setUser(userProfile);
             return { success: true, error: null };
         } else {
-            // This is a critical error: auth succeeded but profile is missing.
-            // Clean up by signing the user out to prevent a broken state.
             await supabase.auth.signOut();
             setUser(null);
             return { success: false, error: 'PROFILE_FETCH_FAILED' };
@@ -116,42 +123,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     await supabase.auth.signOut();
-    // The onAuthStateChange listener will handle setting the user to null.
+    setUser(null);
   };
   
   const updateUser = (updates: Partial<User>) => {
       setUser(prevUser => prevUser ? { ...prevUser, ...updates } : null);
   };
 
-  const sendPasswordReset = async (userId: string): Promise<{ success: boolean; error: string | null }> => {
-    if (!userId.trim()) {
-      return { success: false, error: 'User ID cannot be empty.' };
-    }
-    const trimmedUserId = userId.trim().toLowerCase();
-    
-    const { data: userProfile, error: profileError } = await supabase
-        .from('users')
-        .select('email')
-        .eq('user_id', trimmedUserId)
-        .single();
-    
-    if (profileError || !userProfile?.email) {
-        // Don't reveal if a user exists or not for security reasons.
-        console.warn("Password reset attempted for non-existent user_id:", trimmedUserId);
-        return { success: true, error: null };
-    }
-
-    await supabase.auth.resetPasswordForEmail(userProfile.email);
-
-    return { success: true, error: null };
-  };
-
   const value = {
     user,
+    loading,
     login,
     logout,
     updateUser,
-    sendPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
