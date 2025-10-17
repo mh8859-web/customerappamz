@@ -11,27 +11,10 @@ import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import { useData } from '../../context/DataContext';
 
-const DashboardLoader: React.FC = () => (
-    <div className="space-y-8 animate-pulse">
-        <div className="h-9 bg-secondary rounded w-1/2"></div>
-        <div className="h-20 bg-surface rounded-2xl shadow-card"></div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-                <div className="h-48 bg-surface rounded-2xl shadow-card"></div>
-                <div className="h-32 bg-surface rounded-2xl shadow-card"></div>
-            </div>
-            <div className="lg:col-span-1 space-y-6">
-                <div className="h-40 bg-surface rounded-2xl shadow-card"></div>
-                <div className="h-32 bg-surface rounded-2xl shadow-card"></div>
-            </div>
-        </div>
-    </div>
-);
-
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
-    const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, milestones, announcements, refetchData, loading: dataLoading } = useData();
+    const { findUserById } = useUsers();
+    const { projects, milestones, announcements, refetchData } = useData();
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
 
@@ -76,8 +59,6 @@ const CustomerDashboard: React.FC = () => {
             await refetchData(); // refetch to simulate update
         }
     };
-
-    if (dataLoading || usersLoading) return <DashboardLoader />;
 
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;

@@ -7,30 +7,13 @@ import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 
-const DashboardLoader: React.FC = () => (
-  <div className="space-y-8 animate-pulse">
-    <div className="h-9 bg-secondary rounded w-1/2"></div>
-    <div className="h-20 bg-surface rounded-2xl shadow-card"></div>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-    </div>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-96 bg-surface rounded-2xl shadow-card"></div>
-        <div className="h-96 bg-surface rounded-2xl shadow-card"></div>
-    </div>
-  </div>
-);
-
 const DesignerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { findUserById } = useUsers();
-  const { projects, tasks, designs, leaveRequests, announcements, loading } = useData();
+  const { projects, tasks, designs, leaveRequests, announcements } = useData();
   const navigate = useNavigate();
 
-  if (!user || loading) return <DashboardLoader />;
+  if (!user) return null;
 
   const assignedProjects = projects.filter(p => p.designerId === user.id);
   const tasksDueToday = tasks.filter(t => t.assigneeId === user.id && t.status !== 'Done');

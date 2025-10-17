@@ -12,24 +12,6 @@ import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
-const DashboardLoader: React.FC = () => (
-  <div className="space-y-8 animate-pulse">
-    <div className="flex justify-between items-center">
-      <div className="h-9 bg-secondary rounded w-1/3"></div>
-      <div className="h-11 bg-secondary rounded-xl w-48"></div>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
-    </div>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 h-80 bg-surface rounded-2xl shadow-card"></div>
-      <div className="h-80 bg-surface rounded-2xl shadow-card"></div>
-    </div>
-  </div>
-);
-
 interface StatCardProps {
     title: string;
     value: string | number;
@@ -53,7 +35,7 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { users } = useUsers();
-  const { projects, activityLogs, milestones, announcements, loading, refetchData } = useData();
+  const { projects, activityLogs, milestones, announcements, refetchData } = useData();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   
@@ -102,8 +84,6 @@ const AdminDashboard: React.FC = () => {
     setAnnouncement('');
     alert('Announcement sent!');
   };
-
-  if (loading) return <DashboardLoader />;
 
   const currentProjects = projects.filter(p => p.status === 'Active').length;
   const activeDesigners = users.filter(u => u.role === 'Designer').length;

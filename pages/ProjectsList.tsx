@@ -52,13 +52,12 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 
 const ProjectsList: React.FC = () => {
   const { user } = useAuth();
-  const { projects, loading: dataLoading, refetchData } = useData();
-  const { loading: usersLoading } = useUsers();
+  const { projects, refetchData } = useData();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const navigate = useNavigate();
   
-  if (!user || usersLoading || dataLoading) return null;
+  if (!user) return null;
   
   const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => {
     const projectToCreate = {

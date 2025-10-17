@@ -28,8 +28,8 @@ interface DataContextType {
     announcements: Announcement[];
     posts: Post[];
     feedComments: FeedComment[];
-    loading: boolean;
     refetchData: () => Promise<void>;
+    loading: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -39,7 +39,7 @@ const mapToCamelCase = (data: any[], mapper: (item: any) => any) => {
 }
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const { user, loading: authLoading } = useAuth();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
 
     const [projects, setProjects] = useState<Project[]>([]);
@@ -64,34 +64,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
 
     const fetchData = useCallback(async () => {
-        // This function now internally checks if a user exists.
-        // If not, it clears all data and stops, preventing errors and ensuring a clean state.
+        setLoading(true);
         if (!user) {
-            setProjects([]);
-            setTasks([]);
-            setDesigns([]);
-            setMessages([]);
-            setMilestones([]);
-            setQuotes([]);
-            setActivityLogs([]);
-            setSiteVisits([]);
-            setSupportTickets([]);
-            setAttendanceLogs([]);
-            setLeaveRequests([]);
-            setWorkLogs([]);
-            setProjectUpdates([]);
-            setFinalGalleryImages([]);
-            setExpenses([]);
-            setProducts([]);
-            setProjectTemplates([]);
-            setAnnouncements([]);
-            setPosts([]);
-            setFeedComments([]);
+            setProjects([]); setTasks([]); setDesigns([]); setMessages([]); setMilestones([]);
+            setQuotes([]); setActivityLogs([]); setSiteVisits([]); setSupportTickets([]);
+            setAttendanceLogs([]); setLeaveRequests([]); setWorkLogs([]); setProjectUpdates([]);
+            setFinalGalleryImages([]); setExpenses([]); setProducts([]); setProjectTemplates([]);
+            setAnnouncements([]); setPosts([]); setFeedComments([]);
             setLoading(false);
             return;
         }
 
-        setLoading(true);
         try {
             const tables = [
                 'projects', 'tasks', 'designs', 'messages', 'milestones', 'quotes', 'activity_logs', 
@@ -143,20 +126,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     useEffect(() => {
-        // This effect is now simpler. It just waits for auth to finish,
-        // and then calls `fetchData`, which knows what to do based on the user state.
-        // This removes the race condition.
-        if (!authLoading) {
-            fetchData();
-        }
-    }, [fetchData, authLoading]);
+        fetchData();
+    }, [fetchData]);
 
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,
         supportTickets, attendanceLogs, leaveRequests, workLogs, projectUpdates,
         finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments,
-        loading,
         refetchData: fetchData,
+        loading,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -9,16 +9,12 @@ interface AuthContextType {
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   sendPasswordReset: (userId: string) => Promise<{ success: boolean; error: string | null }>;
-  // FIX: Add loading property to the context type.
-  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  // FIX: Add loading state to track session initialization.
-  const [loading, setLoading] = useState(true);
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) {
@@ -70,9 +66,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } catch (e) {
         console.error("Critical error during session initialization. Forcing logout.", e);
         setUser(null);
-      } finally {
-        // FIX: Set loading to false after the session has been checked.
-        setLoading(false);
       }
     };
     
@@ -171,8 +164,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     user,
-    // FIX: Expose loading state in the context value.
-    loading,
     login,
     logout,
     updateUser,

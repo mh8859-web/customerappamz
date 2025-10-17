@@ -6,12 +6,8 @@
     <title>AMAZ Interiors PM</title>
 
     <!-- PWA & Themeing -->
-    <meta name="theme-color" content="#1D9BF0">
     <link rel="icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png" type="image/png" />
-    <link rel="apple-touch-icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png">
     
-    <link rel="manifest" href="/manifest.json">
-
     <!-- Scripts & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -132,22 +128,6 @@
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
-    <script>
-      // Forcefully unregister any existing service workers to clear bad caches.
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          if (registrations.length > 0) {
-            console.log('Unregistering existing service workers...');
-            for (let registration of registrations) {
-              registration.unregister();
-            }
-            console.log('Service workers unregistered. The app will be loaded from the network on the next visit.');
-          }
-        }).catch(function(err) {
-          console.error('Service Worker unregistration failed: ', err);
-        });
-      }
-    </script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

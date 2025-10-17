@@ -5,9 +5,9 @@ import { useAuth } from './AuthContext';
 
 interface UserContextType {
   users: User[];
-  loading: boolean;
   findUserById: (id: string) => User | undefined;
   refetchUsers: () => Promise<void>;
+  loading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -15,18 +15,16 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user: authUser, loading: authLoading } = useAuth();
+  const { user: authUser } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
-    // This function now internally checks for a valid user.
-    // This makes the logic more robust and centralized.
+    setLoading(true);
     if (!authUser) {
       setUsers([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
         const userList = await getUsers();
         setUsers(userList);
@@ -36,16 +34,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
         setLoading(false);
     }
-  }, [authUser]); // Dependency on authUser ensures this function has the latest auth state.
+  }, [authUser]);
 
   useEffect(() => {
-    // This effect is now simpler. It just waits for auth to finish,
-    // and then calls `fetchAllUsers`, which knows what to do based on
-    // whether a user is logged in or not. This removes the race condition.
-    if (!authLoading) {
-      fetchAllUsers();
-    }
-  }, [authLoading, fetchAllUsers]);
+    fetchAllUsers();
+  }, [fetchAllUsers]);
 
   const findUserById = (id: string): User | undefined => {
     return users.find(user => user.id === id);
@@ -53,9 +46,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     users,
-    loading,
     findUserById,
     refetchUsers: fetchAllUsers,
+    loading,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

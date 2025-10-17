@@ -30,8 +30,8 @@ type UnifiedUpdate = {
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
     const { user } = useAuth();
-    const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData, loading: dataLoading } = useData();
+    const { findUserById } = useUsers();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData } = useData();
     
     const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
     const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
@@ -93,7 +93,7 @@ const ProjectDetails: React.FC = () => {
 
     }, [projectId, projects, user]);
 
-    if (dataLoading || usersLoading || !project || !user) {
+    if (!project || !user) {
         return <div className="text-center text-text-headline">Loading project details...</div>;
     }
 

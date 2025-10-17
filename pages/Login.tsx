@@ -12,15 +12,15 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isForgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const { login, user, loading: authLoading } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If the auth check is done and a user exists, redirect them away from the login page.
-    if (!authLoading && user) {
+    // If a user session is found, redirect them away from the login page.
+    if (user) {
       navigate('/', { replace: true });
     }
-  }, [user, authLoading, navigate]);
+  }, [user, navigate]);
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,15 +47,6 @@ const Login: React.FC = () => {
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
   
-  // Don't render the form if we're about to redirect
-  if (authLoading || user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-page-bg">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue"></div>
-      </div>
-    );
-  }
-
   return (
     <>
       <ForgotPasswordModal 

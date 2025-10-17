@@ -25,7 +25,6 @@ import TeamCalendar from './pages/designer/TeamCalendar';
 import CommunityHub from './pages/shared/CommunityHub';
 import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
-import CacheManagement from './pages/admin/CacheManagement';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Helper component to redirect to the correct dashboard based on user role
@@ -82,7 +81,6 @@ const App: React.FC = () => {
               <Route path="attendance" element={<AttendanceLogs />} />
               <Route path="reports" element={<FinancialReports />} />
               <Route path="settings" element={<AdminSettings />} />
-              <Route path="cache" element={<CacheManagement />} />
           </Route>
 
           {/* Designer Routes */}
