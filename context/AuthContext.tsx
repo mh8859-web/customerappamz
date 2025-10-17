@@ -16,9 +16,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Start loading immediately
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+  // This is the single source of truth for fetching a user's profile from the DB
+  // and setting the application's user state.
+  const fetchUserProfile = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
+    if (!supabaseUser) {
+      setUser(null);
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -27,13 +34,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (error) {
       console.error('Error fetching user profile:', error);
+      // If profile fetch fails, we must sign out to prevent an inconsistent state.
+      await supabase.auth.signOut();
       setUser(null);
       return null;
-    } else if (data) {
-      // Map database snake_case to application camelCase
+    } 
+    
+    if (data) {
       const userProfile: User = {
           id: data.id,
-          fullName: data.full_name || 'User', // Fallback to prevent crash if full_name is null
+          fullName: data.full_name || 'User',
           email: data.email,
           role: data.role,
           avatarUrl: data.avatar_url,
@@ -44,70 +54,77 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userProfile);
       return userProfile;
     }
+
+    // This case means a user exists in auth.users but not in public.users
+    // This is a critical data integrity issue, so we log them out.
+    await supabase.auth.signOut();
+    setUser(null);
     return null;
   };
   
+  // This effect runs only once on app startup to handle the initial session check.
   useEffect(() => {
-    // FIX: Added a timeout to ensure the app never gets stuck in a loading state.
-    // On a hard refresh, if the onAuthStateChange listener fails to fire for any reason,
-    // this timeout will force the loading state to false, preventing a permanent blank screen.
-    const authTimeout = setTimeout(() => {
-        if (loading) {
-            console.warn("Authentication timed out. Clearing loading state.");
-            setLoading(false);
+    const initializeSession = async () => {
+      try {
+        // Proactively get the session from local storage.
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+            throw new Error(`Supabase getSession error: ${error.message}`);
         }
-    }, 5000); // 5-second timeout
+        // fetchUserProfile will handle setting the user state or null.
+        await fetchUserProfile(session?.user ?? null);
+      } catch (e) {
+        console.error("Critical error during session initialization. Forcing logout.", e);
+        // If anything fails (e.g., corrupted local storage), clear the session.
+        setUser(null);
+      } finally {
+        // The initial authentication check is complete.
+        setLoading(false);
+      }
+    };
+    
+    initializeSession();
 
+    // This listener handles all subsequent auth changes (sign in, sign out, token refresh).
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        clearTimeout(authTimeout); // We got a response, so clear the safety timeout.
-        try {
-            if (session) {
-                await fetchUserProfile(session.user);
-            } else {
-                setUser(null);
-            }
-        } catch (error) {
-            console.error("Critical error during authentication state change:", error);
-            setUser(null);
-        } finally {
-            setLoading(false);
+      async (event, session) => {
+        // On SIGNED_IN, the session is guaranteed to be available.
+        if (event === 'SIGNED_IN') {
+          setLoading(true);
+          await fetchUserProfile(session!.user);
+          setLoading(false);
+        }
+        // On SIGNED_OUT, clear the user state.
+        if (event === 'SIGNED_OUT') {
+          setUser(null);
         }
       }
     );
 
     return () => {
-      clearTimeout(authTimeout);
       authListener.subscription.unsubscribe();
     };
-  }, []); // The empty dependency array ensures this effect runs only once on component mount.
+  }, []); // Empty dependency array ensures this runs only once.
 
+  // The login function is now simplified. It only handles the authentication call.
+  // The onAuthStateChange listener above will handle the result.
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
     const trimmedUserId = userId.trim().toLowerCase();
-    const trimmedPassword = password.trim();
-
-    // Step 1: Find the user in the public.users table by their user_id to get their actual email.
+    
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('email')
       .eq('user_id', trimmedUserId)
       .single();
 
-    if (profileError || !userProfile) {
+    if (profileError || !userProfile?.email) {
       console.error("Login failed: No user profile found for user_id:", trimmedUserId);
       return { success: false, error: 'INVALID_CREDENTIALS' };
     }
-
-    const actualEmail = userProfile.email;
-    if (!actualEmail) {
-        console.error("Login failed: User profile has no email for user_id:", trimmedUserId);
-        return { success: false, error: 'UNKNOWN_ERROR' };
-    }
     
-    // Step 2: Use the email to sign in.
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-      email: actualEmail,
-      password: trimmedPassword,
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: userProfile.email,
+      password: password.trim(),
     });
 
     if (signInError) {
@@ -118,35 +135,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: false, error: 'UNKNOWN_ERROR' };
     }
 
-    // Step 3: Proactively fetch the user profile on successful login.
-    // This is more robust than relying only on the onAuthStateChange listener.
-    if (signInData.user) {
-        const fetchedProfile = await fetchUserProfile(signInData.user);
-        // If the profile fetch fails, we treat it as a login failure to prevent a "stuck" state.
-        if (!fetchedProfile) {
-            // Log the user out from the auth session since we can't load their app profile.
-            await supabase.auth.signOut();
-            return { success: false, error: 'PROFILE_FETCH_FAILED' };
-        }
-    } else {
-        // This case should be rare, but it's a safeguard.
-        return { success: false, error: 'UNKNOWN_ERROR' };
-    }
-
+    // If signIn is successful, the onAuthStateChange listener will fire and handle fetching the profile.
     return { success: true, error: null };
   };
 
   const logout = async () => {
-    setLoading(true);
-    try {
-        await supabase.auth.signOut();
-        setUser(null);
-    } catch (error) {
-        console.error("Error during logout:", error);
-        setUser(null); // Still attempt to clear local session
-    } finally {
-        setLoading(false);
-    }
+    // Calling signOut will trigger the onAuthStateChange listener, which will clear the user state.
+    await supabase.auth.signOut();
   };
   
   const updateUser = (updates: Partial<User>) => {
