@@ -93,26 +93,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .eq('user_id', trimmedUserId)
       .single();
 
-    // Step 2: If no profile exists for that user_id, it's an invalid credential.
     if (profileError || !userProfile) {
       console.error("Login failed: No user profile found for user_id:", trimmedUserId);
       return { success: false, error: 'INVALID_CREDENTIALS' };
     }
 
-    // Step 3: Use the ACTUAL email from the profile for authentication.
-    // This is the key fix: it works for both "real" emails and "proxy" emails.
     const actualEmail = userProfile.email;
     if (!actualEmail) {
         console.error("Login failed: User profile has no email for user_id:", trimmedUserId);
         return { success: false, error: 'UNKNOWN_ERROR' };
     }
     
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    // Step 2: Use the email to sign in.
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email: actualEmail,
       password: trimmedPassword,
     });
 
-    // Step 4: Handle authentication errors.
     if (signInError) {
       console.error("AUTHENTICATION FAILED:", signInError.message);
       if (signInError.message.includes("Invalid login credentials")) {
@@ -121,8 +118,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: false, error: 'UNKNOWN_ERROR' };
     }
 
-    // A successful login will trigger the onAuthStateChange listener,
-    // which will then fetch the user profile and update the application state.
+    // Step 3: Proactively fetch the user profile on successful login.
+    // This is more robust than relying only on the onAuthStateChange listener,
+    // which can sometimes have a delay or fail to fire, causing a "stuck" login screen.
+    if (signInData.user) {
+        await fetchUserProfile(signInData.user);
+    } else {
+        // This case should be rare, but it's a safeguard.
+        return { success: false, error: 'UNKNOWN_ERROR' };
+    }
+
     return { success: true, error: null };
   };
 
