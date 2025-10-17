@@ -129,31 +129,23 @@
   }
 }
 </script>
-<script>
-  // FIX: Force unregister any old service workers to prevent caching issues.
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-      for (let registration of registrations) {
-        registration.unregister()
-          .then(function() { console.log('Service Worker unregistered successfully.'); })
-          .catch(function(err) { console.error('Service Worker unregistration failed:', err); });
-      }
-    }).catch(function(err) {
-      console.error('Failed to get service worker registrations:', err);
-    });
-  }
-</script>
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
-    <script type="module">
-      // Auto-cache busting to prevent "stuck" screens on deployment.
-      // This forces the browser to fetch the latest version of the app script
-      // by appending a unique timestamp, bypassing any stale browser cache.
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = `/index.tsx?v=${new Date().getTime()}`;
-      document.body.appendChild(script);
+    <script>
+      // Register the service worker for smart caching and offline capabilities.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            })
+            .catch(error => {
+              console.log('ServiceWorker registration failed: ', error);
+            });
+        });
+      }
     </script>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
