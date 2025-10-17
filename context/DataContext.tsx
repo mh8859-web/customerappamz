@@ -64,6 +64,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
 
     const fetchData = useCallback(async () => {
+        // This function now internally checks if a user exists.
+        // If not, it clears all data and stops, preventing errors and ensuring a clean state.
+        if (!user) {
+            setProjects([]);
+            setTasks([]);
+            setDesigns([]);
+            setMessages([]);
+            setMilestones([]);
+            setQuotes([]);
+            setActivityLogs([]);
+            setSiteVisits([]);
+            setSupportTickets([]);
+            setAttendanceLogs([]);
+            setLeaveRequests([]);
+            setWorkLogs([]);
+            setProjectUpdates([]);
+            setFinalGalleryImages([]);
+            setExpenses([]);
+            setProducts([]);
+            setProjectTemplates([]);
+            setAnnouncements([]);
+            setPosts([]);
+            setFeedComments([]);
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
             const tables = [
@@ -113,15 +140,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [user]);
 
     useEffect(() => {
-        if (!authLoading && user) {
+        // This effect is now simpler. It just waits for auth to finish,
+        // and then calls `fetchData`, which knows what to do based on the user state.
+        // This removes the race condition.
+        if (!authLoading) {
             fetchData();
-        } else if (!authLoading && !user) {
-            setLoading(false);
         }
-    }, [fetchData, authLoading, user]);
+    }, [fetchData, authLoading]);
 
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,

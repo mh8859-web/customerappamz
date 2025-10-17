@@ -18,30 +18,34 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user: authUser, loading: authLoading } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
-    // This function is now wrapped in a try/catch/finally block.
-    // This is a critical fix to prevent the app from getting stuck on the loading screen
-    // if the API call to fetch users fails for any reason (e.g., network error, RLS policy).
-    // The 'finally' block GUARANTEES that loading is set to false, resolving the infinite loading state.
+    // This function now internally checks for a valid user.
+    // This makes the logic more robust and centralized.
+    if (!authUser) {
+      setUsers([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
         const userList = await getUsers();
         setUsers(userList);
     } catch (error) {
         console.error("UserContext: Failed to fetch users.", error);
-        setUsers([]); // Clear users on error to prevent using stale or incorrect data.
+        setUsers([]);
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [authUser]); // Dependency on authUser ensures this function has the latest auth state.
 
   useEffect(() => {
-    if (!authLoading && authUser) {
-        fetchAllUsers();
-    } else if (!authLoading && !authUser) {
-        setUsers([]);
-        setLoading(false);
+    // This effect is now simpler. It just waits for auth to finish,
+    // and then calls `fetchAllUsers`, which knows what to do based on
+    // whether a user is logged in or not. This removes the race condition.
+    if (!authLoading) {
+      fetchAllUsers();
     }
-  }, [authLoading, authUser, fetchAllUsers]);
+  }, [authLoading, fetchAllUsers]);
 
   const findUserById = (id: string): User | undefined => {
     return users.find(user => user.id === id);
