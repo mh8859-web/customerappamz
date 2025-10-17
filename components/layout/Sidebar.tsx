@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, TrashIcon } from '../icons';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -38,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support Tickets' },
       { to: '/settings', icon: <SettingsIcon className="w-6 h-6" />, label: 'Settings' },
+      { to: '/cache', icon: <TrashIcon className="w-6 h-6" />, label: 'Cache' },
     ],
     Designer: [
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
