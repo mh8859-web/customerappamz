@@ -5,7 +5,7 @@ import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product } from '../types';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ChatComponent from '../components/chat/ChatComponent';
@@ -220,10 +220,12 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    const TABS: Record<User['role'], string[]> = {
+    // FIX: Add 'Sub-Admin' to cover all UserRole types.
+    const TABS: Record<UserRole, string[]> = {
         Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
         Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
         Admin: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+        'Sub-Admin': ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
     };
     
     let tabs = TABS[user.role] || [];

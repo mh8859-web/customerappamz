@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, TrashIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, TrashIcon, InfoIcon } from '../icons';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -32,6 +32,20 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support Tickets' },
       { to: '/settings', icon: <SettingsIcon className="w-6 h-6" />, label: 'Settings' },
+      { to: '/about', icon: <InfoIcon className="w-6 h-6" />, label: 'About' },
+    ],
+    'Sub-Admin': [
+      { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
+      { to: '/overview', icon: <TrendingUpIcon className="w-6 h-6" />, label: 'Overview' },
+      { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
+      { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
+      { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Projects' },
+      { to: '/attendance', icon: <ClockIcon className="w-6 h-6" />, label: 'Attendance' },
+      { to: '/reports', icon: <PieChartIcon className="w-6 h-6" />, label: 'Financial Reports' },
+      { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
+      { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
+      { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support Tickets' },
+      { to: '/about', icon: <InfoIcon className="w-6 h-6" />, label: 'About' },
     ],
     Designer: [
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
@@ -47,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support' },
+      { to: '/about', icon: <InfoIcon className="w-6 h-6" />, label: 'About' },
     ],
     Customer: [
       { to: '/', icon: <HomeIcon className="w-6 h-6" />, label: 'My Project' },
@@ -57,6 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Help & Support' },
+      { to: '/about', icon: <InfoIcon className="w-6 h-6" />, label: 'About' },
     ],
   };
 

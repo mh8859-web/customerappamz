@@ -26,6 +26,7 @@ import CommunityHub from './pages/shared/CommunityHub';
 import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import AboutPage from './pages/shared/AboutPage';
 
 // Helper component to redirect to the correct dashboard based on user role
 const DashboardRedirect: React.FC = () => {
@@ -34,6 +35,7 @@ const DashboardRedirect: React.FC = () => {
     
     switch (user.role) {
       case 'Admin':
+      case 'Sub-Admin':
         return <AdminDashboard />;
       case 'Designer':
         return <DesignerDashboard />;
@@ -46,6 +48,10 @@ const DashboardRedirect: React.FC = () => {
 
 // Role-specific route wrappers to protect routes inside the dashboard
 const AdminRoutes: React.FC = () => {
+    const { user } = useAuth();
+    return user?.role === 'Admin' || user?.role === 'Sub-Admin' ? <Outlet /> : <Navigate to="/" replace />;
+};
+const FullAdminRoutes: React.FC = () => {
     const { user } = useAuth();
     return user?.role === 'Admin' ? <Outlet /> : <Navigate to="/" replace />;
 };
@@ -73,13 +79,18 @@ const App: React.FC = () => {
           <Route path="account" element={<MyAccount />} />
           <Route path="downloads" element={<DownloadCenter />} />
           <Route path="project-wall" element={<ProjectWall />} />
+          <Route path="about" element={<AboutPage />} />
 
-          {/* Admin Routes */}
+          {/* Admin & Sub-Admin Routes */}
           <Route element={<AdminRoutes />}>
               <Route path="overview" element={<AdminOverview />} />
-              <Route path="users" element={<UserManagement />} />
               <Route path="attendance" element={<AttendanceLogs />} />
               <Route path="reports" element={<FinancialReports />} />
+          </Route>
+
+          {/* Full-Admin Only Routes */}
+          <Route element={<FullAdminRoutes />}>
+              <Route path="users" element={<UserManagement />} />
               <Route path="settings" element={<AdminSettings />} />
           </Route>
 
