@@ -146,6 +146,14 @@
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module">
+      // Auto-cache busting to prevent "stuck" screens on deployment.
+      // This forces the browser to fetch the latest version of the app script
+      // by appending a unique timestamp, bypassing any stale browser cache.
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = `/index.tsx?v=${new Date().getTime()}`;
+      document.body.appendChild(script);
+    </script>
   </body>
 </html>
