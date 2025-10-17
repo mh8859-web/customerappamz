@@ -5,7 +5,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean; // <-- NEW: Critical state to track initial auth check
+  loading: boolean;
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -40,9 +40,17 @@ const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | nu
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start as true
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout: If authentication hangs, force the UI to render after 4 seconds.
+    const authTimeout = setTimeout(() => {
+        if (loading) {
+            console.warn("Authentication check timed out. Forcing UI render.");
+            setLoading(false);
+        }
+    }, 4000);
+
     const initializeSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -54,7 +62,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Error initializing session:", e);
         setUser(null);
       } finally {
-        setLoading(false); // Auth check is complete
+        clearTimeout(authTimeout); // Clear the safety net if auth completes
+        setLoading(false); // Signal that the auth check is complete
       }
     };
     
@@ -63,10 +72,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
-          setLoading(true);
           const profile = await fetchAndMapProfile(session.user);
           setUser(profile);
-          setLoading(false);
         }
         if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -75,6 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     return () => {
+      clearTimeout(authTimeout); // Cleanup on unmount
       authListener.subscription.unsubscribe();
     };
   }, []);

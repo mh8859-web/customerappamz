@@ -136,6 +136,11 @@
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module">
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = `/index.tsx?t=${new Date().getTime()}`; // Append timestamp to bust cache
+      document.body.appendChild(script);
+    </script>
   </body>
 </html>
