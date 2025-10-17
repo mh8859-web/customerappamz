@@ -5,21 +5,21 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   sendPasswordReset: (userId: string) => Promise<{ success: boolean; error: string | null }>;
+  // FIX: Add loading property to the context type.
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start loading immediately
+  // FIX: Add loading state to track session initialization.
+  const [loading, setLoading] = useState(true);
 
-  // This is the single source of truth for fetching a user's profile from the DB
-  // and setting the application's user state.
   const fetchUserProfile = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) {
       setUser(null);
@@ -34,7 +34,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (error) {
       console.error('Error fetching user profile:', error);
-      // If profile fetch fails, we must sign out to prevent an inconsistent state.
       await supabase.auth.signOut();
       setUser(null);
       return null;
@@ -55,46 +54,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return userProfile;
     }
 
-    // This case means a user exists in auth.users but not in public.users
-    // This is a critical data integrity issue, so we log them out.
     await supabase.auth.signOut();
     setUser(null);
     return null;
   };
   
-  // This effect runs only once on app startup to handle the initial session check.
   useEffect(() => {
     const initializeSession = async () => {
       try {
-        // Proactively get the session from local storage.
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
             throw new Error(`Supabase getSession error: ${error.message}`);
         }
-        // fetchUserProfile will handle setting the user state or null.
         await fetchUserProfile(session?.user ?? null);
       } catch (e) {
         console.error("Critical error during session initialization. Forcing logout.", e);
-        // If anything fails (e.g., corrupted local storage), clear the session.
         setUser(null);
       } finally {
-        // The initial authentication check is complete.
+        // FIX: Set loading to false after the session has been checked.
         setLoading(false);
       }
     };
     
     initializeSession();
 
-    // This listener handles all subsequent auth changes (sign in, sign out, token refresh).
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // On SIGNED_IN, the session is guaranteed to be available.
         if (event === 'SIGNED_IN') {
-          setLoading(true);
           await fetchUserProfile(session!.user);
-          setLoading(false);
         }
-        // On SIGNED_OUT, clear the user state.
         if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -104,43 +92,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []); // Empty dependency array ensures this runs only once.
+  }, []);
 
-  // The login function is now simplified. It only handles the authentication call.
-  // The onAuthStateChange listener above will handle the result.
   const login = async (userId: string, password: string): Promise<{ success: boolean; error: string | null }> => {
-    const trimmedUserId = userId.trim().toLowerCase();
-    
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('email')
-      .eq('user_id', trimmedUserId)
-      .single();
+    try {
+        const trimmedUserId = userId.trim().toLowerCase();
+        
+        const { data: profileForEmail, error: profileError } = await supabase
+          .from('users')
+          .select('email')
+          .eq('user_id', trimmedUserId)
+          .single();
 
-    if (profileError || !userProfile?.email) {
-      console.error("Login failed: No user profile found for user_id:", trimmedUserId);
-      return { success: false, error: 'INVALID_CREDENTIALS' };
+        if (profileError || !profileForEmail?.email) {
+          console.error("Login failed: No user profile found for user_id:", trimmedUserId);
+          return { success: false, error: 'INVALID_CREDENTIALS' };
+        }
+        
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: profileForEmail.email,
+          password: password.trim(),
+        });
+
+        if (signInError) {
+          console.error("AUTHENTICATION FAILED:", signInError.message);
+          if (signInError.message.includes("Invalid login credentials")) {
+             return { success: false, error: 'INVALID_CREDENTIALS' };
+          }
+          return { success: false, error: 'UNKNOWN_ERROR' };
+        }
+
+        if (data.session) {
+            const profile = await fetchUserProfile(data.session.user);
+            if (profile) {
+                return { success: true, error: null };
+            } else {
+                return { success: false, error: 'PROFILE_FETCH_FAILED' };
+            }
+        }
+        
+        return { success: false, error: 'UNKNOWN_ERROR' };
+
+    } catch (e) {
+        console.error("An unexpected error occurred during login:", e);
+        return { success: false, error: 'UNKNOWN_ERROR' };
     }
-    
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: userProfile.email,
-      password: password.trim(),
-    });
-
-    if (signInError) {
-      console.error("AUTHENTICATION FAILED:", signInError.message);
-      if (signInError.message.includes("Invalid login credentials")) {
-         return { success: false, error: 'INVALID_CREDENTIALS' };
-      }
-      return { success: false, error: 'UNKNOWN_ERROR' };
-    }
-
-    // If signIn is successful, the onAuthStateChange listener will fire and handle fetching the profile.
-    return { success: true, error: null };
   };
 
   const logout = async () => {
-    // Calling signOut will trigger the onAuthStateChange listener, which will clear the user state.
     await supabase.auth.signOut();
   };
   
@@ -154,32 +153,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     const trimmedUserId = userId.trim().toLowerCase();
     
-    // Find the user's actual email to send the reset link to.
     const { data: userProfile, error: profileError } = await supabase
         .from('users')
         .select('email')
         .eq('user_id', trimmedUserId)
         .single();
     
-    // If no user is found, we don't throw an error to prevent user enumeration.
-    // The success message will handle this case gracefully.
     if (profileError || !userProfile?.email) {
         console.warn("Password reset attempted for non-existent user_id:", trimmedUserId);
         return { success: true, error: null };
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email);
+    await supabase.auth.resetPasswordForEmail(userProfile.email);
 
-    if (error) {
-        console.error("Password reset error:", error.message);
-    }
-
-    // Always return success to prevent user enumeration attacks.
     return { success: true, error: null };
   };
 
   const value = {
     user,
+    // FIX: Expose loading state in the context value.
     loading,
     login,
     logout,

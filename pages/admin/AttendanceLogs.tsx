@@ -50,7 +50,7 @@ const AttendanceLogs: React.FC = () => {
                 <div key={log.id} className="bg-primary-bg p-4 rounded-xl border border-border-color">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-bold text-text-headline">{project?.title}</p>
-                    <span className="text-sm font-semibold text-accent">{log.hoursSpent} hrs</span>
+                    <span className="text-sm font-semibold text-brand-blue">{log.hoursSpent} hrs</span>
                   </div>
                   <p className="text-sm text-text-muted">{log.tasksCompleted}</p>
                 </div>
@@ -74,7 +74,7 @@ const AttendanceLogs: React.FC = () => {
                 <div key={log.id} className="bg-primary-bg p-4 rounded-xl text-sm">
                   <div className="flex justify-between items-start">
                     <p className="font-bold text-text-headline">{designer?.fullName}</p>
-                    <span className="font-mono text-accent">{log.duration}</span>
+                    <span className="font-mono text-brand-blue">{log.duration}</span>
                   </div>
                   <div className="text-text-muted mt-2 space-y-1">
                     <p><strong className="text-text-headline/80">In:</strong> {new Date(log.clockIn).toLocaleString()}</p>

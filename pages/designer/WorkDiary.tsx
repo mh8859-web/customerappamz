@@ -65,7 +65,7 @@ const DailyWork: React.FC = () => {
         });
     };
     
-    const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+    const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
 
     if (loading) return null;
 
@@ -112,7 +112,7 @@ const DailyWork: React.FC = () => {
                                     <div key={log.id} className="bg-primary-bg p-3 rounded-xl">
                                         <div className="flex justify-between items-center mb-1">
                                             <p className="font-semibold text-text-headline">{project?.title}</p>
-                                            <span className="text-sm font-mono text-accent">{log.hoursSpent} hrs</span>
+                                            <span className="text-sm font-mono text-brand-blue">{log.hoursSpent} hrs</span>
                                         </div>
                                         <p className="text-sm text-text-muted">{log.tasksCompleted}</p>
                                     </div>

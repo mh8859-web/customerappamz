@@ -35,7 +35,7 @@ const FinancialReports: React.FC = () => {
         }
     }).filter(p => p.profit > 0);
     
-    const COLORS = ['#4FD1C5', '#81E6D9', '#2C7A7B', '#319795', '#4A5568'];
+    const COLORS = ['#1D9BF0', '#1A8CD8', '#0F1419', '#536471', '#CFD9DE'];
     const totalRevenue = chartData.reduce((sum, d) => sum + d.Revenue, 0);
     const totalExpenses = chartData.reduce((sum, d) => sum + d.Expenses, 0);
     const netProfit = totalRevenue - totalExpenses;
@@ -59,7 +59,7 @@ const FinancialReports: React.FC = () => {
                 </Card>
                  <Card>
                     <p className="text-text-muted">Net Profit</p>
-                    <p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-accent' : 'text-red-400'}`}>₹{netProfit.toLocaleString()}</p>
+                    <p className={`text-3xl font-bold ${netProfit >= 0 ? 'text-brand-blue' : 'text-red-400'}`}>₹{netProfit.toLocaleString()}</p>
                 </Card>
             </div>
             
@@ -68,12 +68,12 @@ const FinancialReports: React.FC = () => {
                  <div style={{ height: '300px' }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData}>
-                            <XAxis dataKey="name" stroke="#A0AEC0" fontSize={12} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#A0AEC0" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value)/1000}k`} />
-                            <Tooltip contentStyle={{ backgroundColor: '#2D3748', border: '1px solid #4A5568', borderRadius: '12px' }} cursor={{fill: 'rgba(79, 209, 197, 0.1)'}} />
+                            <XAxis dataKey="name" stroke="#536471" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#536471" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${Number(value)/1000}k`} />
+                            <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px' }} cursor={{fill: 'rgba(29, 155, 240, 0.1)'}} />
                             <Legend wrapperStyle={{fontSize: "14px"}}/>
-                            <Bar dataKey="Revenue" fill="#4FD1C5" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Expenses" fill="#F56565" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Revenue" fill="#1D9BF0" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Expenses" fill="#F87171" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -99,7 +99,7 @@ const FinancialReports: React.FC = () => {
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
-                             <Tooltip contentStyle={{ backgroundColor: '#2D3748', border: '1px solid #4A5568', borderRadius: '12px' }} formatter={(value) => `₹${Number(value).toLocaleString()}`}/>
+                             <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px' }} formatter={(value) => `₹${Number(value).toLocaleString()}`}/>
                         </PieChart>
                     </ResponsiveContainer>
                 </div>

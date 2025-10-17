@@ -52,7 +52,7 @@ const Financials: React.FC = () => {
                             <div className="mt-3">
                                 <p className="text-xs text-text-muted mb-1">Budget Utilization</p>
                                 <div className="w-full bg-border-color rounded-full h-2">
-                                    <div className={`h-2 rounded-full ${profitability > 85 ? 'bg-red-500' : 'bg-accent'}`} style={{ width: `${profitability}%` }}></div>
+                                    <div className={`h-2 rounded-full ${profitability > 85 ? 'bg-red-500' : 'bg-brand-blue'}`} style={{ width: `${profitability}%` }}></div>
                                 </div>
                             </div>
                         </div>
@@ -85,7 +85,7 @@ const TeamManagement: React.FC = () => {
                         return (
                             <div key={designer.id} className="flex items-center justify-between bg-primary-bg p-3 rounded-xl">
                                 <UserNameDisplay user={designer} showAvatar={true} imageSize="w-8 h-8" textClassName="font-semibold text-text-headline" />
-                                <p className="text-sm font-mono text-accent">{projectCount} Active Project{projectCount !== 1 ? 's' : ''}</p>
+                                <p className="text-sm font-mono text-brand-blue">{projectCount} Active Project{projectCount !== 1 ? 's' : ''}</p>
                             </div>
                         );
                     })}
@@ -144,7 +144,7 @@ const ClientDirectory: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-text-muted text-right">Lifetime Value</p>
-                                <p className="font-bold text-accent text-right">{formatCurrency(totalValue)}</p>
+                                <p className="font-bold text-brand-blue text-right">{formatCurrency(totalValue)}</p>
                             </div>
                         </div>
                     );

@@ -4,13 +4,29 @@ import { Project, Milestone } from '../../types';
 import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
 import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
-// FIX: Removed unused icons
 import { DownloadIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import { useData } from '../../context/DataContext';
+
+const DashboardLoader: React.FC = () => (
+    <div className="space-y-8 animate-pulse">
+        <div className="h-9 bg-secondary rounded w-1/2"></div>
+        <div className="h-20 bg-surface rounded-2xl shadow-card"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+                <div className="h-48 bg-surface rounded-2xl shadow-card"></div>
+                <div className="h-32 bg-surface rounded-2xl shadow-card"></div>
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+                <div className="h-40 bg-surface rounded-2xl shadow-card"></div>
+                <div className="h-32 bg-surface rounded-2xl shadow-card"></div>
+            </div>
+        </div>
+    </div>
+);
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -61,7 +77,7 @@ const CustomerDashboard: React.FC = () => {
         }
     };
 
-    if (dataLoading || usersLoading) return null;
+    if (dataLoading || usersLoading) return <DashboardLoader />;
 
     if (completedProject) {
         return <TestimonialFlow project={completedProject} />;
@@ -91,10 +107,10 @@ const CustomerDashboard: React.FC = () => {
                 <h1 className="text-3xl font-bold text-text-headline">Welcome, {user?.fullName.split(' ')[0]}!</h1>
                  
                  {latestAnnouncement && (
-                    <Card className="!p-4 bg-accent/10 border-accent/30 flex items-start gap-3">
-                        <MegaphoneIcon className="w-5 h-5 text-accent flex-shrink-0 mt-1"/>
+                    <Card className="!p-4 bg-brand-blue/10 border-brand-blue/30 flex items-start gap-3">
+                        <MegaphoneIcon className="w-5 h-5 text-brand-blue flex-shrink-0 mt-1"/>
                         <div>
-                            <h3 className="font-bold text-accent">An Update from AMAZ Interiors</h3>
+                            <h3 className="font-bold text-brand-blue">An Update from AMAZ Interiors</h3>
                             <p className="text-sm text-text-headline">{latestAnnouncement.content}</p>
                         </div>
                     </Card>
@@ -116,8 +132,8 @@ const CustomerDashboard: React.FC = () => {
                              <div className="flex items-center gap-6">
                                 <div className="relative w-24 h-24">
                                     <svg className="w-full h-full" viewBox="0 0 36 36">
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#4A5568" strokeWidth="3" />
-                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#4FD1C5" strokeWidth="3" strokeDasharray={`${(totalPaid / project.budgetDisplay) * 100}, 100`} />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#CFD9DE" strokeWidth="3" />
+                                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#1D9BF0" strokeWidth="3" strokeDasharray={`${(totalPaid / project.budgetDisplay) * 100}, 100`} />
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                                         <span className="text-lg font-bold text-text-headline">{Math.round((totalPaid / project.budgetDisplay) * 100)}%</span>

@@ -8,7 +8,6 @@ import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icon
 import { useUsers } from '../../context/UserContext';
 import CommunityFeed from './CommunityFeed';
 import { useData } from '../../context/DataContext';
-// FIX: Import deleteRecord instead of the supabase client directly, and use it to delete posts.
 import { createRecord, updateRecord, deleteRecord } from '../../services/api';
 
 const CommunityHub: React.FC = () => {
@@ -145,7 +144,6 @@ const CommunityHub: React.FC = () => {
     
     const confirmDeletePost = async () => {
         if (!postToDelete) return;
-        // FIX: Replaced direct supabase call with the abstracted deleteRecord function and added error handling.
         const { error } = await deleteRecord('posts', postToDelete);
         if (error) {
             alert('Failed to delete post. Please try again.');

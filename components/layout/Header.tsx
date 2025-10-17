@@ -24,6 +24,16 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  // Restore clock-in state from localStorage on component mount
+  useEffect(() => {
+    const savedClockInTime = localStorage.getItem('clockInTime');
+    if (savedClockInTime) {
+      const time = new Date(savedClockInTime);
+      setClockInTime(time);
+      setIsClockedIn(true);
+    }
+  }, []);
+
   useEffect(() => {
     let timer: number;
     if (isClockedIn && clockInTime) {
@@ -64,20 +74,27 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
 
   const handleClockToggle = () => {
     if (isClockedIn) {
+      // Clocking out
+      localStorage.removeItem('clockInTime');
       setIsClockedIn(false);
       setClockInTime(null);
       setElapsedTime('00:00:00');
       alert('Clocked out!');
     } else {
+      // Clocking in
       navigator.geolocation.getCurrentPosition(position => {
         const { latitude, longitude } = position.coords;
+        const now = new Date();
+        localStorage.setItem('clockInTime', now.toISOString());
+        setIsClockedIn(true);
+        setClockInTime(now);
         alert(`Clocked in at location: ${latitude}, ${longitude}`);
-        setIsClockedIn(true);
-        setClockInTime(new Date());
       }, () => {
-        alert('Could not get location. Clocking in without it.');
+        const now = new Date();
+        localStorage.setItem('clockInTime', now.toISOString());
         setIsClockedIn(true);
-        setClockInTime(new Date());
+        setClockInTime(now);
+        alert('Could not get location. Clocking in without it.');
       });
     }
   };
@@ -149,7 +166,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
                         <ul>
                             {searchResults.users.slice(0, 3).map(user => (
                                 <li key={user.id}>
-                                    <div className="flex items-center gap-3 px-3 py-2 hover:bg-secondary transition-colors cursor-pointer">
+                                    <div className="flex items-center gap-3 px-3 py-2">
                                         <img src={user.avatarUrl} alt={user.fullName} className="w-8 h-8 rounded-full" />
                                         <div>
                                             <UserNameDisplay user={user} textClassName="text-sm font-semibold text-text-primary" />

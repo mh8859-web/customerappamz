@@ -10,7 +10,7 @@ interface TestimonialFlowProps {
 
 const Balloon: React.FC<{delay: number}> = ({delay}) => (
     <div 
-        className="absolute bottom-[-10rem] w-12 h-16 bg-accent rounded-full opacity-70 animate-rise"
+        className="absolute bottom-[-10rem] w-12 h-16 bg-brand-blue rounded-full opacity-70 animate-rise"
         style={{
             left: `${Math.random() * 90}%`,
             animationDelay: `${delay}s`,

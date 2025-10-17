@@ -33,7 +33,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onCr
     });
   };
   
-  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add New Product to Sourcing List">

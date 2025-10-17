@@ -44,7 +44,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, milestone,
                     </h3>
                     <p className="text-text-muted my-2">
                     This milestone is marked as complete. Please proceed with the payment of 
-                    <span className="font-bold text-accent"> ₹{milestone.amountDisplay.toLocaleString()} </span>
+                    <span className="font-bold text-brand-blue"> ₹{milestone.amountDisplay.toLocaleString()} </span>
                     to continue.
                     </p>
                     <div className="mt-6 flex justify-center gap-4">
@@ -60,7 +60,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, milestone,
         case 'processing':
             return (
                 <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue mx-auto"></div>
                     <p className="text-text-headline mt-4">Processing payment securely...</p>
                 </div>
             );
@@ -73,7 +73,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, milestone,
                     </h3>
                     <p className="text-text-muted my-2">
                         Thank you! We've received your payment of 
-                        <span className="font-bold text-accent"> ₹{milestone.amountDisplay.toLocaleString()} </span>
+                        <span className="font-bold text-brand-blue"> ₹{milestone.amountDisplay.toLocaleString()} </span>
                         for the "{milestone.title}" milestone.
                     </p>
                      <div className="mt-6 flex flex-col items-center gap-4">

@@ -87,7 +87,7 @@ const MyAccount: React.FC = () => {
         setIsSaving(false);
     };
 
-    const inputClasses = "w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+    const inputClasses = "w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
 
     return (
         <div className="space-y-6 max-w-2xl mx-auto">

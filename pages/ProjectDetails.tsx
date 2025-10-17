@@ -243,7 +243,7 @@ const ProjectDetails: React.FC = () => {
             case 'Live Updates':
                 const UpdateIcon = ({ type }: { type: UnifiedUpdate['type'] }) => {
                     const iconMap = {
-                        update: <ZapIcon className="w-5 h-5 text-accent" />,
+                        update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
                         work_log: <ClipboardIcon className="w-5 h-5 text-blue-400" />,
                         system: <SettingsIcon className="w-5 h-5 text-purple-400" />,
                     };
@@ -262,7 +262,7 @@ const ProjectDetails: React.FC = () => {
                                             value={newUpdateMessage}
                                             onChange={(e) => setNewUpdateMessage(e.target.value)}
                                             placeholder={`Share an update on "${project.title}"...`}
-                                            className="w-full bg-primary-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-accent"
+                                            className="w-full bg-primary-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                             rows={3}
                                         />
                                         <div className="text-right mt-2">
@@ -288,7 +288,7 @@ const ProjectDetails: React.FC = () => {
                                         </div>
                                         <p className="text-sm text-text-muted mt-1">{item.content}</p>
                                         {item.type === 'work_log' && (
-                                            <div className="mt-2 text-xs font-mono text-accent bg-accent/10 px-2 py-1 rounded inline-block">
+                                            <div className="mt-2 text-xs font-mono text-brand-blue bg-brand-blue/10 px-2 py-1 rounded inline-block">
                                                 Hours Logged: {item.hours}
                                             </div>
                                         )}
@@ -375,7 +375,7 @@ const ProjectDetails: React.FC = () => {
                                             <div className="flex-1">
                                                 <p className="font-semibold text-text-headline">{p.name}</p>
                                                 <p className="text-xs text-text-muted">{p.supplier}</p>
-                                                <p className="text-sm font-mono text-accent mt-1">₹{p.cost.toLocaleString()} x {p.quantity}</p>
+                                                <p className="text-sm font-mono text-brand-blue mt-1">₹{p.cost.toLocaleString()} x {p.quantity}</p>
                                             </div>
                                             <div>
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -449,7 +449,7 @@ const ProjectDetails: React.FC = () => {
                             {projectQuotes.map(q => (
                                 <div key={q.id} className="bg-primary-bg p-4 rounded-xl flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <FileTextIcon className="w-6 h-6 text-accent" />
+                                        <FileTextIcon className="w-6 h-6 text-brand-blue" />
                                         <div>
                                             <p className="font-semibold text-text-headline capitalize">{q.version} Quote</p>
                                             <p className="text-xs text-text-muted">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
@@ -644,7 +644,7 @@ const ProjectDetails: React.FC = () => {
                             <button key={tab} onClick={() => setActiveTab(tab)}
                                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2
                                     ${activeTab === tab 
-                                        ? 'border-accent text-accent' 
+                                        ? 'border-brand-blue text-brand-blue' 
                                         : 'border-transparent text-text-muted hover:text-text-headline hover:border-text-muted'}`}
                             >
                                 {tab === 'Timeline' && <CalendarIcon className="w-4 h-4" />}

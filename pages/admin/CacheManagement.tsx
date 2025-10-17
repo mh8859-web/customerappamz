@@ -22,7 +22,6 @@ const CacheManagement: React.FC = () => {
       sessionStorage.clear();
 
       // 3. Force a hard reload from the server
-      // FIX: The `true` parameter for a hard reload is deprecated. The modern equivalent is to simply call `reload()` without arguments.
       window.location.reload();
     }
   };

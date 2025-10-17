@@ -79,7 +79,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
         {isReadOnly ? (
           <div className="text-center text-sm text-text-muted">This project is archived. Chat is read-only.</div>
         ) : (
-          <div className="flex items-center bg-primary-bg rounded-xl p-2 border border-border-color focus-within:ring-2 focus-within:ring-accent">
+          <div className="flex items-center bg-primary-bg rounded-xl p-2 border border-border-color focus-within:ring-2 focus-within:ring-brand-blue">
             <input
               type="text"
               value={newMessage}
@@ -92,7 +92,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-text-muted hover:text-accent transition-colors rounded-full"
+              className="p-2 text-text-muted hover:text-brand-blue transition-colors rounded-full"
               aria-label="Attach file"
               disabled={isReadOnly}
             >
@@ -100,7 +100,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
             </button>
             <button 
               onClick={() => handleSendMessage()}
-              className="p-2 text-text-muted hover:text-accent transition-colors rounded-full"
+              className="p-2 text-text-muted hover:text-brand-blue transition-colors rounded-full"
               aria-label="Send message"
               disabled={isReadOnly}
             >

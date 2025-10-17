@@ -10,7 +10,7 @@ const TeamCalendar: React.FC = () => {
     const { tasks, siteVisits, leaveRequests, loading: dataLoading } = useData();
     
     const designerColors: Record<string, string> = {};
-    const colorClasses = ['bg-accent/20 text-accent', 'bg-blue-500/20 text-blue-300', 'bg-green-500/20 text-green-400', 'bg-purple-500/20 text-purple-400'];
+    const colorClasses = ['bg-brand-blue/20 text-brand-blue', 'bg-blue-500/20 text-blue-300', 'bg-green-500/20 text-green-400', 'bg-purple-500/20 text-purple-400'];
     let colorIndex = 0;
     
     users.forEach(user => {
@@ -78,7 +78,7 @@ const TeamCalendar: React.FC = () => {
 
         calendarDays.push(
             <div key={day} className="border-r border-b border-border-color p-2 min-h-[120px] flex flex-col">
-                <div className={`font-semibold ${isToday ? 'bg-accent text-primary-bg rounded-full w-7 h-7 flex items-center justify-center' : 'text-text-headline'}`}>
+                <div className={`font-semibold ${isToday ? 'bg-brand-blue text-white rounded-full w-7 h-7 flex items-center justify-center' : 'text-text-headline'}`}>
                     {day}
                 </div>
                 <div className="mt-1 space-y-1 overflow-y-auto text-xs">

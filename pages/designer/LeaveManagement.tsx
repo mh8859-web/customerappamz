@@ -49,15 +49,15 @@ const LeaveManagement: React.FC = () => {
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label className="text-sm font-medium text-text-headline">Reason</label>
-                            <input type="text" name="reason" value={newRequest.reason} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required />
+                            <input type="text" name="reason" value={newRequest.reason} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue" required />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-text-headline">Start Date</label>
-                            <input type="date" name="startDate" value={newRequest.startDate} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required />
+                            <input type="date" name="startDate" value={newRequest.startDate} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue" required />
                         </div>
                         <div>
                             <label className="text-sm font-medium text-text-headline">End Date</label>
-                            <input type="date" name="endDate" value={newRequest.endDate} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required />
+                            <input type="date" name="endDate" value={newRequest.endDate} onChange={handleInputChange} className="w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue" required />
                         </div>
                         <Button type="submit" className="w-full">Submit Request</Button>
                     </form>

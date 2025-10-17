@@ -31,8 +31,8 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0] }> = (
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, sender }) => {
   const bubbleClasses = isOwnMessage
-    ? 'bg-accent text-primary-bg'
-    : 'bg-surface';
+    ? 'bg-brand-blue text-white'
+    : 'bg-secondary';
 
   const alignmentClasses = isOwnMessage ? 'items-end' : 'items-start';
 
@@ -47,7 +47,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, se
             <div className={`rounded-xl p-3 ${bubbleClasses}`}>
                  {!isOwnMessage && (
                     <div className="mb-1">
-                      <UserNameDisplay user={sender} className="text-xs font-bold text-accent" />
+                      <UserNameDisplay user={sender} className="text-xs font-bold text-brand-blue" />
                     </div>
                 )}
                 {message.body && <p className="text-sm">{message.body}</p>}

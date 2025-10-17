@@ -39,7 +39,7 @@ const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({ isOpen, onClo
     onCreate({ name, description, milestones: formattedMilestones });
   };
   
-  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent text-sm";
+  const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Project Template">

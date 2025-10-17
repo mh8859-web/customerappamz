@@ -49,11 +49,11 @@ const ProjectGanttChart: React.FC<ProjectGanttChartProps> = ({ milestones, start
             </div>
             <div className="relative w-full h-8 bg-primary-bg rounded-lg">
                 <div 
-                    className="absolute top-0 h-full bg-accent/20 rounded-lg"
+                    className="absolute top-0 h-full bg-brand-blue/20 rounded-lg"
                     style={{ left: `0%`, width: `${milestone.left}%` }}
                 ></div>
                 <div 
-                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-accent rounded-full border-2 border-primary-bg shadow-soft"
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-brand-blue rounded-full border-2 border-primary-bg shadow-soft"
                     style={{ left: `calc(${milestone.left}% - 8px)` }}
                 ></div>
             </div>

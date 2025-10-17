@@ -1,8 +1,6 @@
-// A robust "stale-while-revalidate" service worker.
-// It provides a fast, offline-first experience while ensuring the app
-// stays up-to-date automatically in the background.
+// A robust service worker with a hybrid caching strategy.
 
-const CACHE_NAME = 'amaz-pm-v2'; // Increment version to force cache updates on deployment
+const CACHE_NAME = 'amaz-pm-v3'; // Increment version to force cache updates on deployment
 
 // On install, activate the new worker immediately.
 self.addEventListener('install', (event) => {
@@ -38,6 +36,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // --- STRATEGY 1: Network-first for navigation requests (the HTML page) ---
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          // If fetch is successful, cache it for offline use
+          if (response && response.status === 200) {
+            const cacheResponse = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, cacheResponse);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // If fetch fails (user is offline), try to get it from the cache
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+
+  // --- STRATEGY 2: Stale-while-revalidate for all other assets (JS, CSS, images) ---
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.match(event.request).then((cachedResponse) => {

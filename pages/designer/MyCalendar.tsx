@@ -52,7 +52,7 @@ const MyCalendar: React.FC = () => {
 
         calendarDays.push(
             <div key={day} className="border-r border-b border-border-color p-2 min-h-[120px] flex flex-col">
-                <div className={`font-semibold ${isToday ? 'bg-accent text-primary-bg rounded-full w-7 h-7 flex items-center justify-center' : 'text-text-headline'}`}>
+                <div className={`font-semibold ${isToday ? 'bg-brand-blue text-white rounded-full w-7 h-7 flex items-center justify-center' : 'text-text-headline'}`}>
                     {day}
                 </div>
                 <div className="mt-1 space-y-1 overflow-y-auto text-xs">

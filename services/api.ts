@@ -25,9 +25,9 @@ export const getUsers = async (): Promise<User[]> => {
         email: user.email,
         role: user.role,
         avatarUrl: user.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-        verified: !!user.verified, // FIX: Ensure verified is always a boolean to fix display bug.
+        verified: !!user.verified,
         verificationRequested: user.verification_requested,
-        userId: user.user_id,
+        userId: user.user_id || '',
     }));
 };
 
@@ -48,7 +48,6 @@ export const signUpNewUser = async (email: string, password: string, metadata: S
     return { user: data.user, error };
 };
 
-// FIX: Added missing createRecord function to handle creation of new records.
 // Generic function to create a new record in any table
 export const createRecord = async (tableName: string, recordData: Record<string, any>) => {
     const { data, error } = await supabase
@@ -72,7 +71,6 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
     return { data, error };
 };
 
-// FIX: Added a generic deleteRecord function to abstract away direct supabase calls and resolve import errors.
 // Generic function to delete a record by ID from any table
 export const deleteRecord = async (tableName: string, recordId: string) => {
     const { error } = await supabase

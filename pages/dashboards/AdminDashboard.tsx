@@ -12,6 +12,24 @@ import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
+const DashboardLoader: React.FC = () => (
+  <div className="space-y-8 animate-pulse">
+    <div className="flex justify-between items-center">
+      <div className="h-9 bg-secondary rounded w-1/3"></div>
+      <div className="h-11 bg-secondary rounded-xl w-48"></div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+      <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 h-80 bg-surface rounded-2xl shadow-card"></div>
+      <div className="h-80 bg-surface rounded-2xl shadow-card"></div>
+    </div>
+  </div>
+);
+
 interface StatCardProps {
     title: string;
     value: string | number;
@@ -19,8 +37,6 @@ interface StatCardProps {
     color: string;
 }
 
-// FIX: The `React.cloneElement` call was causing a TypeScript error because the icon components do not accept a 'style' prop.
-// The icons use `currentColor` for their stroke, so we can set the color on the parent `div` and it will be inherited.
 const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
     <Card className="flex items-center p-5">
         <div className={`p-3 rounded-xl`} style={{ backgroundColor: `${color}20`, color }}>
@@ -33,7 +49,6 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
     </Card>
 );
 
-
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -43,7 +58,6 @@ const AdminDashboard: React.FC = () => {
   const [announcement, setAnnouncement] = useState('');
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
-
 
   const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
     const projectToCreate = {
@@ -89,7 +103,7 @@ const AdminDashboard: React.FC = () => {
     alert('Announcement sent!');
   };
 
-  if (loading) return null;
+  if (loading) return <DashboardLoader />;
 
   const currentProjects = projects.filter(p => p.status === 'Active').length;
   const activeDesigners = users.filter(u => u.role === 'Designer').length;

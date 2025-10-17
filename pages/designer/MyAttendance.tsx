@@ -24,7 +24,7 @@ const MyAttendance: React.FC = () => {
                         <div key={log.id} className="bg-primary-bg p-4 rounded-xl text-sm">
                             <div className="flex justify-between items-start">
                                 <p className="font-bold text-text-headline">{new Date(log.clockIn).toLocaleDateString()}</p>
-                                <span className="font-mono text-accent">{log.duration}</span>
+                                <span className="font-mono text-brand-blue">{log.duration}</span>
                             </div>
                             <div className="text-text-muted mt-2 space-y-1">
                                 <p><strong className="text-text-headline/80">In:</strong> {new Date(log.clockIn).toLocaleTimeString()}</p>

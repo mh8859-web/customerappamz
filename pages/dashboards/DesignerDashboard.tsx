@@ -7,13 +7,30 @@ import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 
+const DashboardLoader: React.FC = () => (
+  <div className="space-y-8 animate-pulse">
+    <div className="h-9 bg-secondary rounded w-1/2"></div>
+    <div className="h-20 bg-surface rounded-2xl shadow-card"></div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+        <div className="h-24 bg-surface rounded-2xl shadow-card"></div>
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 h-96 bg-surface rounded-2xl shadow-card"></div>
+        <div className="h-96 bg-surface rounded-2xl shadow-card"></div>
+    </div>
+  </div>
+);
+
 const DesignerDashboard: React.FC = () => {
   const { user } = useAuth();
   const { findUserById } = useUsers();
   const { projects, tasks, designs, leaveRequests, announcements, loading } = useData();
   const navigate = useNavigate();
 
-  if (!user || loading) return null;
+  if (!user || loading) return <DashboardLoader />;
 
   const assignedProjects = projects.filter(p => p.designerId === user.id);
   const tasksDueToday = tasks.filter(t => t.assigneeId === user.id && t.status !== 'Done');
@@ -43,10 +60,10 @@ const DesignerDashboard: React.FC = () => {
       <h1 className="text-3xl font-bold text-text-headline">Welcome back, {user.fullName.split(' ')[0]}</h1>
       
       {latestAnnouncement && (
-        <Card className="!p-4 bg-accent/10 border-accent/30 flex items-start gap-3">
-            <MegaphoneIcon className="w-5 h-5 text-accent flex-shrink-0 mt-1"/>
+        <Card className="!p-4 bg-brand-blue/10 border-brand-blue/30 flex items-start gap-3">
+            <MegaphoneIcon className="w-5 h-5 text-brand-blue flex-shrink-0 mt-1"/>
             <div>
-                <h3 className="font-bold text-accent">Announcement from {findUserById(latestAnnouncement.authorId)?.fullName}</h3>
+                <h3 className="font-bold text-brand-blue">Announcement from {findUserById(latestAnnouncement.authorId)?.fullName}</h3>
                 <p className="text-sm text-text-headline">{latestAnnouncement.content}</p>
             </div>
         </Card>
@@ -54,19 +71,19 @@ const DesignerDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
-          <div className="flex items-center text-accent mb-2"><BriefcaseIcon className="w-5 h-5 mr-2"/> Assigned Projects</div>
+          <div className="flex items-center text-brand-blue mb-2"><BriefcaseIcon className="w-5 h-5 mr-2"/> Assigned Projects</div>
           <p className="text-4xl font-bold text-text-headline">{assignedProjects.length}</p>
         </Card>
         <Card>
-          <div className="flex items-center text-accent mb-2"><CheckCircleIcon className="w-5 h-5 mr-2"/> Awaiting Approval</div>
+          <div className="flex items-center text-brand-blue mb-2"><CheckCircleIcon className="w-5 h-5 mr-2"/> Awaiting Approval</div>
           <p className="text-4xl font-bold text-text-headline">{awaitingApproval.length}</p>
         </Card>
         <Card>
-          <div className="flex items-center text-accent mb-2"><MessageSquareIcon className="w-5 h-5 mr-2"/> Tasks This Month</div>
+          <div className="flex items-center text-brand-blue mb-2"><MessageSquareIcon className="w-5 h-5 mr-2"/> Tasks This Month</div>
           <p className="text-4xl font-bold text-text-headline">{tasksCompletedThisMonth}</p>
         </Card>
         <Card>
-          <div className="flex items-center text-accent mb-2"><CalendarIcon className="w-5 h-5 mr-2"/> Leave Balance</div>
+          <div className="flex items-center text-brand-blue mb-2"><CalendarIcon className="w-5 h-5 mr-2"/> Leave Balance</div>
           <p className="text-4xl font-bold text-text-headline">{remainingLeave} <span className="text-lg">days</span></p>
         </Card>
       </div>
@@ -79,10 +96,10 @@ const DesignerDashboard: React.FC = () => {
               <Link to={`/projects/${project.id}`} key={project.id} className="block bg-primary-bg p-4 rounded-xl hover:bg-border-color transition-colors">
                 <div className="flex justify-between items-center mb-2">
                   <p className="font-semibold text-text-headline">{project.title}</p>
-                  <p className="text-sm text-accent">{project.stage.replace(/_/g, ' ')}</p>
+                  <p className="text-sm text-brand-blue">{project.stage.replace(/_/g, ' ')}</p>
                 </div>
                 <div className="w-full bg-border-color rounded-full h-2.5">
-                  <div className="bg-accent h-2.5 rounded-full" style={{ width: `${project.progress}%` }}></div>
+                  <div className="bg-brand-blue h-2.5 rounded-full" style={{ width: `${project.progress}%` }}></div>
                 </div>
               </Link>
             ))}

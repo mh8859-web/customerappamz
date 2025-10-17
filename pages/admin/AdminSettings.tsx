@@ -18,7 +18,7 @@ const ToggleSwitch: React.FC<{ label: string; enabled: boolean; setEnabled: (ena
     <span className="text-sm text-text-headline">{label}</span>
     <div className="relative">
       <input type="checkbox" className="sr-only" checked={enabled} onChange={() => setEnabled(!enabled)} />
-      <div className={`block w-14 h-8 rounded-full transition ${enabled ? 'bg-accent' : 'bg-surface'}`}></div>
+      <div className={`block w-14 h-8 rounded-full transition ${enabled ? 'bg-brand-blue' : 'bg-secondary'}`}></div>
       <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${enabled ? 'transform translate-x-6' : ''}`}></div>
     </div>
   </label>
@@ -26,7 +26,7 @@ const ToggleSwitch: React.FC<{ label: string; enabled: boolean; setEnabled: (ena
 
 
 const CompanyProfileSettings = () => {
-    const inputClasses = "w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent";
+    const inputClasses = "w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
     return (
         <Card>
             <h2 className="text-xl font-bold text-text-headline mb-4">Company Profile</h2>
@@ -34,8 +34,8 @@ const CompanyProfileSettings = () => {
             <form className="space-y-4">
                 <FormField label="Company Logo">
                     <div className="flex items-center gap-4">
-                        <img src="https://i.pravatar.cc/150?u=aura-logo" alt="Company Logo" className="w-16 h-16 rounded-full"/>
-                        <input type="file" className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/20 file:text-accent hover:file:bg-accent/30`}/>
+                        <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="Company Logo" className="w-16 h-16 rounded-lg"/>
+                        <input type="file" className={`${inputClasses} file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/20 file:text-brand-blue hover:file:bg-brand-blue/30`}/>
                     </div>
                 </FormField>
                 <FormField label="Company Name">
@@ -43,7 +43,7 @@ const CompanyProfileSettings = () => {
                 </FormField>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField label="Contact Number">
-                        <input type="tel" defaultValue="+1 (555) 123-4567" className={inputClasses} />
+                        <input type="tel" defaultValue="+91 98765 43210" className={inputClasses} />
                     </FormField>
                     <FormField label="Website">
                         <input type="url" defaultValue="https://www.amaz-interiors.com" className={inputClasses} />
@@ -102,7 +102,7 @@ const PermissionsSettings = () => {
                                         <td className="px-6 py-4">{action}</td>
                                         {roles.map(role => (
                                             <td key={role} className="px-6 py-4 text-center">
-                                                <input type="checkbox" className="form-checkbox h-5 w-5 rounded bg-surface border-border-color text-accent focus:ring-accent"
+                                                <input type="checkbox" className="form-checkbox h-5 w-5 rounded bg-surface border-border-color text-brand-blue focus:ring-brand-blue"
                                                     checked={hasPermission(role, action)}
                                                     readOnly
                                                 />
@@ -132,8 +132,8 @@ const CustomizationSettings = () => {
             <div className="space-y-6">
                 <FormField label="Primary Accent Color">
                     <div className="flex items-center gap-3">
-                        <input type="color" defaultValue="#4FD1C5" className="w-12 h-12 bg-transparent border-none cursor-pointer" />
-                        <span className="font-mono text-text-headline">#4FD1C5</span>
+                        <input type="color" defaultValue="#1D9BF0" className="w-12 h-12 bg-transparent border-none cursor-pointer" />
+                        <span className="font-mono text-text-headline">#1D9BF0</span>
                     </div>
                 </FormField>
                  <div>
@@ -156,7 +156,7 @@ const BillingSettings = () => (
         <div className="bg-primary-bg p-6 rounded-xl border border-border-color flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
                 <p className="text-sm text-text-muted">Current Plan</p>
-                <p className="text-2xl font-bold text-accent">Professional</p>
+                <p className="text-2xl font-bold text-brand-blue">Professional</p>
                 <p className="text-sm text-text-headline">Next billing on Dec 21, 2024</p>
             </div>
             <div className="flex gap-3">
@@ -265,8 +265,8 @@ const AdminSettings: React.FC = () => {
                                 onClick={() => setActiveTab(tab.id as SettingsTab)}
                                 className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
                                     activeTab === tab.id
-                                        ? 'bg-accent/10 text-accent font-semibold'
-                                        : 'hover:bg-surface text-text-muted'
+                                        ? 'bg-brand-blue/10 text-brand-blue font-semibold'
+                                        : 'hover:bg-secondary text-text-primary'
                                 }`}
                             >
                                 {tab.icon}
@@ -279,15 +279,6 @@ const AdminSettings: React.FC = () => {
                     {renderContent()}
                 </div>
             </div>
-
-            <footer className="mt-12 text-center border-t border-border-color pt-8">
-              <p className="text-sm text-text-muted mb-2">Powered By:</p>
-              <img 
-                src="https://myacc786.s3.ap-south-1.amazonaws.com/png%20(4).png" 
-                alt="Powered by logo" 
-                className="h-10 mx-auto" 
-              />
-            </footer>
         </div>
     );
 };

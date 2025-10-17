@@ -31,7 +31,6 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
 
   const handleSaveComment = () => {
     if (newComment && newComment.text.trim() !== '') {
-      // FIX: Added the `status: 'Open'` property to satisfy the `Comment` type.
       const commentToAdd: Comment = {
         id: `comment-${Date.now()}`,
         authorId: currentUser.id,
@@ -53,7 +52,7 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
     const author = 'authorId' in comment ? findUserById(comment.authorId) : null;
     return (
         <div 
-            className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-accent border-2 border-white shadow-lg cursor-pointer group"
+            className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-brand-blue border-2 border-white shadow-lg cursor-pointer group"
             style={{ left: `${comment.x}%`, top: `${comment.y}%` }}
         >
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-primary-bg p-2 rounded-lg text-xs text-left opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-soft">
@@ -88,13 +87,13 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
             style={{ left: `${newComment.x}%`, top: `${newComment.y}%` }}
           >
             <div className="relative">
-                <div className="w-6 h-6 rounded-full bg-accent border-2 border-white animate-pulse"></div>
+                <div className="w-6 h-6 rounded-full bg-brand-blue border-2 border-white animate-pulse"></div>
                 <div className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-56 bg-surface p-3 rounded-lg z-20 shadow-soft">
                     <textarea
                         value={newComment.text}
                         onChange={(e) => setNewComment({ ...newComment, text: e.target.value })}
                         placeholder="Add your comment..."
-                        className="w-full bg-primary-bg border border-border-color rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="w-full bg-primary-bg border border-border-color rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue"
                         rows={3}
                         autoFocus
                     />

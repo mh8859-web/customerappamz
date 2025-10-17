@@ -16,7 +16,7 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const customer = findUserById(project.customerId);
 
     return (
-        <Card className="hover:border-accent transition-colors duration-300">
+        <Card className="hover:border-brand-blue transition-colors duration-300">
             <Link to={`/projects/${project.id}`} className="block">
                 <div className="flex justify-between items-start">
                     <h3 className="text-lg font-bold text-text-headline mb-2">{project.title}</h3>
@@ -42,7 +42,7 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
                         <span>{project.progress}%</span>
                     </div>
                     <div className="w-full bg-border-color rounded-full h-2">
-                        <div className="bg-accent h-2 rounded-full" style={{ width: `${project.progress}%` }}></div>
+                        <div className="bg-brand-blue h-2 rounded-full" style={{ width: `${project.progress}%` }}></div>
                     </div>
                 </div>
             </Link>
@@ -120,13 +120,13 @@ const ProjectsList: React.FC = () => {
         <nav className="-mb-px flex space-x-6">
             <button onClick={() => setActiveTab('Active')}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Active' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-headline'}`}
+                    ${activeTab === 'Active' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
             >
                 Active Projects ({activeProjects.length})
             </button>
              <button onClick={() => setActiveTab('Archived')}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Archived' ? 'border-accent text-accent' : 'border-transparent text-text-muted hover:text-text-headline'}`}
+                    ${activeTab === 'Archived' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
             >
                 Archived Projects ({archivedProjects.length})
             </button>

@@ -19,8 +19,7 @@ export interface User {
   avatarUrl: string;
   verified?: boolean;
   verificationRequested?: boolean;
-  userId?: string;
-  password?: string;
+  userId: string;
 }
 
 export interface Project {
