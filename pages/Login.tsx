@@ -27,10 +27,10 @@ const Login: React.FC = () => {
     if (success) {
       navigate('/');
     } else {
-      // The new login function returns a single error for both user not found and bad password
-      // which aligns with Supabase's auth response and improves security by not revealing which was incorrect.
       if (loginError === 'INVALID_CREDENTIALS') {
         setError('Invalid User ID or password. Please check your credentials and try again.');
+      } else if (loginError === 'PROFILE_FETCH_FAILED') {
+        setError('Could not retrieve your user profile after login. Please try again or contact support.');
       } else {
         setError('An unexpected error occurred. Please try again later.');
       }

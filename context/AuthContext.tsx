@@ -119,10 +119,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     // Step 3: Proactively fetch the user profile on successful login.
-    // This is more robust than relying only on the onAuthStateChange listener,
-    // which can sometimes have a delay or fail to fire, causing a "stuck" login screen.
+    // This is more robust than relying only on the onAuthStateChange listener.
     if (signInData.user) {
-        await fetchUserProfile(signInData.user);
+        const fetchedProfile = await fetchUserProfile(signInData.user);
+        // If the profile fetch fails, we treat it as a login failure to prevent a "stuck" state.
+        if (!fetchedProfile) {
+            // Log the user out from the auth session since we can't load their app profile.
+            await supabase.auth.signOut();
+            return { success: false, error: 'PROFILE_FETCH_FAILED' };
+        }
     } else {
         // This case should be rare, but it's a safeguard.
         return { success: false, error: 'UNKNOWN_ERROR' };
