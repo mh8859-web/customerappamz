@@ -141,8 +141,7 @@
             for (let registration of registrations) {
               registration.unregister();
             }
-            // Reload the page once to ensure the old SW is gone.
-            window.location.reload();
+            console.log('Service workers unregistered. The app will be loaded from the network on the next visit.');
           }
         }).catch(function(err) {
           console.error('Service Worker unregistration failed: ', err);

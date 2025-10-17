@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -26,12 +26,13 @@ import CommunityHub from './pages/shared/CommunityHub';
 import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 import CacheManagement from './pages/admin/CacheManagement';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
-const App: React.FC = () => {
-  const { user } = useAuth();
-
-  const renderDashboard = () => {
-    if (!user) return <Navigate to="/login" />;
+// Helper component to redirect to the correct dashboard based on user role
+const DashboardRedirect: React.FC = () => {
+    const { user } = useAuth();
+    if (!user) return <Navigate to="/login" />; // Should be caught by ProtectedRoute, but here for safety
+    
     switch (user.role) {
       case 'Admin':
         return <AdminDashboard />;
@@ -42,13 +43,30 @@ const App: React.FC = () => {
       default:
         return <Navigate to="/login" />;
     }
-  };
+};
 
+// Role-specific route wrappers to protect routes inside the dashboard
+const AdminRoutes: React.FC = () => {
+    const { user } = useAuth();
+    return user?.role === 'Admin' ? <Outlet /> : <Navigate to="/" replace />;
+};
+const DesignerRoutes: React.FC = () => {
+    const { user } = useAuth();
+    return user?.role === 'Designer' ? <Outlet /> : <Navigate to="/" replace />;
+};
+const CustomerRoutes: React.FC = () => {
+    const { user } = useAuth();
+    return user?.role === 'Customer' ? <Outlet /> : <Navigate to="/" replace />;
+};
+
+const App: React.FC = () => {
   return (
     <Routes>
-      {user ? (
-        <Route path="/" element={<DashboardLayout />}>
-          <Route index element={renderDashboard()} />
+      <Route path="/login" element={<Login />} />
+      
+      {/* All protected routes are now children of the ProtectedRoute component */}
+      <Route path="/" element={<ProtectedRoute />}>
+          <Route index element={<DashboardRedirect />} />
           <Route path="hub" element={<CommunityHub />} />
           <Route path="projects" element={<ProjectsList />} />
           <Route path="projects/:projectId" element={<ProjectDetails />} />
@@ -58,44 +76,36 @@ const App: React.FC = () => {
           <Route path="project-wall" element={<ProjectWall />} />
 
           {/* Admin Routes */}
-          {user.role === 'Admin' && (
-            <>
+          <Route element={<AdminRoutes />}>
               <Route path="overview" element={<AdminOverview />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="attendance" element={<AttendanceLogs />} />
               <Route path="reports" element={<FinancialReports />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="cache" element={<CacheManagement />} />
-            </>
-          )}
+          </Route>
 
           {/* Designer Routes */}
-          {user.role === 'Designer' && (
-            <>
+          <Route element={<DesignerRoutes />}>
               <Route path="task-board" element={<TaskBoard />} />
               <Route path="my-calendar" element={<MyCalendar />} />
               <Route path="team-calendar" element={<TeamCalendar />} />
               <Route path="leave" element={<LeaveManagement />} />
               <Route path="daily-work" element={<DailyWork />} />
               <Route path="my-attendance" element={<MyAttendance />} />
-            </>
-          )}
-
+          </Route>
+          
           {/* Customer Routes */}
-          {user.role === 'Customer' && (
-            <>
+          <Route element={<CustomerRoutes />}>
               <Route path="billing" element={<BillingHistory />} />
-            </>
-          )}
+          </Route>
 
+          {/* Fallback for any other authenticated route */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      ) : (
-        <>
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </>
-      )}
+      </Route>
+      
+      {/* Global fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

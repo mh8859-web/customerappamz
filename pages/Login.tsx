@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
@@ -12,8 +12,16 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isForgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // If the auth check is done and a user exists, redirect them away from the login page.
+    if (!authLoading && user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +46,15 @@ const Login: React.FC = () => {
   };
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
+  
+  // Don't render the form if we're about to redirect
+  if (authLoading || user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-page-bg">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-blue"></div>
+      </div>
+    );
+  }
 
   return (
     <>
