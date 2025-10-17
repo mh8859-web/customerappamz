@@ -13,69 +13,51 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to fetch and map a user profile from the 'users' table.
+// This function has no side effects.
+const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+    if (error || !data) {
+        console.error('Failed to fetch user profile:', error);
+        return null;
+    }
+    
+    return {
+        id: data.id,
+        fullName: data.full_name || 'User',
+        email: data.email,
+        role: data.role,
+        avatarUrl: data.avatar_url,
+        verified: data.verified,
+        verificationRequested: data.verification_requested,
+        userId: data.user_id,
+    };
+};
+
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const fetchUserProfile = async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
-    if (!supabaseUser) {
-      setUser(null);
-      return null;
-    }
-    
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      await supabase.auth.signOut();
-      setUser(null);
-      return null;
-    } 
-    
-    if (data) {
-      const userProfile: User = {
-          id: data.id,
-          fullName: data.full_name || 'User',
-          email: data.email,
-          role: data.role,
-          avatarUrl: data.avatar_url,
-          verified: data.verified,
-          verificationRequested: data.verification_requested,
-          userId: data.user_id,
-      };
-      setUser(userProfile);
-      return userProfile;
-    }
-
-    await supabase.auth.signOut();
-    setUser(null);
-    return null;
-  };
-  
   useEffect(() => {
+    // On initial app load, check for an existing session.
     const initializeSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-            throw new Error(`Supabase getSession error: ${error.message}`);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            const profile = await fetchAndMapProfile(session.user);
+            setUser(profile); // If profile is null, user is effectively logged out.
         }
-        await fetchUserProfile(session?.user ?? null);
-      } catch (e) {
-        console.error("Critical error during session initialization. Forcing logout.", e);
-        setUser(null);
-      }
     };
     
     initializeSession();
 
+    // Listen for auth events that happen outside the app's direct control, like logout.
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN') {
-          await fetchUserProfile(session!.user);
-        }
+      (event, session) => {
         if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -107,24 +89,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           password: password.trim(),
         });
 
-        if (signInError) {
-          console.error("AUTHENTICATION FAILED:", signInError.message);
-          if (signInError.message.includes("Invalid login credentials")) {
-             return { success: false, error: 'INVALID_CREDENTIALS' };
-          }
-          return { success: false, error: 'UNKNOWN_ERROR' };
+        if (signInError || !data.user) {
+          console.error("AUTHENTICATION FAILED:", signInError?.message);
+          return { success: false, error: 'INVALID_CREDENTIALS' };
         }
 
-        if (data.session) {
-            const profile = await fetchUserProfile(data.session.user);
-            if (profile) {
-                return { success: true, error: null };
-            } else {
-                return { success: false, error: 'PROFILE_FETCH_FAILED' };
-            }
-        }
+        // After successful auth, fetch the user profile to complete the login process.
+        const userProfile = await fetchAndMapProfile(data.user);
         
-        return { success: false, error: 'UNKNOWN_ERROR' };
+        if (userProfile) {
+            setUser(userProfile); // Set the user state for the app
+            return { success: true, error: null };
+        } else {
+            // This is a critical error: auth succeeded but profile is missing.
+            // Clean up by signing the user out to prevent a broken state.
+            await supabase.auth.signOut();
+            setUser(null);
+            return { success: false, error: 'PROFILE_FETCH_FAILED' };
+        }
 
     } catch (e) {
         console.error("An unexpected error occurred during login:", e);
@@ -134,6 +116,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     await supabase.auth.signOut();
+    // The onAuthStateChange listener will handle setting the user to null.
   };
   
   const updateUser = (updates: Partial<User>) => {
@@ -153,6 +136,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
     
     if (profileError || !userProfile?.email) {
+        // Don't reveal if a user exists or not for security reasons.
         console.warn("Password reset attempted for non-existent user_id:", trimmedUserId);
         return { success: true, error: null };
     }
