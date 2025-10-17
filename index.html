@@ -133,16 +133,19 @@
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
     <script>
-      // Register the service worker for smart caching and offline capabilities.
+      // Forcefully unregister any existing service workers to clear bad caches.
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(error => {
-              console.log('ServiceWorker registration failed: ', error);
-            });
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          if (registrations.length > 0) {
+            console.log('Unregistering existing service workers...');
+            for (let registration of registrations) {
+              registration.unregister();
+            }
+            // Reload the page once to ensure the old SW is gone.
+            window.location.reload();
+          }
+        }).catch(function(err) {
+          console.error('Service Worker unregistration failed: ', err);
         });
       }
     </script>

@@ -6,10 +6,9 @@ import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyI
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  setInstallModalOpen: (open: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInstallModalOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const { user, logout } = useAuth();
   
   const baseLinkClasses = "flex items-center p-3 my-1 rounded-full font-semibold transition-colors duration-200 group";
@@ -18,11 +17,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 
     `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses}`;
-
-  const handleInstallClick = () => {
-    setInstallModalOpen(true);
-    setSidebarOpen(false);
-  }
 
   const navItems = {
     Admin: [
@@ -90,11 +84,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, setInsta
                 <span className="ml-4 text-base">{item.label}</span>
               </NavLink>
             ))}
-            {/* Install App Button */}
-             <button onClick={handleInstallClick} className={`${baseLinkClasses} ${inactiveLinkClasses} w-full`}>
-                <DownloadIcon className="w-6 h-6" />
-                <span className="ml-4 font-semibold text-base">Install App</span>
-            </button>
           </nav>
           <div className="px-4 py-4">
             <button onClick={logout} className={`${baseLinkClasses} ${inactiveLinkClasses} w-full`}>
