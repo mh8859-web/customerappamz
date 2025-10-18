@@ -4,20 +4,14 @@ import { useAuth } from '../../context/AuthContext';
 import DashboardLayout from '../layout/DashboardLayout';
 
 const ProtectedRoute: React.FC = () => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    // While checking auth status, render nothing. This prevents a flash of the login page
-    // for authenticated users and is faster than a full loader.
-    return null;
-  }
+  const { user } = useAuth();
 
   if (!user) {
-    // Auth check is complete and there's no user, so redirect to login.
+    // There's no user, so redirect to login instantly.
     return <Navigate to="/login" replace />;
   }
   
-  // Auth check is complete and there is a user, render the main dashboard.
+  // There is a user, render the main dashboard instantly.
   return <DashboardLayout />;
 };
 
