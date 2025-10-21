@@ -34,7 +34,6 @@ const fetchAndMapProfile = async (
 
   if (error || !data) {
     console.error("Failed to fetch user profile:", error?.message);
-    // Don't sign out here, let the caller handle the null profile
     return null;
   }
 
@@ -57,35 +56,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // This function performs a one-time check for the initial session on app load.
-    // It's designed to be robust and ALWAYS resolve the loading state.
-    const resolveInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          throw error;
-        }
-
-        if (session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-      } catch (e) {
-        console.error("Error resolving initial session:", e);
-        setUser(null);
-      } finally {
-        // This is critical: it guarantees the loading spinner is removed,
-        // regardless of whether the session check succeeded or failed.
-        setLoading(false);
-      }
-    };
-
-    resolveInitialSession();
-
-    // This listener then handles all subsequent auth changes (login, logout, token refresh).
+    setLoading(true);
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
@@ -94,6 +65,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         } else {
           setUser(null);
         }
+        // This listener handles the initial session, login, and logout.
+        // Once it has processed the session, the loading is complete.
+        setLoading(false);
       }
     );
 
@@ -107,6 +81,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
+      // Set loading to true to show the app shell immediately upon login attempt.
+      // The onAuthStateChange listener will set it to false upon completion.
       setLoading(true);
       const trimmedUserId = userId.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
@@ -116,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (profileError || !profile?.email) {
-        setLoading(false);
+        setLoading(false); // Manually stop loading on failure
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
 
@@ -127,16 +103,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
       );
       
-      // onAuthStateChange will handle success. We only need to handle errors here.
       if (signInError) {
-        setLoading(false);
+        setLoading(false); // Manually stop loading on failure
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // Do not set loading(false) on success, let the listener do it to prevent race conditions.
+      // On success, we don't set loading to false here.
+      // The onAuthStateChange listener is now the single source of truth and will handle it.
       return { success: true, error: null };
     } catch (e) {
-      setLoading(false);
+      setLoading(false); // Manually stop loading on any other catched error
       console.error("Login error:", e);
       return { success: false, error: "UNKNOWN_ERROR" };
     }

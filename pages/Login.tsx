@@ -46,12 +46,6 @@ const Login: React.FC = () => {
   };
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
-
-  // Render nothing if we are still loading and a user might exist.
-  // This prevents a "flash" of the login form for already authenticated users.
-  if (loading) {
-    return null;
-  }
   
   return (
     <>

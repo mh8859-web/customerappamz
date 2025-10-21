@@ -4,18 +4,23 @@ import { useAuth } from "../../context/AuthContext";
 import DashboardLayout from "../layout/DashboardLayout";
 import { UserProvider } from "../../context/UserContext";
 import { DataProvider } from "../../context/DataContext";
+import AppShell from "../ui/AppShell";
 
 const ProtectedRoute: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  // The main App component now handles the initial loading state.
-  // This component's only responsibility is to check for an authenticated user.
+  // Show a high-fidelity app skeleton ONLY when checking authentication state for protected routes.
+  // This provides a smooth experience for logged-in users on refresh.
+  if (authLoading) {
+    return <AppShell />;
+  }
+
+  // If authentication is resolved and there is no user, redirect to login.
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Wrap the entire authenticated app in the necessary data providers.
-  // This ensures all child routes have access to user and project data.
+  // If a user exists, wrap the authenticated app in the necessary data providers.
   return (
     <UserProvider>
       <DataProvider>
