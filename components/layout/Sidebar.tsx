@@ -32,6 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/account', icon: <UserCircleIcon className="w-6 h-6" />, label: 'My Account' },
       { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6" />, label: 'Support Tickets' },
       { to: '/settings', icon: <SettingsIcon className="w-6 h-6" />, label: 'Settings' },
+      { to: '/cache-management', icon: <TrashIcon className="w-6 h-6" />, label: 'Cache' },
       { to: '/about', icon: <InfoIcon className="w-6 h-6" />, label: 'About' },
     ],
     'Sub-Admin': [

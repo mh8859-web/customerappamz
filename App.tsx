@@ -27,6 +27,7 @@ import DownloadCenter from './pages/shared/DownloadCenter';
 import ProjectWall from './pages/shared/ProjectWall';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AboutPage from './pages/shared/AboutPage';
+import CacheManagement from './pages/admin/CacheManagement';
 
 // Helper component to redirect to the correct dashboard based on user role
 const DashboardRedirect: React.FC = () => {
@@ -92,6 +93,7 @@ const App: React.FC = () => {
           <Route element={<FullAdminRoutes />}>
               <Route path="users" element={<UserManagement />} />
               <Route path="settings" element={<AdminSettings />} />
+              <Route path="cache-management" element={<CacheManagement />} />
           </Route>
 
           {/* Designer Routes */}
