@@ -97,7 +97,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
     }
-  }, []);
+  }, [setMobileNumber]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

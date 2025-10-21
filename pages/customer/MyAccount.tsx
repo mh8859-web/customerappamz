@@ -4,6 +4,7 @@ import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { EditIcon } from '../../components/icons';
 import { uploadAvatar, updateRecord } from '../../services/api';
+import ChangePasswordModal from '../../components/auth/ChangePasswordModal';
 
 const MyAccount: React.FC = () => {
     const { user, updateUser } = useAuth();
@@ -13,6 +14,7 @@ const MyAccount: React.FC = () => {
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
     
     useEffect(() => {
         if(user) {
@@ -90,67 +92,80 @@ const MyAccount: React.FC = () => {
     const inputClasses = "w-full mt-1 bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
 
     return (
-        <div className="space-y-6 max-w-2xl mx-auto">
-            <div className="flex justify-between items-center">
-                <h1 className="text-3xl font-bold text-text-headline">My Account</h1>
-                <div className="flex gap-2">
-                    {isEditing && (
-                        <Button onClick={handleCancel} variant="secondary" disabled={isSaving}>
-                            Cancel
-                        </Button>
-                    )}
-                    <Button onClick={isEditing ? handleSaveChanges : () => setIsEditing(true)} disabled={isSaving}>
-                        {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Profile')}
-                    </Button>
-                </div>
-            </div>
-            
-            <Card>
-                <div className="flex flex-col items-center sm:flex-row gap-6">
-                    <div className={`relative ${isEditing ? 'cursor-pointer' : ''}`} onClick={handleAvatarClick}>
-                        <img src={avatarPreview || user.avatarUrl} alt="User Avatar" className="w-24 h-24 rounded-full object-cover" />
+        <>
+            <ChangePasswordModal 
+                isOpen={isPasswordModalOpen}
+                onClose={() => setPasswordModalOpen(false)}
+            />
+            <div className="space-y-6 max-w-2xl mx-auto">
+                <div className="flex justify-between items-center">
+                    <h1 className="text-3xl font-bold text-text-headline">My Account</h1>
+                    <div className="flex gap-2">
                         {isEditing && (
-                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-                                <EditIcon className="w-6 h-6 text-white"/>
-                            </div>
+                            <Button onClick={handleCancel} variant="secondary" disabled={isSaving}>
+                                Cancel
+                            </Button>
                         )}
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                        <Button onClick={isEditing ? handleSaveChanges : () => setIsEditing(true)} disabled={isSaving}>
+                            {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Edit Profile')}
+                        </Button>
                     </div>
-                    <div className="flex-1 w-full">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-headline mb-1">Full Name</label>
-                                <input 
-                                    type="text" 
-                                    value={formData.fullName}
-                                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                                    readOnly={!isEditing}
-                                    className={`${inputClasses} ${!isEditing ? 'bg-surface border-transparent' : ''}`}
-                                />
-                            </div>
-                             <div>
-                                <label className="block text-sm font-medium text-text-headline mb-1">Email (System)</label>
-                                <input 
-                                    type="email" 
-                                    value={user.email}
-                                    readOnly
-                                    className={`${inputClasses} bg-surface border-transparent text-text-muted cursor-not-allowed`}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-headline mb-1">User ID</label>
-                                <input 
-                                    type="text" 
-                                    value={user.userId || ''}
-                                    readOnly
-                                    className={`${inputClasses} bg-surface border-transparent text-text-muted cursor-not-allowed`}
-                                />
+                </div>
+                
+                <Card>
+                    <div className="flex flex-col items-center sm:flex-row gap-6">
+                        <div className={`relative ${isEditing ? 'cursor-pointer' : ''}`} onClick={handleAvatarClick}>
+                            <img src={avatarPreview || user.avatarUrl} alt="User Avatar" className="w-24 h-24 rounded-full object-cover" />
+                            {isEditing && (
+                                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                                    <EditIcon className="w-6 h-6 text-white"/>
+                                </div>
+                            )}
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+                        </div>
+                        <div className="flex-1 w-full">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-text-headline mb-1">Full Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.fullName}
+                                        onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                                        readOnly={!isEditing}
+                                        className={`${inputClasses} ${!isEditing ? 'bg-surface border-transparent' : ''}`}
+                                    />
+                                </div>
+                                 <div>
+                                    <label className="block text-sm font-medium text-text-headline mb-1">Email (System)</label>
+                                    <input 
+                                        type="email" 
+                                        value={user.email}
+                                        readOnly
+                                        className={`${inputClasses} bg-surface border-transparent text-text-muted cursor-not-allowed`}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text-headline mb-1">User ID</label>
+                                    <input 
+                                        type="text" 
+                                        value={user.userId || ''}
+                                        readOnly
+                                        className={`${inputClasses} bg-surface border-transparent text-text-muted cursor-not-allowed`}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </Card>
-        </div>
+                </Card>
+                <Card>
+                    <h2 className="text-lg font-bold text-text-headline mb-2">Security</h2>
+                    <div className="flex justify-between items-center">
+                        <p className="text-text-secondary">Update your password to keep your account secure.</p>
+                        <Button variant="secondary" onClick={() => setPasswordModalOpen(true)}>Change Password</Button>
+                    </div>
+                </Card>
+            </div>
+        </>
     );
 };
 

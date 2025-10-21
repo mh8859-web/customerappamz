@@ -5,10 +5,13 @@ import { Milestone } from '../../types';
 import Button from '../../components/ui/Button';
 import { DownloadIcon } from '../../components/icons';
 import { useData } from '../../context/DataContext';
+import { useUsers } from '../../context/UserContext';
 
 const BillingHistory: React.FC = () => {
     const { user } = useAuth();
     const { milestones, projects, loading } = useData();
+    const { findUserById } = useUsers();
+
     if (!user || loading) return null;
 
     const myProjectIds = projects.filter(p => p.customerId === user.id).map(p => p.id);
@@ -16,9 +19,89 @@ const BillingHistory: React.FC = () => {
         .filter(m => myProjectIds.includes(m.projectId))
         .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 
+    const generateInvoiceHTML = (milestone: Milestone) => {
+        const project = projects.find(p => p.id === milestone.projectId);
+        const designer = findUserById(project?.designerId || '');
+        
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invoice #${milestone.id.slice(0, 8)}</title>
+                <script src="https://cdn.tailwindcss.com"></script>
+            </head>
+            <body class="bg-gray-100 font-sans p-8">
+                <div class="max-w-4xl mx-auto bg-white p-12 rounded-lg shadow-lg">
+                    <div class="flex justify-between items-center border-b pb-6 mb-8">
+                        <div>
+                            <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ Logo" class="h-12"/>
+                        </div>
+                        <div class="text-right">
+                            <h1 class="text-3xl font-bold text-gray-800">INVOICE</h1>
+                            <p class="text-gray-500">#${milestone.id.slice(0, 8).toUpperCase()}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div>
+                            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Billed To</h2>
+                            <p class="font-bold text-gray-800">${user.fullName}</p>
+                            <p class="text-gray-600">${user.email}</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Invoice Details</h2>
+                            <p><strong class="text-gray-600">Date Issued:</strong> ${new Date().toLocaleDateString()}</p>
+                            <p><strong class="text-gray-600">Date Due:</strong> ${new Date(milestone.dueDate).toLocaleDateString()}</p>
+                            <p><strong class="text-gray-600">Status:</strong> <span class="font-semibold ${milestone.statusDisplay === 'Paid' ? 'text-green-500' : 'text-yellow-500'}">${milestone.statusDisplay}</span></p>
+                        </div>
+                    </div>
+                    <div>
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="p-4 text-sm font-semibold text-gray-600 uppercase">Description</th>
+                                    <th class="p-4 text-sm font-semibold text-gray-600 uppercase text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b">
+                                    <td class="p-4">
+                                        <p class="font-medium text-gray-800">Project: ${project?.title}</p>
+                                        <p class="text-sm text-gray-500">Milestone: ${milestone.title}</p>
+                                    </td>
+                                    <td class="p-4 text-right font-medium text-gray-800">₹${milestone.amountDisplay.toLocaleString()}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-end mt-8">
+                        <div class="w-full max-w-xs text-right">
+                            <div class="flex justify-between py-2">
+                                <span class="text-gray-600">Subtotal</span>
+                                <span class="font-medium text-gray-800">₹${milestone.amountDisplay.toLocaleString()}</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-t font-bold text-xl text-gray-800">
+                                <span>Total Due</span>
+                                <span>₹${milestone.amountDisplay.toLocaleString()}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+    };
+
+    const handlePrintInvoice = (milestone: Milestone) => {
+        const invoiceHtml = generateInvoiceHTML(milestone);
+        const printWindow = window.open('', '_blank');
+        printWindow?.document.write(invoiceHtml);
+        printWindow?.document.close();
+        setTimeout(() => printWindow?.print(), 500);
+    };
+
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-text-headline">Billing History</h1>
+            <h1 className="text-3xl font-bold font-display text-text-headline">Billing History</h1>
             <Card>
                 {/* Mobile View */}
                 <div className="md:hidden space-y-4">
@@ -44,7 +127,7 @@ const BillingHistory: React.FC = () => {
                                     <p className="text-text-muted"><strong className="text-text-headline/80">Due Date:</strong> {new Date(milestone.dueDate).toLocaleDateString()}</p>
                                     {milestone.paidDateDisplay && <p className="text-text-muted"><strong className="text-text-headline/80">Paid On:</strong> {new Date(milestone.paidDateDisplay).toLocaleDateString()}</p>}
                                 </div>
-                                <Button variant="secondary" className="w-full mt-3 py-1.5 text-xs flex items-center justify-center gap-2">
+                                <Button variant="secondary" onClick={() => handlePrintInvoice(milestone)} className="w-full mt-3 py-1.5 text-xs flex items-center justify-center gap-2">
                                     <DownloadIcon className="w-4 h-4"/> Download Invoice
                                 </Button>
                             </div>
@@ -84,7 +167,7 @@ const BillingHistory: React.FC = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <Button variant="secondary" className="!p-2">
+                                            <Button variant="secondary" onClick={() => handlePrintInvoice(milestone)} className="!p-2">
                                                 <DownloadIcon className="w-4 h-4" />
                                             </Button>
                                         </td>

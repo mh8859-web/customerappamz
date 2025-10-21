@@ -8,7 +8,7 @@ import { useUsers } from '../../context/UserContext';
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => Promise<void>;
+  onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>, quoteFile: File) => Promise<void>;
 }
 
 const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
@@ -32,12 +32,14 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     startDate: '',
   };
   const [formData, setFormData] = useState(initialFormData);
+  const [quoteFile, setQuoteFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // Reset form data when the modal is closed to prevent stale input
     if (!isOpen) {
       setFormData(initialFormData);
+      setQuoteFile(null);
       setIsSubmitting(false);
     }
   }, [isOpen]);
@@ -49,10 +51,19 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+  
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setQuoteFile(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminUser) return;
+    if (!adminUser || !quoteFile) {
+        alert("Please select an initial quote PDF to upload.");
+        return;
+    };
     
     setIsSubmitting(true);
     await onCreate({
@@ -60,7 +71,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         budgetDisplay: parseInt(formData.budgetDisplay, 10),
         areaSqft: parseInt(formData.areaSqft, 10),
         adminId: adminUser.id,
-    });
+    }, quoteFile);
   };
 
   const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80";
@@ -103,7 +114,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
           <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={formInputClasses} required />
         </FormField>
         <FormField label="Initial Quote (PDF)">
-            <input type="file" accept=".pdf" className={`${formInputClasses} file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20`}/>
+            <input type="file" onChange={handleFileChange} accept=".pdf" className={`${formInputClasses} file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20`} required/>
         </FormField>
         <div className="flex justify-end pt-4 gap-3">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>

@@ -5,7 +5,7 @@ import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole } from '../types';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ChatComponent from '../components/chat/ChatComponent';
@@ -27,11 +27,28 @@ type UnifiedUpdate = {
     hours?: number;
 };
 
+const TABS: Record<UserRole, string[]> = {
+    Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
+    Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
+    Admin: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+    'Sub-Admin': ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+};
+
+// Moved outside for performance: prevents re-declaration on every render.
+const UpdateIcon: React.FC<{ type: UnifiedUpdate['type'] }> = ({ type }) => {
+    const iconMap = {
+        update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
+        work_log: <ClipboardIcon className="w-5 h-5 text-blue-400" />,
+        system: <SettingsIcon className="w-5 h-5 text-purple-400" />,
+    };
+    return <div className="absolute left-[-1.6rem] top-1 bg-surface p-1.5 rounded-full">{iconMap[type]}</div>;
+};
+
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
     const { user } = useAuth();
-    const { findUserById } = useUsers();
-    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData } = useData();
+    const { findUserById, loading: usersLoading } = useUsers();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData, loading: dataLoading } = useData();
     
     const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
     const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
@@ -42,6 +59,7 @@ const ProjectDetails: React.FC = () => {
     const [isAddProductModalOpen, setAddProductModalOpen] = useState(false);
     const [isPOModalOpen, setPOModalOpen] = useState(false);
     
+    const isLoading = dataLoading || usersLoading;
     const isProjectReadOnly = project?.status === 'Completed';
     
     const unifiedUpdateFeed = useMemo(() => {
@@ -86,15 +104,31 @@ const ProjectDetails: React.FC = () => {
         const currentProject = projects.find(p => p.id === projectId);
         setProject(currentProject);
         
-        if(currentProject) {
-            const firstTab = (currentProject.status === 'Completed' && TABS[user!.role].includes('Final Gallery')) ? 'Final Gallery' : 'Live Updates';
+        if(currentProject && user) {
+            const firstTab = (currentProject.status === 'Completed' && TABS[user.role].includes('Final Gallery')) ? 'Final Gallery' : 'Live Updates';
             setActiveTab(firstTab);
         }
 
     }, [projectId, projects, user]);
 
+    const tabs = useMemo(() => {
+        if (!user || !project) return [];
+        let baseTabs = TABS[user.role] || [];
+        if (project.stage === 'completed') {
+            const galleryTab = 'Final Gallery';
+            if (!baseTabs.includes(galleryTab)) {
+                return [galleryTab, ...baseTabs];
+            }
+        }
+        return baseTabs;
+    }, [user, project]);
+
+    if (isLoading) {
+        return <div className="text-center text-text-primary">Loading project details...</div>;
+    }
+
     if (!project || !user) {
-        return <div className="text-center text-text-headline">Loading project details...</div>;
+        return <div className="text-center text-red-500">Project not found or you do not have permission to view it.</div>;
     }
 
     const designer = findUserById(project.designerId);
@@ -220,42 +254,17 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    const TABS: Record<UserRole, string[]> = {
-        Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
-        Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
-        Admin: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
-        'Sub-Admin': ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
-    };
-    
-    let tabs = TABS[user.role] || [];
-    
-    if (project.stage === 'completed') {
-        const galleryTab = 'Final Gallery';
-        if (!tabs.includes(galleryTab)) {
-            tabs = [galleryTab, ...tabs];
-        }
-    }
-
     const totalSourcedCost = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
 
 
     const renderTabContent = () => {
         switch (activeTab) {
             case 'Live Updates':
-                const UpdateIcon = ({ type }: { type: UnifiedUpdate['type'] }) => {
-                    const iconMap = {
-                        update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
-                        work_log: <ClipboardIcon className="w-5 h-5 text-blue-400" />,
-                        system: <SettingsIcon className="w-5 h-5 text-purple-400" />,
-                    };
-                    return <div className="absolute left-[-1.6rem] top-1 bg-surface p-1.5 rounded-full">{iconMap[type]}</div>;
-                };
-
                 return (
                     <Card>
                         {user?.role === 'Designer' && !isProjectReadOnly && (
                             <div className="mb-6">
-                                <h2 className="text-lg font-bold text-text-headline mb-2">Post a New Update</h2>
+                                <h2 className="text-lg font-bold text-text-primary mb-2">Post a New Update</h2>
                                 <div className="flex items-start gap-3">
                                     <img src={user.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full" />
                                     <div className="flex-1">
@@ -263,7 +272,7 @@ const ProjectDetails: React.FC = () => {
                                             value={newUpdateMessage}
                                             onChange={(e) => setNewUpdateMessage(e.target.value)}
                                             placeholder={`Share an update on "${project.title}"...`}
-                                            className="w-full bg-primary-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                                            className="w-full bg-page-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
                                             rows={3}
                                         />
                                         <div className="text-right mt-2">
@@ -274,7 +283,7 @@ const ProjectDetails: React.FC = () => {
                             </div>
                         )}
 
-                        <h2 className="text-xl font-bold text-text-headline mb-4">Update History</h2>
+                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Update History</h2>
                         <div className="space-y-6">
                             {unifiedUpdateFeed.map(item => (
                                 <div key={item.id} className="flex gap-4">
@@ -284,10 +293,10 @@ const ProjectDetails: React.FC = () => {
                                     <div className="flex-1 border-l-2 border-border-color pl-8 relative">
                                         <UpdateIcon type={item.type}/>
                                         <div className="flex items-center justify-between">
-                                            <UserNameDisplay user={item.author} textClassName="font-bold text-text-headline" />
-                                            <p className="text-xs text-text-muted">{new Date(item.timestamp).toLocaleString()}</p>
+                                            <UserNameDisplay user={item.author} textClassName="font-bold text-text-primary" />
+                                            <p className="text-xs text-text-secondary">{new Date(item.timestamp).toLocaleString()}</p>
                                         </div>
-                                        <p className="text-sm text-text-muted mt-1">{item.content}</p>
+                                        <p className="text-sm text-text-secondary mt-1">{item.content}</p>
                                         {item.type === 'work_log' && (
                                             <div className="mt-2 text-xs font-mono text-brand-blue bg-brand-blue/10 px-2 py-1 rounded inline-block">
                                                 Hours Logged: {item.hours}
@@ -308,9 +317,9 @@ const ProjectDetails: React.FC = () => {
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {user?.role === 'Designer' && project.stage === 'design_phase' && !isProjectReadOnly && (
-                            <Card className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-primary-bg">
-                                <UploadCloudIcon className="w-12 h-12 text-text-muted mb-2"/>
-                                <p className="text-text-headline font-semibold">Upload New Design</p>
+                            <Card className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg">
+                                <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
+                                <p className="text-text-primary font-semibold">Upload New Design</p>
                                 <p className="text-xs text-center">Supports up to 5 concepts</p>
                             </Card>
                         )}
@@ -319,14 +328,14 @@ const ProjectDetails: React.FC = () => {
                                 {d.type === 'image' ? (
                                     <img src={d.fileUrl} alt={`Design v${d.version}`} className="rounded-xl mb-4 aspect-video object-cover" />
                                 ) : (
-                                    <div className="rounded-xl mb-4 aspect-video bg-primary-bg flex items-center justify-center">
-                                        <p className="text-text-headline">3D Model</p>
+                                    <div className="rounded-xl mb-4 aspect-video bg-page-bg flex items-center justify-center">
+                                        <p className="text-text-primary">3D Model</p>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <p className="font-bold text-text-headline">Version {d.version}</p>
-                                        <p className="text-sm text-text-muted">{d.notes}</p>
+                                        <p className="font-bold text-text-primary">Version {d.version}</p>
+                                        <p className="text-sm text-text-secondary">{d.notes}</p>
                                     </div>
                                     <div className="text-xs text-right">
                                         {d.approved 
@@ -366,16 +375,16 @@ const ProjectDetails: React.FC = () => {
                         <div className="lg:col-span-2">
                             <Card>
                                 <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-text-headline">Sourced Products</h2>
+                                    <h2 className="text-xl font-bold font-display text-text-primary">Sourced Products</h2>
                                     {!isProjectReadOnly && <Button onClick={() => setAddProductModalOpen(true)}>+ Add Product</Button>}
                                 </div>
                                 <div className="space-y-3">
                                     {projectProducts.map(p => (
-                                        <div key={p.id} className="bg-primary-bg p-3 rounded-xl flex items-center gap-4">
+                                        <div key={p.id} className="bg-page-bg p-3 rounded-xl flex items-center gap-4">
                                             <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-lg object-cover" />
                                             <div className="flex-1">
-                                                <p className="font-semibold text-text-headline">{p.name}</p>
-                                                <p className="text-xs text-text-muted">{p.supplier}</p>
+                                                <p className="font-semibold text-text-primary">{p.name}</p>
+                                                <p className="text-xs text-text-secondary">{p.supplier}</p>
                                                 <p className="text-sm font-mono text-brand-blue mt-1">₹{p.cost.toLocaleString()} x {p.quantity}</p>
                                             </div>
                                             <div>
@@ -395,13 +404,13 @@ const ProjectDetails: React.FC = () => {
                         </div>
                         <div className="lg:col-span-1">
                             <Card>
-                                <h2 className="text-xl font-bold text-text-headline mb-4">Budget Overview</h2>
+                                <h2 className="text-xl font-bold font-display text-text-primary mb-4">Budget Overview</h2>
                                 <div className="space-y-3 text-sm">
-                                    <div className="flex justify-between"><span>Total Budget:</span> <span className="font-semibold text-text-headline">₹{project.budgetDisplay.toLocaleString()}</span></div>
-                                    <div className="flex justify-between"><span>Sourced Items:</span> <span className="font-semibold text-text-headline">- ₹{totalSourcedCost.toLocaleString()}</span></div>
+                                    <div className="flex justify-between"><span>Total Budget:</span> <span className="font-semibold text-text-primary">₹{project.budgetDisplay.toLocaleString()}</span></div>
+                                    <div className="flex justify-between"><span>Sourced Items:</span> <span className="font-semibold text-text-primary">- ₹{totalSourcedCost.toLocaleString()}</span></div>
                                     <div className="border-t border-border-color my-2"></div>
                                     <div className="flex justify-between text-base">
-                                        <span className="font-bold text-text-headline">Remaining:</span>
+                                        <span className="font-bold text-text-primary">Remaining:</span>
                                         <span className={`font-bold ${project.budgetDisplay - totalSourcedCost < 0 ? 'text-red-400' : 'text-green-400'}`}>
                                             ₹{(project.budgetDisplay - totalSourcedCost).toLocaleString()}
                                         </span>
@@ -415,22 +424,22 @@ const ProjectDetails: React.FC = () => {
                 const allComments = projectDesigns.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
                 return (
                     <Card>
-                        <h2 className="text-xl font-bold text-text-headline mb-4">Client Feedback</h2>
+                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Client Feedback</h2>
                         <div className="space-y-4">
                             {allComments.map(comment => {
                                 const author = findUserById(comment.authorId);
                                 return (
-                                    <div key={comment.id} className="bg-primary-bg p-4 rounded-xl flex gap-4">
+                                    <div key={comment.id} className="bg-page-bg p-4 rounded-xl flex gap-4">
                                         <img src={comment.design.fileUrl} alt="design" className="w-24 h-24 rounded-lg object-cover" />
                                         <div className="flex-1">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <UserNameDisplay user={author} textClassName="text-text-headline font-semibold" />
-                                                    <p className="text-xs text-text-muted">on Design v{comment.design.version}</p>
+                                                    <UserNameDisplay user={author} textClassName="text-text-primary font-semibold" />
+                                                    <p className="text-xs text-text-secondary">on Design v{comment.design.version}</p>
                                                 </div>
                                                 <span className={`text-xs font-semibold ${comment.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}`}>{comment.status}</span>
                                             </div>
-                                            <p className="text-sm text-text-muted mt-2">{comment.text}</p>
+                                            <p className="text-sm text-text-secondary mt-2">{comment.text}</p>
                                             {comment.status === 'Open' && !isProjectReadOnly && (
                                                  <Button variant="secondary" onClick={() => handleCommentStatusChange(comment.id, comment.design.id, 'Resolved')} className="!px-3 !py-1 text-xs mt-2">Mark as Resolved</Button>
                                             )}
@@ -438,22 +447,22 @@ const ProjectDetails: React.FC = () => {
                                     </div>
                                 );
                             })}
-                            {allComments.length === 0 && <p className="text-text-muted">No feedback yet.</p>}
+                            {allComments.length === 0 && <p className="text-text-secondary">No feedback yet.</p>}
                         </div>
                     </Card>
                 );
             case 'Quotes & Docs':
                 return (
                      <Card>
-                        <h2 className="text-xl font-bold text-text-headline mb-4">Quotes & Documents</h2>
+                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Quotes & Documents</h2>
                         <div className="space-y-3">
                             {projectQuotes.map(q => (
-                                <div key={q.id} className="bg-primary-bg p-4 rounded-xl flex items-center justify-between">
+                                <div key={q.id} className="bg-page-bg p-4 rounded-xl flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <FileTextIcon className="w-6 h-6 text-brand-blue" />
                                         <div>
-                                            <p className="font-semibold text-text-headline capitalize">{q.version} Quote</p>
-                                            <p className="text-xs text-text-muted">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
+                                            <p className="font-semibold text-text-primary capitalize">{q.version} Quote</p>
+                                            <p className="text-xs text-text-secondary">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
                                         </div>
                                     </div>
                                     <Button variant="secondary" className="px-4 py-2 text-sm">Download</Button>
@@ -470,14 +479,14 @@ const ProjectDetails: React.FC = () => {
             case 'Milestones':
                 return (
                     <Card>
-                        <h2 className="text-xl font-bold text-text-headline mb-4">Project Milestones</h2>
+                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Project Milestones</h2>
 
                         {/* Mobile View */}
                         <div className="md:hidden space-y-3">
                             {projectMilestones.map(milestone => (
-                                <div key={milestone.id} className="bg-primary-bg p-4 rounded-xl text-sm">
+                                <div key={milestone.id} className="bg-page-bg p-4 rounded-xl text-sm">
                                     <div className="flex justify-between items-start mb-2">
-                                        <p className="font-bold text-text-headline">{milestone.title}</p>
+                                        <p className="font-bold text-text-primary">{milestone.title}</p>
                                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                             milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
                                             milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
@@ -486,8 +495,8 @@ const ProjectDetails: React.FC = () => {
                                             {milestone.statusDisplay}
                                         </span>
                                     </div>
-                                    <p className="text-text-muted"><strong className="text-text-headline/80">Amount:</strong> ₹{milestone.amountDisplay.toLocaleString()}</p>
-                                    <p className="text-text-muted"><strong className="text-text-headline/80">Due:</strong> {milestone.dueDate}</p>
+                                    <p className="text-text-secondary"><strong className="text-text-primary/80">Amount:</strong> ₹{milestone.amountDisplay.toLocaleString()}</p>
+                                    <p className="text-text-secondary"><strong className="text-text-primary/80">Due:</strong> {milestone.dueDate}</p>
                                     {user?.role === 'Admin' && milestone.statusDisplay !== 'Paid' && !isProjectReadOnly && (
                                         <Button variant="secondary" className="w-full mt-3 py-1 text-xs">Mark as Paid</Button>
                                     )}
@@ -498,7 +507,7 @@ const ProjectDetails: React.FC = () => {
                         {/* Desktop View */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-text-muted uppercase bg-primary-bg">
+                                <thead className="text-xs text-text-secondary uppercase bg-page-bg">
                                     <tr>
                                         <th scope="col" className="px-6 py-3">Title</th>
                                         <th scope="col" className="px-6 py-3">Due Date</th>
@@ -510,7 +519,7 @@ const ProjectDetails: React.FC = () => {
                                 <tbody>
                                     {projectMilestones.map(milestone => (
                                         <tr key={milestone.id} className="border-b border-border-color">
-                                            <td className="px-6 py-4 font-medium text-text-headline">{milestone.title}</td>
+                                            <td className="px-6 py-4 font-medium text-text-primary">{milestone.title}</td>
                                             <td className="px-6 py-4">{milestone.dueDate}</td>
                                             <td className="px-6 py-4">₹{milestone.amountDisplay.toLocaleString()}</td>
                                             <td className="px-6 py-4">
@@ -539,13 +548,13 @@ const ProjectDetails: React.FC = () => {
              case 'Final Gallery':
                 return (
                     <Card>
-                        <h2 className="text-xl font-bold text-text-headline mb-4">Final Project Gallery</h2>
-                        <p className="text-text-muted mb-6">A showcase of the completed "{project.title}" project.</p>
+                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Final Project Gallery</h2>
+                        <p className="text-text-secondary mb-6">A showcase of the completed "{project.title}" project.</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {finalGalleryImages.filter(img => img.projectId === project.id).map(image => (
                                 <div key={image.id}>
                                     <img src={image.url} alt={image.caption} className="rounded-lg aspect-square object-cover" />
-                                    <p className="text-sm text-center mt-2 text-text-muted">{image.caption}</p>
+                                    <p className="text-sm text-center mt-2 text-text-secondary">{image.caption}</p>
                                 </div>
                             ))}
                         </div>
@@ -580,7 +589,7 @@ const ProjectDetails: React.FC = () => {
                 onClose={() => setFinalApprovalModalOpen(false)}
                 title="Final Project Approval"
             >
-                <p className="text-text-muted mb-6">Please review the project. By approving, you are confirming that the project has been completed to your satisfaction.</p>
+                <p className="text-text-secondary mb-6">Please review the project. By approving, you are confirming that the project has been completed to your satisfaction.</p>
                 <div className="flex justify-end gap-4">
                     <Button variant="secondary" onClick={handleClientDiscussionRequest}>Discuss Further</Button>
                     <Button onClick={handleClientFinalApproval}>Approve Completion</Button>
@@ -613,8 +622,8 @@ const ProjectDetails: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-text-headline">{project.title}</h1>
-                        <div className="text-text-muted flex items-center gap-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-muted" /></div>
+                        <h1 className="text-3xl font-bold font-display text-text-primary">{project.title}</h1>
+                        <div className="text-text-secondary flex items-center gap-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-secondary" /></div>
                     </div>
                     {renderHeaderActions()}
                 </div>
@@ -624,17 +633,17 @@ const ProjectDetails: React.FC = () => {
                 <Card>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
                         <div>
-                            <h3 className="font-bold text-text-headline mb-1 uppercase tracking-wider text-xs">Description</h3>
-                            <p className="text-text-muted">{project.description}</p>
+                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Description</h3>
+                            <p className="text-text-secondary">{project.description}</p>
                         </div>
                         <div>
-                            <h3 className="font-bold text-text-headline mb-1 uppercase tracking-wider text-xs">Site Location</h3>
-                            <p className="text-text-muted">{project.address}</p>
+                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Site Location</h3>
+                            <p className="text-text-secondary">{project.address}</p>
                         </div>
                         <div>
-                            <h3 className="font-bold text-text-headline mb-1 uppercase tracking-wider text-xs">Client Contact</h3>
-                            <UserNameDisplay user={customer} textClassName="text-text-muted" />
-                            <p className="text-text-muted">{customer?.userId || 'Not available'}</p>
+                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Client Contact</h3>
+                            <UserNameDisplay user={customer} textClassName="text-text-secondary" />
+                            <p className="text-text-secondary">{customer?.userId || 'Not available'}</p>
                         </div>
                     </div>
                 </Card>
@@ -646,7 +655,7 @@ const ProjectDetails: React.FC = () => {
                                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2
                                     ${activeTab === tab 
                                         ? 'border-brand-blue text-brand-blue' 
-                                        : 'border-transparent text-text-muted hover:text-text-headline hover:border-text-muted'}`}
+                                        : 'border-transparent text-text-secondary hover:text-text-primary hover:border-text-secondary'}`}
                             >
                                 {tab === 'Timeline' && <CalendarIcon className="w-4 h-4" />}
                                 {tab === 'Sourcing' && <PackageIcon className="w-4 h-4" />}

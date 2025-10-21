@@ -7,20 +7,6 @@ import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinI
 import CommentSection from './CommentSection';
 import { Link } from 'react-router-dom';
 
-interface PostCardProps {
-    post: Post;
-    comments: FeedComment[];
-    currentUser: User;
-    projects: Project[];
-    layout: 'list' | 'grid';
-    onReact: (postId: string, reaction: ReactionType) => void;
-    onAddComment: (postId: string, content: string) => void;
-    onDelete: (postId: string) => void;
-    onVote: (postId: string, optionId: string) => void;
-    onPinToggle: (postId: string) => void;
-    onTagClick: (tag: string) => void;
-}
-
 const reactionMap: Record<ReactionType, React.ReactNode> = {
     love: <HeartIcon className="w-5 h-5 text-red-500" solid />,
     idea: <SparklesIcon className="w-5 h-5 text-yellow-500" />,
@@ -34,6 +20,36 @@ const reactionTooltips: Record<ReactionType, string> = {
     thought: 'Thought',
     kudos: 'Kudos',
 };
+
+const timeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m";
+    return "Just now";
+};
+
+interface PostCardProps {
+    post: Post;
+    comments: FeedComment[];
+    currentUser: User;
+    projects: Project[];
+    layout: 'list' | 'grid';
+    onReact: (postId: string, reaction: ReactionType) => void;
+    onAddComment: (postId: string, content: string) => void;
+    onDelete: (postId: string) => void;
+    onVote: (postId: string, optionId: string) => void;
+    onPinToggle: (postId: string) => void;
+    onTagClick: (tag: string) => void;
+}
 
 const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projects, layout, onReact, onAddComment, onDelete, onVote, onPinToggle, onTagClick }) => {
     const { findUserById } = useUsers();
@@ -53,8 +69,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
                 return { icon: <GlobeAltIcon className="w-3.5 h-3.5"/>, text: 'Visible to Everyone' };
             case 'team_only':
                 return { icon: <UserGroupIcon className="w-3.5 h-3.5"/>, text: 'Visible to Team Only' };
-            case 'project_members':
+            case 'project_members': {
+                if (!post.projectId) return false;
+                const project = projects.find(p => p.id === post.projectId);
+                if (!project) return false;
                 return { icon: <BriefcaseIcon className="w-3.5 h-3.5"/>, text: `Visible to members of ${project?.title || 'Project'}` };
+            }
             default:
                 return null;
         }
@@ -71,22 +91,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
           document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
-
-    const timeAgo = (dateString: string) => {
-        const date = new Date(dateString);
-        const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-        let interval = seconds / 31536000;
-        if (interval > 1) return Math.floor(interval) + "y";
-        interval = seconds / 2592000;
-        if (interval > 1) return Math.floor(interval) + "mo";
-        interval = seconds / 86400;
-        if (interval > 1) return Math.floor(interval) + "d";
-        interval = seconds / 3600;
-        if (interval > 1) return Math.floor(interval) + "h";
-        interval = seconds / 60;
-        if (interval > 1) return Math.floor(interval) + "m";
-        return "Just now";
-    };
 
     const renderContentWithTags = (content: string) => {
         const parts = content.split(/(#\w+)/g);

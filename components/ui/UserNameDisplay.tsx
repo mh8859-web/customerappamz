@@ -9,25 +9,30 @@ interface UserNameDisplayProps {
   imageSize?: string;
 }
 
-const badgeMap: Record<UserRole, string> = {
-  Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602000/admin_shield_badge.svg',
-  'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602000/admin_shield_badge.svg',
-  Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602001/designer_brush_badge.svg',
-  Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602002/customer_home_badge.svg',
+// --- NEW Badge URL and Details Maps ---
+const badgeUrlMap: Record<UserRole, string> = {
+  Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
+  Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
 };
 
-const roleDetails: Record<UserRole, { text: string; }> = {
+const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     Admin: {
-        text: 'Official Amaz Company Account',
+        title: 'Official Amaz Admin',
+        text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members',
     },
     'Sub-Admin': {
-        text: 'Official Amaz Company Account',
+        title: 'Official Amaz Admin',
+        text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members',
     },
     Designer: {
-        text: 'Official Amaz Employee Account',
+        title: 'Official Amaz Employee',
+        text: 'This Account Is Verified And This Account Belong To Senior Level Designers, Other Team',
     },
     Customer: {
-        text: 'Official Amaz Client Account',
+        title: 'Official Amaz Client',
+        text: 'This Account Is Verified And This Account Belong To Our Clients',
     },
 };
 
@@ -56,7 +61,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
     return <span className={`${className} ${textClassName}`}>Unknown User</span>;
   }
 
-  const badgeUrl = user.verified ? badgeMap[user.role] : null;
+  const badgeUrl = user.verified ? badgeUrlMap[user.role] : null;
   const details = user.verified ? roleDetails[user.role] : null;
 
   return (
@@ -67,12 +72,9 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
       <span className={textClassName}>{user.fullName}</span>
       {badgeUrl && details && (
         <div ref={badgeRef} className="verified-badge-container flex-shrink-0">
-          <img 
-            src={badgeUrl} 
-            alt="Verified User" 
-            className="w-4 h-4 cursor-pointer"
-            onClick={() => setPopoverOpen(!isPopoverOpen)}
-          />
+          <div className="cursor-pointer" onClick={() => setPopoverOpen(!isPopoverOpen)}>
+            <img src={badgeUrl} alt="Verified Badge" className="w-4 h-4" />
+          </div>
           <div 
             ref={popoverRef} 
             className={`verification-popover ${isPopoverOpen ? 'open' : ''}`}
@@ -86,12 +88,11 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
                     />
                 </div>
                 <div className="flex items-start gap-2">
-                     <img 
-                        src={badgeUrl} 
-                        alt="Verified Badge" 
-                        className="w-5 h-5 flex-shrink-0 mt-0.5"
-                     />
-                     <p className="text-sm text-text-secondary">{details.text}</p>
+                     <img src={badgeUrl} alt="Verified Badge" className="w-5 h-5 flex-shrink-0 mt-0.5"/>
+                     <div>
+                        <p className="font-bold text-sm text-text-primary">{details.title}</p>
+                        <p className="text-sm text-text-secondary">{details.text}</p>
+                     </div>
                 </div>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '../types';
 import { getUsers } from '../services/api';
@@ -15,34 +16,37 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user: authUser } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
-    setLoading(true);
     if (!authUser) {
       setUsers([]);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
     try {
         const userList = await getUsers();
         setUsers(userList);
     } catch (error) {
         console.error("UserContext: Failed to fetch users.", error);
-        setUsers([]);
+        setUsers([]); // Clear users on error to prevent stale data
     } finally {
         setLoading(false);
     }
   }, [authUser]);
 
   useEffect(() => {
-    fetchAllUsers();
-  }, [fetchAllUsers]);
+    // Fetch users only when authentication is resolved and there's a user
+    if (!authLoading) {
+      fetchAllUsers();
+    }
+  }, [authLoading, fetchAllUsers]);
 
-  const findUserById = (id: string): User | undefined => {
+  const findUserById = useCallback((id: string): User | undefined => {
     return users.find(user => user.id === id);
-  };
+  }, [users]);
 
   const value = {
     users,

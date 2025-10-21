@@ -8,7 +8,7 @@ import UserNameDisplay from '../components/ui/UserNameDisplay';
 import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
 import { useData } from '../context/DataContext';
-import { createRecord } from '../services/api';
+import { createRecord, uploadProjectFile } from '../services/api';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -59,45 +59,39 @@ const ProjectsList: React.FC = () => {
   
   if (!user) return null;
   
-  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>) => {
+  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
+    // 1. Create project record to get an ID for file path
     const projectToCreate = {
         ...newProjectData,
-        // Convert camelCase to snake_case for DB
-        customer_id: newProjectData.customerId,
-        designer_id: newProjectData.designerId,
-        admin_id: newProjectData.adminId,
-        budget_display: newProjectData.budgetDisplay,
-        area_sqft: newProjectData.areaSqft,
-        start_date: newProjectData.startDate,
         revenue_display: 0,
         progress: 10,
         status: 'Active',
         stage: 'design_phase',
     };
-    // remove camelCase keys
-    delete (projectToCreate as any).customerId;
-    delete (projectToCreate as any).designerId;
-    delete (projectToCreate as any).adminId;
-    delete (projectToCreate as any).budgetDisplay;
-    delete (projectToCreate as any).areaSqft;
-    delete (projectToCreate as any).startDate;
 
     const { data: newProject, error: projectError } = await createRecord('projects', projectToCreate);
 
-    if (projectError) {
-        alert(`Failed to create project: ${projectError.message}`);
+    if (projectError || !newProject) {
+        alert(`Failed to create project: ${projectError?.message}`);
         return;
     }
 
-    const initialQuote = {
-        project_id: newProject.id,
-        version: 'initial',
-        file_url: 'dummy.pdf', // Mock file URL
-        uploaded_by: newProject.admin_id,
-    };
+    // 2. Upload the quote file
+    const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
+    if (!quoteUrl) {
+        alert('Project created, but failed to upload quote. Please upload it manually.');
+    } else {
+        // 3. Create the quote record with the file URL
+        const initialQuote = {
+            project_id: newProject.id,
+            version: 'initial',
+            file_url: quoteUrl,
+            uploaded_by: newProject.admin_id,
+        };
+        await createRecord('quotes', initialQuote);
+    }
     
-    await createRecord('quotes', initialQuote);
-
+    // 4. Refresh data and navigate
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);

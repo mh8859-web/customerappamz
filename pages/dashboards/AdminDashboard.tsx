@@ -10,7 +10,7 @@ import { Project, Quote, Announcement } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
-import { createRecord } from '../../services/api';
+import { createRecord, uploadProjectFile } from '../../services/api';
 
 const SkeletonCard = () => (
     <Card className="flex items-center p-5 animate-pulse-fast">
@@ -54,7 +54,8 @@ const AdminDashboard: React.FC = () => {
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
-  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>) => {
+  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
+    // 1. Create project record to get an ID for file path
     const projectToCreate = {
         ...newProjectData,
         revenue_display: 0,
@@ -65,20 +66,29 @@ const AdminDashboard: React.FC = () => {
 
     const { data: newProject, error: projectError } = await createRecord('projects', projectToCreate);
 
-    if (projectError) {
-        alert(`Failed to create project: ${projectError.message}`);
+    if (projectError || !newProject) {
+        alert(`Failed to create project: ${projectError?.message}`);
         return;
     }
 
-    const initialQuote = {
-        project_id: newProject.id,
-        version: 'initial',
-        file_url: 'dummy.pdf', // Mock file URL
-        uploaded_by: newProject.admin_id,
-    };
+    // 2. Upload the quote file
+    const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
+    if (!quoteUrl) {
+        alert('Project created, but failed to upload quote. Please upload it manually.');
+        // Optionally, delete the created project for consistency
+        // await deleteRecord('projects', newProject.id);
+    } else {
+        // 3. Create the quote record with the file URL
+        const initialQuote = {
+            project_id: newProject.id,
+            version: 'initial',
+            file_url: quoteUrl,
+            uploaded_by: newProject.admin_id,
+        };
+        await createRecord('quotes', initialQuote);
+    }
     
-    await createRecord('quotes', initialQuote);
-    
+    // 4. Refresh data and navigate
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);

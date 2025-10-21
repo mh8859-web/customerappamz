@@ -9,16 +9,13 @@ interface SignUpMetadata {
 
 // Fetch all users from the public 'users' table
 export const getUsers = async (): Promise<User[]> => {
-    const { data, error } = await supabase
-        .from('users')
-        .select('*');
+    const { data, error } = await supabase.from('users').select('*');
 
     if (error) {
         console.error('Error fetching users:', error);
         return [];
     }
 
-    // Map snake_case columns to camelCase properties
     return data.map(user => ({
         id: user.id,
         fullName: user.full_name || 'Unnamed User',
@@ -44,7 +41,6 @@ export const signUpNewUser = async (email: string, password: string, metadata: S
             }
         }
     });
-
     return { user: data.user, error };
 };
 
@@ -55,7 +51,6 @@ export const createRecord = async (tableName: string, recordData: Record<string,
         .insert(recordData)
         .select()
         .single();
-
     return { data, error };
 };
 
@@ -67,7 +62,6 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
         .eq('id', recordId)
         .select()
         .single();
-        
     return { data, error };
 };
 
@@ -77,17 +71,16 @@ export const deleteRecord = async (tableName: string, recordId: string) => {
         .from(tableName)
         .delete()
         .eq('id', recordId);
-
     return { error };
 };
 
 // Upload a user's avatar to Supabase Storage
 export const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {
-    const filePath = `${userId}/${Date.now()}_${file.name}`;
+    const filePath = `public/${userId}/${Date.now()}_${file.name}`;
     
     const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
         console.error('Error uploading avatar:', uploadError);
@@ -101,9 +94,34 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
+// NEW: Upload a generic project file (quote, design, etc.)
+export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
+    const filePath = `${projectId}/${Date.now()}_${file.name}`;
+
+    const { error } = await supabase.storage
+        .from('project_files')
+        .upload(filePath, file);
+
+    if (error) {
+        console.error('Error uploading project file:', error);
+        return null;
+    }
+
+    const { data } = supabase.storage
+        .from('project_files')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+};
+
+// NEW: Update the current user's password
+export const updateUserPassword = async (newPassword: string) => {
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    return { data, error };
+};
+
+
 // Deletes a user by calling a Supabase RPC function.
-// This is the secure way to delete a user from the client-side.
-// NOTE: This requires a `delete_user` function to be created in your Supabase SQL editor.
 export const deleteUser = async (userId: string) => {
     const { data, error } = await supabase.rpc('delete_user', { user_id: userId });
     return { data, error };

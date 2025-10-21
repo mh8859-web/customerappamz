@@ -20,11 +20,8 @@ const AboutPage: React.FC = () => {
             A premium, luxury, mobile-responsive Interior Project Management web app that connects Admin, Designers, and Customers for seamless project tracking, design approvals, and communication.
           </p>
           <div className="border-t border-border-color my-6"></div>
-          <h3 className="text-lg font-semibold text-text-primary">
-            DEVELOPER YUSUF
-          </h3>
-          <p className="text-sm text-text-secondary mt-1">
-            Application developed and maintained by Yusuf.
+          <p className="text-xs text-text-secondary mt-8">
+            App Created With ❤️ By Amaz Team
           </p>
         </div>
       </Card>

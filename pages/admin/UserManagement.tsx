@@ -8,26 +8,6 @@ import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
-import SqlInstructionModal from '../../components/admin/SqlInstructionModal';
-
-const DELETE_USER_SQL = `CREATE OR REPLACE FUNCTION public.delete_user(user_id uuid)
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  -- Check if the user calling the function is an Admin
-  IF (SELECT role FROM public.users WHERE id = auth.uid()) != 'Admin' THEN
-    RAISE EXCEPTION 'Only admins can delete users.';
-  END IF;
-
-  -- Perform the deletion from the master authentication table
-  DELETE FROM auth.users AS u WHERE u.id = user_id;
-  
-  RETURN 'User deleted successfully.';
-END;
-$$;`;
 
 const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
@@ -35,8 +15,6 @@ const UserManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { users, loading, refetchUsers } = useUsers();
   const { user: currentUser } = useAuth();
-  const [isSqlModalOpen, setSqlModalOpen] = useState(false);
-
 
   const handleCreateUser = async (newUser: {
     fullName: string;
@@ -122,12 +100,8 @@ const UserManagement: React.FC = () => {
       const { error } = await deleteUser(userToDelete.id);
 
       if (error) {
-        // Provide a more helpful error message if the function doesn't exist.
-        if (error.message.includes('function public.delete_user(user_id) does not exist')) {
-            setSqlModalOpen(true);
-        } else {
-            alert(`Failed to delete user: ${error.message}`);
-        }
+        alert(`Failed to delete user. Please ensure backend functions are correctly configured or contact support.`);
+        console.error("Delete user RPC error:", error);
       } else {
         alert('User deleted successfully.');
         await refetchUsers();
@@ -137,13 +111,6 @@ const UserManagement: React.FC = () => {
 
   return (
     <>
-       <SqlInstructionModal
-        isOpen={isSqlModalOpen}
-        onClose={() => setSqlModalOpen(false)}
-        title="Backend Setup Required"
-        instructions="The user deletion feature requires a secure function on the backend. Please run the following SQL script in your Supabase project's SQL Editor to create it."
-        sqlCode={DELETE_USER_SQL}
-      />
       <CreateUserModal
         isOpen={isCreateUserModalOpen}
         onClose={() => setCreateUserModalOpen(false)}

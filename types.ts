@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer';
 
 export type ProjectStage = 
@@ -17,8 +16,8 @@ export interface User {
   email: string;
   role: UserRole;
   avatarUrl: string;
-  verified?: boolean;
-  verificationRequested?: boolean;
+  verified: boolean;
+  verificationRequested: boolean;
   userId: string;
 }
 
@@ -70,7 +69,7 @@ export interface Design {
   notes: string;
   approved: boolean;
   submittedForReview: boolean;
-  comments?: Comment[];
+  comments: Comment[];
   approvedBy?: string;
   approvedAt?: string;
 }
@@ -228,11 +227,9 @@ export interface Post {
   authorId: string;
   content: string;
   createdAt: string;
-  
-  // New Community Hub Features
   reactions: Reaction[];
   poll?: Poll;
-  isPinned?: boolean;
+  isPinned: boolean;
   projectId?: string;
   postType: 'standard' | 'showcase' | 'before_after';
   showcaseDetails?: {
@@ -253,4 +250,11 @@ export interface FeedComment {
   authorId: string;
   content: string;
   createdAt: string;
+}
+
+export interface FinalGalleryImage {
+    id: string;
+    projectId: string;
+    url: string;
+    caption: string;
 }
