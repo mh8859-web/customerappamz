@@ -52,7 +52,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
             case 'everyone':
                 return { icon: <GlobeAltIcon className="w-3.5 h-3.5"/>, text: 'Visible to Everyone' };
             case 'team_only':
-                return { icon: <UserGroupIcon className="w-3.h-3.5"/>, text: 'Visible to Team Only' };
+                return { icon: <UserGroupIcon className="w-3.5 h-3.5"/>, text: 'Visible to Team Only' };
             case 'project_members':
                 return { icon: <BriefcaseIcon className="w-3.5 h-3.5"/>, text: `Visible to members of ${project?.title || 'Project'}` };
             default:
@@ -61,7 +61,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
     }, [post.visibility, project]);
 
     useEffect(() => {
-        if (!showOptions) return;
         const handleClickOutside = (event: MouseEvent) => {
           if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
             setShowOptions(false);
@@ -71,7 +70,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
         return () => {
           document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, [showOptions]);
+    }, []);
 
     const timeAgo = (dateString: string) => {
         const date = new Date(dateString);

@@ -61,7 +61,6 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   }, [searchQuery, users, projects]);
   
   useEffect(() => {
-    if (!isProfileOpen) return; // Only add listener when dropdown is open
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setProfileOpen(false);
@@ -71,7 +70,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isProfileOpen]); // Add dependency
+  }, []);
 
   const handleClockToggle = () => {
     if (isClockedIn) {
