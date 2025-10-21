@@ -5,6 +5,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -39,37 +40,32 @@ const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | nu
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && !user) { // Set user only if not already set
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-        }
-      } catch (e) {
-        console.error("Error initializing session:", e);
-        setUser(null);
-      }
-    };
-    
-    initializeSession();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
+        const supabaseUser = session?.user;
+        if (supabaseUser) {
+          const profile = await fetchAndMapProfile(supabaseUser);
           setUser(profile);
-        }
-        if (event === 'SIGNED_OUT') {
+        } else {
           setUser(null);
         }
+        setLoading(false);
       }
     );
 
+    const timer = setTimeout(() => {
+        if (loading) {
+            console.warn("Auth state change timed out. Proceeding.");
+            setLoading(false);
+        }
+    }, 5000);
+
     return () => {
       authListener.subscription.unsubscribe();
+      clearTimeout(timer);
     };
   }, []);
 
@@ -126,6 +122,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     user,
+    loading,
     login,
     logout,
     updateUser,

@@ -4,21 +4,26 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import { LockIcon, UserCircleIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 
+const InitializingLoader = () => (
+    <div className="flex items-center justify-center h-screen w-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
+    </div>
+);
+
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login, user } = useAuth();
+  const { login, user, loading } = useAuth();
   const navigate = useNavigate();
 
-  // If a user session is restored in the background, navigate away.
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +49,10 @@ const Login: React.FC = () => {
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
-  // If there's a user, render null while the redirect effect happens
+  if (loading) {
+      return <InitializingLoader />;
+  }
+  
   if (user) {
       return null;
   }
