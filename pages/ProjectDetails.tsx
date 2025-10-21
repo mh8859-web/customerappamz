@@ -220,7 +220,6 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
-    // FIX: Add 'Sub-Admin' to cover all UserRole types.
     const TABS: Record<UserRole, string[]> = {
         Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
         Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],

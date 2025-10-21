@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -6,12 +7,11 @@
     <title>AMAZ Interiors PM</title>
 
     <!-- PWA & Themeing -->
+    <meta name="theme-color" content="#1D9BF0">
     <link rel="icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png" type="image/png" />
+    <link rel="apple-touch-icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png">
     
-    <!-- Aggressive Cache Control -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <link rel="manifest" href="/assets/manifest-D6ULfPGD.json">
 
     <!-- Scripts & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -44,9 +44,6 @@
             boxShadow: {
               'card': '0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05)',
               'modal': '0 10px 30px rgba(0, 0, 0, 0.1)',
-            },
-            animation: {
-              'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }
           }
         }
@@ -121,6 +118,7 @@
         border-color: #FFFFFF transparent transparent transparent;
       }
     </style>
+
   <script type="importmap">
 {
   "imports": {
@@ -133,14 +131,20 @@
   }
 }
 </script>
+  <script type="module" crossorigin src="/assets/index-B_VtQ9C4.js"></script>
 </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
-    <script type="module">
-      const script = document.createElement('script');
-      script.type = 'module';
-      script.src = `/index.tsx?t=${new Date().getTime()}`; // Append timestamp to bust cache
-      document.body.appendChild(script);
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').then(registration => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
     </script>
   </body>
 </html>
