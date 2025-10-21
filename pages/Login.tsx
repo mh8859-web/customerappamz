@@ -54,7 +54,7 @@ const Login: React.FC = () => {
   }
   
   if (user) {
-      return null;
+      return <InitializingLoader />;
   }
   
   return (
