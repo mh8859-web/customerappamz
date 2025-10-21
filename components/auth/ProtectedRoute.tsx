@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 import DashboardLayout from '../layout/DashboardLayout';
 
 const InitializingLoader = () => (
@@ -10,13 +10,13 @@ const InitializingLoader = () => (
 );
 
 const ProtectedRoute: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { status } = useAppContext();
 
-  if (loading) {
+  if (status === 'initializing') {
     return <InitializingLoader />;
   }
 
-  if (!user) {
+  if (status !== 'authenticated') {
     return <Navigate to="/login" replace />;
   }
   

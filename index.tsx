@@ -1,9 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { UserProvider } from './context/UserContext';
-import { DataProvider } from './context/DataContext';
+import { AppProvider } from './context/AppContext';
 import App from './App';
 
 const rootElement = document.getElementById('root');
@@ -15,13 +13,9 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <HashRouter>
-      <AuthProvider>
-        <UserProvider>
-          <DataProvider>
-            <App />
-          </DataProvider>
-        </UserProvider>
-      </AuthProvider>
+      <AppProvider>
+        <App />
+      </AppProvider>
     </HashRouter>
   </React.StrictMode>
 );

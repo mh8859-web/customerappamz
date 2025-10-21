@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { useAuth } from '../../context/AuthContext';
-import { useUsers } from '../../context/UserContext';
-import { useData } from '../../context/DataContext';
+import { useAppContext } from '../../context/AppContext';
 import { createRecord } from '../../services/api';
 
 const SupportPage: React.FC = () => {
-    const { user } = useAuth();
-    const { findUserById, loading: usersLoading } = useUsers();
-    const { supportTickets, projects, loading: dataLoading, refetchData } = useData();
+    const { user, findUserById, supportTickets, projects, status, refetchAllData } = useAppContext();
     
     // State for the customer form
     const [subject, setSubject] = useState('');
@@ -17,7 +13,7 @@ const SupportPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-    if (usersLoading || dataLoading || !user) {
+    if (status !== 'authenticated' || !user) {
         return <div>Loading support...</div>;
     }
 
@@ -50,7 +46,7 @@ const SupportPage: React.FC = () => {
             setSubmitStatus('success');
             setSubject('');
             setMessage('');
-            await refetchData(); // Refresh to show the new ticket if the user is an admin
+            await refetchAllData(); // Refresh to show the new ticket if the user is an admin
         }
     };
 

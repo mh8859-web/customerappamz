@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAppContext } from '../context/AppContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, AlertTriangleIcon } from '../components/icons';
@@ -17,15 +17,8 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { user, login, loading } = useAuth();
+  const { status, login } = useAppContext();
   const navigate = useNavigate();
-
-  // This handles redirection AFTER the initial auth check is complete.
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/', { replace: true });
-    }
-  }, [user, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,8 +27,7 @@ const Login: React.FC = () => {
 
     const result = await login(userId, password);
     
-    // The useEffect above will handle navigation on success.
-    // We only need to handle the failure case here.
+    // The context's onAuthStateChange will handle navigation on success.
     if (!result.success) {
         setIsSubmitting(false);
         if (result.error === 'INVALID_CREDENTIALS') {
@@ -46,13 +38,11 @@ const Login: React.FC = () => {
     }
   };
 
-  // While the initial session is being checked, show a loader.
-  if (loading) {
+  if (status === 'initializing') {
     return <InitializingLoader />;
   }
   
-  // If, after loading, the user object is somehow present, redirect.
-  if (user) {
+  if (status === 'authenticated') {
     return <Navigate to="/" replace />;
   }
   

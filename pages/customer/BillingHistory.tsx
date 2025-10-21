@@ -1,15 +1,13 @@
 import React from 'react';
 import Card from '../../components/ui/Card';
-import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 import { Milestone } from '../../types';
 import Button from '../../components/ui/Button';
 import { DownloadIcon } from '../../components/icons';
-import { useData } from '../../context/DataContext';
 
 const BillingHistory: React.FC = () => {
-    const { user } = useAuth();
-    const { milestones, projects, loading } = useData();
-    if (!user || loading) return null;
+    const { user, milestones, projects, status } = useAppContext();
+    if (!user || status !== 'authenticated') return null;
 
     const myProjectIds = projects.filter(p => p.customerId === user.id).map(p => p.id);
     const myMilestones = milestones

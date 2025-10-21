@@ -1,20 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, ClockIcon, BriefcaseIcon, UsersIcon, UserCircleIcon, LogOutIcon } from '../icons';
 import Button from '../ui/Button';
 import { Link } from 'react-router-dom';
-import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../ui/UserNameDisplay';
-import { useData } from '../../context/DataContext';
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
-  const { user, logout } = useAuth();
-  const { users } = useUsers();
-  const { projects } = useData();
+  const { user, logout, users, projects } = useAppContext();
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [clockInTime, setClockInTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState('00:00:00');

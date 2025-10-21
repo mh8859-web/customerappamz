@@ -1,14 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { useAuth } from '../../context/AuthContext';
+import { useAppContext } from '../../context/AppContext';
 import { WorkLog } from '../../types';
-import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
 const DailyWork: React.FC = () => {
-    const { user } = useAuth();
-    const { projects, workLogs, refetchData, loading } = useData();
+    const { user, projects, workLogs, refetchAllData, status } = useAppContext();
     
     const myLogs = useMemo(() => 
         workLogs.filter(log => log.designerId === user?.id)
@@ -55,7 +53,7 @@ const DailyWork: React.FC = () => {
         };
         
         await createRecord('work_logs', logToAdd);
-        await refetchData();
+        await refetchAllData();
 
         // Reset form
         setNewLog({
@@ -67,7 +65,7 @@ const DailyWork: React.FC = () => {
     
     const inputClasses = "w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-brand-blue";
 
-    if (loading) return null;
+    if (status !== 'authenticated') return null;
 
     return (
         <div className="space-y-6">

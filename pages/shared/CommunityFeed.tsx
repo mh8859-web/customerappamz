@@ -1,6 +1,7 @@
 import React from 'react';
 import { Post, FeedComment, User, Project, ReactionType } from '../../types';
-import PostCard from '../../components/feed/PostCard';
+// Fix: Import PostCard as a named export.
+import { PostCard } from '../../components/feed/PostCard';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 

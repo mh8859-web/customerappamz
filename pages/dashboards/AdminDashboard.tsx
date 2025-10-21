@@ -7,9 +7,7 @@ import { BriefcaseIcon, DollarSignIcon, UsersIcon, CheckCircleIcon, MegaphoneIco
 import { STAGE_DISPLAY_NAMES } from '../../constants';
 import CreateProjectModal from '../../components/admin/CreateProjectModal';
 import { Project, Quote, Announcement } from '../../types';
-import { useAuth } from '../../context/AuthContext';
-import { useUsers } from '../../context/UserContext';
-import { useData } from '../../context/DataContext';
+import { useAppContext } from '../../context/AppContext';
 import { createRecord } from '../../services/api';
 
 const SkeletonCard = () => (
@@ -44,13 +42,11 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { users, loading: usersLoading } = useUsers();
-  const { projects, activityLogs, milestones, announcements, refetchData, loading: dataLoading } = useData();
+  const { user, users, projects, activityLogs, milestones, announcements, refetchAllData, status } = useAppContext();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   
-  const isLoading = usersLoading || dataLoading;
+  const isLoading = status !== 'authenticated';
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
@@ -79,7 +75,7 @@ const AdminDashboard: React.FC = () => {
     
     await createRecord('quotes', initialQuote);
     
-    await refetchData();
+    await refetchAllData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);
   };
@@ -93,7 +89,7 @@ const AdminDashboard: React.FC = () => {
     };
 
     await createRecord('announcements', newAnnouncement);
-    await refetchData();
+    await refetchAllData();
     setAnnouncement('');
     alert('Announcement sent!');
   };

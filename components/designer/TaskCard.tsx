@@ -1,6 +1,6 @@
 import React from 'react';
 import { Task } from '../../types';
-import { useData } from '../../context/DataContext';
+import { useAppContext } from '../../context/AppContext';
 
 interface TaskCardProps {
   task: Task;
@@ -8,7 +8,7 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onDragStart }) => {
-  const { projects } = useData();
+  const { projects } = useAppContext();
   const project = projects.find(p => p.id === task.projectId);
   const dueDate = new Date(task.dueDate);
   const today = new Date();
