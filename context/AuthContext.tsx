@@ -5,7 +5,6 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -40,11 +39,8 @@ const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | nu
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         const profile = await fetchAndMapProfile(session.user);
@@ -52,20 +48,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         setUser(null);
       }
-      setLoading(false);
     });
-
-    // Safety timeout in case onAuthStateChange doesn't fire for some reason (e.g. network issue)
-    const timeout = setTimeout(() => {
-        if (loading) {
-            console.warn("Authentication check timed out. Proceeding without a user.");
-            setLoading(false);
-        }
-    }, 5000);
 
     return () => {
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
@@ -94,8 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return { success: false, error: 'INVALID_CREDENTIALS' };
         }
 
-        // onAuthStateChange will handle setting the user, but we can do it here for faster feedback if needed.
-        // For consistency, we rely on the listener.
+        // The onAuthStateChange listener will handle setting the user state globally.
         return { success: true, error: null };
 
     } catch (e) {
@@ -115,7 +100,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     user,
-    loading,
     login,
     logout,
     updateUser,

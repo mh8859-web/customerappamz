@@ -3,27 +3,18 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import DashboardLayout from '../layout/DashboardLayout';
 
-const InitializingLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-page-bg">
-    <div className="w-8 h-8 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin"></div>
-  </div>
-);
-
 const ProtectedRoute: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  if (loading) {
-    // Show a loader while the initial session check is happening.
-    // This PREVENTS the blank screen and the redirect loop.
-    return <InitializingLoader />;
-  }
-
+  // On the initial render, `user` will be `null` while the AuthContext's effect runs.
+  // This will cause an immediate redirect to login.
+  // Once the session is confirmed, the `user` object will be populated,
+  // causing a re-render and successful navigation to the dashboard.
+  // This creates a "flicker" effect but avoids any blank screens or loaders.
   if (!user) {
-    // The check is complete and there is no user. Redirect to login.
     return <Navigate to="/login" replace />;
   }
   
-  // The check is complete and there is a user. Show the dashboard.
   return <DashboardLayout />;
 };
 

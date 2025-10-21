@@ -4,12 +4,6 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, AlertTriangleIcon } from '../components/icons';
 
-const InitializingLoader = () => (
-  <div className="flex h-screen w-full items-center justify-center bg-page-bg">
-    <div className="w-8 h-8 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin"></div>
-  </div>
-);
-
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -17,8 +11,15 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { user, loading, login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +28,10 @@ const Login: React.FC = () => {
 
     const result = await login(userId, password);
     
-    setIsSubmitting(false);
-
-    if (result.success) {
-      navigate('/', { replace: true });
-    } else {
+    // The useEffect above will handle navigation on success.
+    // We only need to handle the failure case here.
+    if (!result.success) {
+        setIsSubmitting(false);
         if (result.error === 'INVALID_CREDENTIALS') {
             setError('Invalid User ID or Password. Please try again.');
         } else {
@@ -39,11 +39,8 @@ const Login: React.FC = () => {
         }
     }
   };
-
-  if (loading) {
-    return <InitializingLoader />;
-  }
   
+  // If the user object becomes available while on this page, redirect.
   if (user) {
     return <Navigate to="/" replace />;
   }
