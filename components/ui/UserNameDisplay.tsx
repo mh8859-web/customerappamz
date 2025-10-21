@@ -42,19 +42,29 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   const badgeRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
+    // Only add the event listener if the popover is open.
+    if (!isPopoverOpen) {
+      return;
+    }
+
     const handleClickOutside = (event: MouseEvent) => {
-        if (
-            popoverRef.current && !popoverRef.current.contains(event.target as Node) &&
-            badgeRef.current && !badgeRef.current.contains(event.target as Node)
-        ) {
+        // If the click is on the badge itself, don't close the popover,
+        // as the badge has its own toggle logic.
+        if (badgeRef.current && badgeRef.current.contains(event.target as Node)) {
+          return;
+        }
+        
+        // If the click is outside the popover, close it.
+        if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
             setPopoverOpen(false);
         }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
         document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [isPopoverOpen]); // Rerun the effect when the popover's visibility changes.
 
   if (!user) {
     return <span className={`${className} ${textClassName}`}>Unknown User</span>;
@@ -70,13 +80,15 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
       )}
       <span className={textClassName}>{user.fullName}</span>
       {badgeUrl && details && (
-        <div ref={badgeRef} className="verified-badge-container flex-shrink-0">
-          <img 
-            src={badgeUrl} 
-            alt="Verified User" 
-            className="w-4 h-4 cursor-pointer"
-            onClick={() => setPopoverOpen(!isPopoverOpen)}
-          />
+        <div className="verified-badge-container flex-shrink-0">
+          <div ref={badgeRef}>
+            <img 
+              src={badgeUrl} 
+              alt="Verified User" 
+              className="w-4 h-4 cursor-pointer"
+              onClick={() => setPopoverOpen(!isPopoverOpen)}
+            />
+          </div>
           <div 
             ref={popoverRef} 
             className={`verification-popover ${isPopoverOpen ? 'open' : ''}`}
