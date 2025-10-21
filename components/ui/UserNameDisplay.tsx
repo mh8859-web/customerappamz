@@ -10,10 +10,10 @@ interface UserNameDisplayProps {
 }
 
 const badgeMap: Record<UserRole, string> = {
-  Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602000/admin_shield_badge.svg',
-  'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602000/admin_shield_badge.svg',
-  Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602001/designer_brush_badge.svg',
-  Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760602002/customer_home_badge.svg',
+  Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
+  Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
 };
 
 const roleDetails: Record<UserRole, { text: string; }> = {
