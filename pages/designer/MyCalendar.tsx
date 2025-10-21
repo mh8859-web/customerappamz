@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/icons';
+import { useData } from '../../context/DataContext';
 
 const MyCalendar: React.FC = () => {
-    const { user, tasks, siteVisits, leaveRequests, status } = useAppContext();
+    const { user } = useAuth();
+    const { tasks, siteVisits, leaveRequests, loading } = useData();
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const events = useMemo(() => {
-        if (!user || status !== 'authenticated') return [];
+        if (!user || loading) return [];
         
         const taskEvents = tasks
             .filter(t => t.assigneeId === user.id)
@@ -31,7 +33,7 @@ const MyCalendar: React.FC = () => {
             });
 
         return [...taskEvents, ...visitEvents, ...leaveEvents];
-    }, [user, tasks, siteVisits, leaveRequests, status]);
+    }, [user, tasks, siteVisits, leaveRequests, loading]);
 
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);

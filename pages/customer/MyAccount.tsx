@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { EditIcon } from '../../components/icons';
 import { uploadAvatar, updateRecord } from '../../services/api';
 
 const MyAccount: React.FC = () => {
-    const { user, updateUserContext } = useAppContext();
+    const { user, updateUser } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({ fullName: '' });
@@ -76,7 +76,7 @@ const MyAccount: React.FC = () => {
             alert(`Failed to update profile: ${error.message}`);
         } else {
             // Update the global user state for instant UI feedback
-            updateUserContext({
+            updateUser({
                 fullName: formData.fullName,
                 avatarUrl: newAvatarUrl
             });

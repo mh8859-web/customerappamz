@@ -1,121 +1,129 @@
 import React, { useState, useEffect } from 'react';
-import { useAppContext } from '../context/AppContext';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
-import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, AlertTriangleIcon } from '../components/icons';
-
-const InitializingLoader = () => (
-    <div className="flex items-center justify-center h-screen bg-page-bg">
-        <div className="w-10 h-10 border-4 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin"></div>
-    </div>
-);
+import { LockIcon, UserCircleIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
-  const { status, login } = useAppContext();
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { login, user } = useAuth();
   const navigate = useNavigate();
 
+  // If a user session is restored in the background, navigate away.
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+  
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsSubmitting(true);
-    setError(null);
 
-    const result = await login(userId, password);
+    const { success, error: loginError } = await login(userId, password);
     
-    // The context's onAuthStateChange will handle navigation on success.
-    if (!result.success) {
-        setIsSubmitting(false);
-        if (result.error === 'INVALID_CREDENTIALS') {
-            setError('Invalid User ID or Password. Please try again.');
-        } else {
-            setError('An unknown error occurred. Please try again later.');
-        }
+    setIsSubmitting(false);
+    
+    if (success) {
+      navigate('/');
+    } else {
+      if (loginError === 'INVALID_CREDENTIALS') {
+        setError('Invalid User ID or password. Please check your credentials and try again.');
+      } else if (loginError === 'PROFILE_FETCH_FAILED') {
+        setError('Could not retrieve your user profile after login. Please try again or contact support.');
+      } else {
+        setError('An unexpected error occurred. Please try again later.');
+      }
     }
   };
+  
+  const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
-  if (status === 'initializing') {
-    return <InitializingLoader />;
+  // If there's a user, render null while the redirect effect happens
+  if (user) {
+      return null;
   }
   
-  if (status === 'authenticated') {
-    return <Navigate to="/" replace />;
-  }
-  
-  const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 pl-12 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
-
   return (
-    <div className="flex min-h-screen bg-page-bg">
-        <div className="hidden lg:flex flex-1 items-center justify-center p-12 bg-secondary">
-             <div className="max-w-md text-left">
-                <img 
-                    src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-                    alt="AMAZ Interiors PM Logo" 
-                    className="h-16 mb-8" 
-                />
-                <h1 className="text-5xl font-display font-bold text-text-primary leading-tight">
-                    Connect, Collaborate, and Create Beautiful Spaces.
-                </h1>
-                <p className="text-lg text-text-secondary mt-4">
-                    The central hub for clients, designers, and project managers.
-                </p>
-             </div>
+    <div className="flex items-center justify-center min-h-screen bg-page-bg p-4">
+      <main className="w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
+        <div className="w-full md:w-1/2 text-center md:text-left">
+          <img 
+            src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
+            alt="AMAZ Interiors PM Logo" 
+            className="h-16 mx-auto md:mx-0 mb-4" 
+          />
+          <h1 className="text-3xl md:text-4xl font-display font-semibold text-text-primary leading-tight">
+            Connect, Collaborate, and Create Beautiful Spaces.
+          </h1>
         </div>
 
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-4">
-             <main className="w-full max-w-sm mx-auto">
-                 <h2 className="text-3xl font-display font-semibold text-text-primary text-center mb-8">
-                    Sign In
-                </h2>
-                
-                 {error && (
-                    <div className="bg-red-500/10 text-red-700 p-3 rounded-lg mb-4 text-sm flex items-center gap-2">
-                        <AlertTriangleIcon className="w-5 h-5 flex-shrink-0" />
-                        {error}
-                    </div>
-                )}
-                
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="relative">
-                        <UserIcon className="absolute w-5 h-5 text-text-secondary top-1/2 left-4 -translate-y-1/2"/>
-                        <input
-                            type="text"
-                            value={userId}
-                            onChange={(e) => setUserId(e.target.value)}
-                            placeholder="User ID"
-                            className={formInputClasses}
-                            required
-                        />
-                    </div>
-                    <div className="relative">
-                         <LockIcon className="absolute w-5 h-5 text-text-secondary top-1/2 left-4 -translate-y-1/2"/>
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password"
-                            className={`${formInputClasses} pr-12`}
-                            required
-                        />
-                         <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute inset-y-0 right-0 flex items-center pr-4 text-text-secondary hover:text-text-primary"
-                            aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        >
-                            {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                        </button>
-                    </div>
-                    <Button type="submit" className="w-full !py-3 !text-base" disabled={isSubmitting}>
-                        {isSubmitting ? 'Signing In...' : 'Sign In'}
-                    </Button>
-                </form>
-             </main>
+        <div className="w-full md:w-1/2 max-w-md">
+          <div className="bg-surface rounded-2xl p-8 shadow-card">
+            <form onSubmit={handleLogin} className="space-y-4">
+              
+              <div>
+                <label htmlFor="userId" className="sr-only">User ID</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <UserCircleIcon className="w-5 h-5 text-text-secondary" />
+                  </span>
+                  <input
+                    id="userId"
+                    type="text"
+                    autoComplete="username"
+                    required
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    className={`${formInputClasses} !pl-12`}
+                    placeholder="User ID"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="password"className="sr-only">Password</label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                    <LockIcon className="w-5 h-5 text-text-secondary" />
+                  </span>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={`${formInputClasses} !pl-12 !pr-12`}
+                    placeholder="Password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-4 text-text-secondary hover:text-text-primary"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && <p className="text-sm text-red-500 text-center">{error}</p>}
+
+              <div>
+                <Button type="submit" className="w-full !py-3.5 !text-lg !font-bold" disabled={isSubmitting}>
+                  {isSubmitting ? 'Signing In...' : 'Sign In'}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
+      </main>
     </div>
   );
 };

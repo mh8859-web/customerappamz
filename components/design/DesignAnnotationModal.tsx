@@ -2,7 +2,7 @@ import React, { useState, useRef, MouseEvent } from 'react';
 import Modal from '../ui/Modal';
 import { Design, User, Comment } from '../../types';
 import Button from '../ui/Button';
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
 
 interface DesignAnnotationModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ const DesignAnnotationModal: React.FC<DesignAnnotationModalProps> = ({ isOpen, o
   const [comments, setComments] = useState<Comment[]>(design.comments || []);
   const [newComment, setNewComment] = useState<{ x: number, y: number, text: string } | null>(null);
   const imageRef = useRef<HTMLImageElement>(null);
-  const { findUserById } = useAppContext();
+  const { findUserById } = useUsers();
 
   const handleImageClick = (e: MouseEvent<HTMLImageElement>) => {
     if (newComment) return; // Only one new comment at a time

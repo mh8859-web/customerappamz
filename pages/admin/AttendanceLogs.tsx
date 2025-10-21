@@ -4,10 +4,12 @@ import { AttendanceLog, WorkLog } from '../../types';
 import { MapPinIcon } from '../../components/icons';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const AttendanceLogs: React.FC = () => {
-  const { findUserById, attendanceLogs, workLogs, projects, status } = useAppContext();
+  const { findUserById, loading: usersLoading } = useUsers();
+  const { attendanceLogs, workLogs, projects, loading: dataLoading } = useData();
   const [isModalOpen, setModalOpen] = useState(false);
   const [selectedLogs, setSelectedLogs] = useState<WorkLog[]>([]);
   const [selectedDesigner, setSelectedDesigner] = useState<string>('');
@@ -28,7 +30,7 @@ const AttendanceLogs: React.FC = () => {
     setModalOpen(true);
   };
 
-  if (status !== 'authenticated') {
+  if (usersLoading || dataLoading) {
     return <div>Loading logs...</div>
   }
 

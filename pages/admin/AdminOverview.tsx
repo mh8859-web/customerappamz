@@ -4,17 +4,15 @@ import Button from '../../components/ui/Button';
 import { LeaveRequest, ProjectTemplate } from '../../types';
 import { FilePlusIcon } from '../../components/icons';
 import CreateTemplateModal from '../../components/admin/CreateTemplateModal';
-// Fix: Use the unified AppContext instead of deprecated UserContext and DataContext.
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
 import { updateRecord, createRecord } from '../../services/api';
 
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
 
 const Financials: React.FC = () => {
-    // Fix: Use useAppContext to get data.
-    const { projects, milestones, expenses, status } = useAppContext();
-    const loading = status !== 'authenticated';
+    const { projects, milestones, expenses, loading } = useData();
 
     if (loading) return <Card><h2 className="text-xl font-bold text-text-headline mb-4">Financial Oversight</h2><p>Loading financials...</p></Card>;
 
@@ -66,15 +64,13 @@ const Financials: React.FC = () => {
 };
 
 const TeamManagement: React.FC = () => {
-    // Fix: Use useAppContext to get data.
-    const { users, projects, leaveRequests, refetchAllData, status } = useAppContext();
+    const { users } = useUsers();
+    const { projects, leaveRequests, refetchData, loading } = useData();
     const designers = users.filter(u => u.role === 'Designer');
-    const loading = status !== 'authenticated';
     
     const handleLeaveRequest = async (requestId: string, status: 'Approved' | 'Rejected') => {
         await updateRecord('leave_requests', requestId, { status });
-        // Fix: Use refetchAllData instead of refetchData.
-        await refetchAllData();
+        await refetchData();
     };
     
     const pendingLeave = leaveRequests.filter(req => req.status === 'Pending');
@@ -126,8 +122,8 @@ const TeamManagement: React.FC = () => {
 };
 
 const ClientDirectory: React.FC = () => {
-    // Fix: Use useAppContext to get data.
-    const { users, projects } = useAppContext();
+    const { users } = useUsers();
+    const { projects } = useData();
     const clients = users.filter(u => u.role === 'Customer');
 
     return (
@@ -159,14 +155,12 @@ const ClientDirectory: React.FC = () => {
 };
 
 const ProjectTemplates: React.FC = () => {
-    // Fix: Use useAppContext to get data.
-    const { projectTemplates, refetchAllData } = useAppContext();
+    const { projectTemplates, refetchData } = useData();
     const [isCreateTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
 
     const handleCreateTemplate = async (template: Omit<ProjectTemplate, 'id'>) => {
         await createRecord('project_templates', template);
-        // Fix: Use refetchAllData instead of refetchData.
-        await refetchAllData();
+        await refetchData();
         setCreateTemplateModalOpen(false);
     };
     

@@ -3,7 +3,8 @@ import { User, Message } from '../../types';
 import { PaperclipIcon, SendIcon } from '../icons';
 import MessageBubble from './MessageBubble';
 import Card from '../ui/Card';
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
 interface ChatComponentProps {
@@ -16,7 +17,8 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
   const [newMessage, setNewMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { findUserById, messages, refetchAllData } = useAppContext();
+  const { findUserById } = useUsers();
+  const { messages, refetchData } = useData();
 
   const projectMessages = messages
     .filter(m => m.chatId === projectId)
@@ -38,7 +40,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
     };
     
     await createRecord('messages', messageToSend);
-    await refetchAllData();
+    await refetchData();
     setNewMessage('');
   };
   

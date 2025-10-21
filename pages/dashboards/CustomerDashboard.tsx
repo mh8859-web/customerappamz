@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Project, Milestone } from '../../types';
 import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
@@ -7,14 +7,18 @@ import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
 import { DownloadIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
+import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { useData } from '../../context/DataContext';
 
 const CustomerDashboard: React.FC = () => {
-    const { user, findUserById, projects, milestones, announcements, refetchAllData, status } = useAppContext();
+    const { user } = useAuth();
+    const { findUserById, loading: usersLoading } = useUsers();
+    const { projects, milestones, announcements, refetchData, loading: dataLoading } = useData();
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
 
-    const isLoading = status !== 'authenticated';
+    const isLoading = usersLoading || dataLoading;
 
     const { project, projectMilestones, designer, admin } = useMemo(() => {
         if (!user) return { project: null, projectMilestones: [], designer: null, admin: null };
@@ -54,7 +58,7 @@ const CustomerDashboard: React.FC = () => {
         if (milestone) {
             milestone.statusDisplay = 'Paid';
             milestone.paidDateDisplay = new Date().toISOString().split('T')[0];
-            await refetchAllData(); // refetch to simulate update
+            await refetchData(); // refetch to simulate update
         }
     };
     

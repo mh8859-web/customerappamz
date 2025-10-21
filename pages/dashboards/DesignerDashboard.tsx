@@ -1,9 +1,11 @@
 import React from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
 import { Link, useNavigate } from 'react-router-dom';
 import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, MegaphoneIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
+import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const SkeletonStatCard = () => (
     <Card className="animate-pulse-fast">
@@ -13,10 +15,12 @@ const SkeletonStatCard = () => (
 );
 
 const DesignerDashboard: React.FC = () => {
-  const { user, findUserById, projects, tasks, designs, leaveRequests, announcements, status } = useAppContext();
+  const { user } = useAuth();
+  const { findUserById, loading: usersLoading } = useUsers();
+  const { projects, tasks, designs, leaveRequests, announcements, loading: dataLoading } = useData();
   const navigate = useNavigate();
   
-  const isLoading = status !== 'authenticated';
+  const isLoading = usersLoading || dataLoading;
 
   if (!user) return null;
 

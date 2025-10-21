@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/icons';
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
 
 const TeamCalendar: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const { users, tasks, siteVisits, leaveRequests, status } = useAppContext();
+    const { users, loading: usersLoading } = useUsers();
+    const { tasks, siteVisits, leaveRequests, loading: dataLoading } = useData();
     
     const designerColors: Record<string, string> = {};
     const colorClasses = ['bg-brand-blue/20 text-brand-blue', 'bg-blue-500/20 text-blue-300', 'bg-green-500/20 text-green-400', 'bg-purple-500/20 text-purple-400'];
@@ -21,7 +23,7 @@ const TeamCalendar: React.FC = () => {
     const getDesignerColor = (id: string) => designerColors[id] || 'bg-gray-500/20 text-gray-300';
 
     const events = useMemo(() => {
-        if(status !== 'authenticated') return [];
+        if(dataLoading || usersLoading) return [];
         
         const taskEvents = tasks.map(t => ({ 
             date: new Date(t.dueDate), 
@@ -57,7 +59,7 @@ const TeamCalendar: React.FC = () => {
             });
 
         return [...taskEvents, ...visitEvents, ...leaveEvents];
-    }, [status, tasks, siteVisits, leaveRequests]);
+    }, [dataLoading, usersLoading, tasks, siteVisits, leaveRequests]);
 
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -93,7 +95,7 @@ const TeamCalendar: React.FC = () => {
     const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
     const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 
-    if (status !== 'authenticated') {
+    if (usersLoading) {
         return <div>Loading calendar...</div>
     }
 

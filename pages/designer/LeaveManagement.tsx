@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { createRecord } from '../../services/api';
 
 const LeaveManagement: React.FC = () => {
-    const { user, leaveRequests, refetchAllData, status } = useAppContext();
+    const { user } = useAuth();
+    const { leaveRequests, refetchData, loading } = useData();
 
     const [newRequest, setNewRequest] = useState({
         reason: '',
@@ -33,7 +35,7 @@ const LeaveManagement: React.FC = () => {
             status: 'Pending',
         });
 
-        await refetchAllData();
+        await refetchData();
         setNewRequest({ reason: '', startDate: '', endDate: '' });
     };
 
@@ -64,7 +66,7 @@ const LeaveManagement: React.FC = () => {
                 <Card className="lg:col-span-2">
                     <h2 className="text-xl font-bold text-text-headline mb-4">Your Requests</h2>
                     
-                    {status !== 'authenticated' ? <p>Loading requests...</p> : (
+                    {loading ? <p>Loading requests...</p> : (
                         <>
                             {/* Mobile View */}
                             <div className="md:hidden space-y-3">

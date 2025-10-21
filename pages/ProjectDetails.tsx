@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
-import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
 import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole } from '../types';
 import Modal from '../components/ui/Modal';
@@ -13,7 +13,9 @@ import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import GeneratePOModal from '../components/designer/GeneratePOModal';
+import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
+import { useData } from '../context/DataContext';
 import { updateRecord, createRecord } from '../services/api';
 
 type UnifiedUpdate = {
@@ -27,7 +29,9 @@ type UnifiedUpdate = {
 
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
-    const { user, findUserById, projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchAllData } = useAppContext();
+    const { user } = useAuth();
+    const { findUserById } = useUsers();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData } = useData();
     
     const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
     const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
@@ -115,7 +119,7 @@ const ProjectDetails: React.FC = () => {
         };
         await createRecord('activity_logs', newLog);
         
-        await refetchAllData();
+        await refetchData();
     };
     
     const handlePostUpdate = async () => {
@@ -126,7 +130,7 @@ const ProjectDetails: React.FC = () => {
             message: newUpdateMessage,
         };
         await createRecord('project_updates', newUpdate);
-        await refetchAllData();
+        await refetchData();
         setNewUpdateMessage('');
     };
 
@@ -136,13 +140,13 @@ const ProjectDetails: React.FC = () => {
             const details = `Approved a design concept. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_updated_quote']}.`;
             await updateProjectState({ stage: 'awaiting_updated_quote', progress: 35 }, user.id, details);
         } else {
-            await refetchAllData();
+            await refetchData();
         }
     };
     
     const handleSubmitForReapproval = async (designId: string) => {
         await updateRecord('designs', designId, { submitted_for_review: true, approved: false });
-        await refetchAllData();
+        await refetchData();
         alert(`Design v${designs.find(d => d.id === designId)?.version} has been submitted to the client for re-approval.`);
     };
 
@@ -194,7 +198,7 @@ const ProjectDetails: React.FC = () => {
         // In real app, you'd probably batch update/insert comments.
         // For simplicity, we just update the design with the new comment array.
         await updateRecord('designs', designId, { comments: newComments, submitted_for_review: false });
-        await refetchAllData();
+        await refetchData();
     };
 
     const handleCreateProduct = async (newProductData: Omit<Product, 'id' | 'projectId'>) => {
@@ -203,7 +207,7 @@ const ProjectDetails: React.FC = () => {
             project_id: project.id
         };
         await createRecord('products', productToCreate);
-        await refetchAllData();
+        await refetchData();
         setAddProductModalOpen(false);
     };
 
@@ -212,10 +216,11 @@ const ProjectDetails: React.FC = () => {
         if (design && design.comments) {
             const updatedComments = design.comments.map(c => c.id === commentId ? { ...c, status } : c);
             await updateRecord('designs', designId, { comments: updatedComments });
-            await refetchAllData();
+            await refetchData();
         }
     };
 
+    // FIX: Add 'Sub-Admin' to cover all UserRole types.
     const TABS: Record<UserRole, string[]> = {
         Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
         Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],

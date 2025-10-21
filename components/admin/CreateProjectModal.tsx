@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { Project } from '../../types';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { useUsers } from '../../context/UserContext';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -18,7 +19,8 @@ const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label,
 );
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreate }) => {
-  const { user: adminUser, users } = useAppContext();
+  const { user: adminUser } = useAuth();
+  const { users } = useUsers();
   const initialFormData = {
     title: '',
     description: '',

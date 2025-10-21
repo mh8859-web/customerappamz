@@ -1,15 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Task } from '../../types';
 import TaskCard from '../../components/designer/TaskCard';
 import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
+import { useData } from '../../context/DataContext';
 import { createRecord, updateRecord } from '../../services/api';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'For Review' | 'Done';
 
 const TaskBoard: React.FC = () => {
-    const { user, tasks, projects, refetchAllData, status } = useAppContext();
+    const { user } = useAuth();
+    const { tasks, projects, refetchData, loading } = useData();
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
     
     const [newTask, setNewTask] = useState({
@@ -42,7 +44,7 @@ const TaskBoard: React.FC = () => {
     const handleDrop = async (e: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
         const taskId = e.dataTransfer.getData("taskId");
         await updateRecord('tasks', taskId, { status });
-        await refetchAllData();
+        await refetchData();
     };
     
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -62,12 +64,12 @@ const TaskBoard: React.FC = () => {
         };
 
         await createRecord('tasks', taskToAdd);
-        await refetchAllData();
+        await refetchData();
         setCreateModalOpen(false);
         setNewTask({ title: '', projectId: '', dueDate: '' });
     };
 
-    if (status !== 'authenticated') return null;
+    if (loading) return null;
 
     return (
         <>

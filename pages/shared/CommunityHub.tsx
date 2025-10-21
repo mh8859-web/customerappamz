@@ -1,15 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Post, FeedComment, Poll, Project, ReactionType, User, PostVisibility } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
 import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icons';
+import { useUsers } from '../../context/UserContext';
 import CommunityFeed from './CommunityFeed';
+import { useData } from '../../context/DataContext';
 import { createRecord, updateRecord, deleteRecord } from '../../services/api';
 
 const CommunityHub: React.FC = () => {
-    const { user, users, posts, feedComments, projects, refetchAllData, status } = useAppContext();
+    const { user } = useAuth();
+    const { users, loading: usersLoading } = useUsers();
+    const { posts, feedComments, projects, refetchData, loading: dataLoading } = useData();
     
     const [postToDelete, setPostToDelete] = useState<string | null>(null);
     const [layout, setLayout] = useState<'list' | 'grid'>('list');
@@ -50,7 +54,7 @@ const CommunityHub: React.FC = () => {
             });
     }, [posts, activeTag, user, projects]);
 
-    if (status !== 'authenticated' || !user) {
+    if (usersLoading || dataLoading || !user) {
         return null;
     }
 
@@ -91,14 +95,14 @@ const CommunityHub: React.FC = () => {
         };
         
         await createRecord('posts', newPostData);
-        await refetchAllData();
+        await refetchData();
     };
 
     const handlePinToggle = async (postId: string) => {
         const post = posts.find(p => p.id === postId);
         if (post) {
             await updateRecord('posts', postId, { is_pinned: !post.isPinned });
-            await refetchAllData();
+            await refetchData();
         }
     };
 
@@ -125,7 +129,7 @@ const CommunityHub: React.FC = () => {
         }
         
         await updateRecord('posts', postId, { reactions: updatedReactions });
-        await refetchAllData();
+        await refetchData();
     };
 
     const handleAddComment = async (postId: string, content: string) => {
@@ -135,7 +139,7 @@ const CommunityHub: React.FC = () => {
             content,
         };
         await createRecord('feed_comments', newComment);
-        await refetchAllData();
+        await refetchData();
     };
     
     const confirmDeletePost = async () => {
@@ -144,7 +148,7 @@ const CommunityHub: React.FC = () => {
         if (error) {
             alert('Failed to delete post. Please try again.');
         }
-        await refetchAllData();
+        await refetchData();
         setPostToDelete(null);
     };
 

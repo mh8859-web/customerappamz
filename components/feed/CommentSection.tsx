@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FeedComment, User } from '../../types';
-// Fix: Use the unified AppContext instead of deprecated UserContext.
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface CommentSectionProps {
@@ -12,8 +11,7 @@ interface CommentSectionProps {
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ postId, comments, currentUser, onAddComment }) => {
-    // Fix: Use useAppContext to get findUserById.
-    const { findUserById } = useAppContext();
+    const { findUserById } = useUsers();
     const [newComment, setNewComment] = useState('');
 
     const handleSubmit = (e: React.FormEvent) => {

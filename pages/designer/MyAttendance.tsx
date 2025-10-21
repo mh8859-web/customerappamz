@@ -1,12 +1,14 @@
 import React from 'react';
 import Card from '../../components/ui/Card';
-import { useAppContext } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { AttendanceLog } from '../../types';
 import { MapPinIcon } from '../../components/icons';
+import { useData } from '../../context/DataContext';
 
 const MyAttendance: React.FC = () => {
-    const { user, attendanceLogs, status } = useAppContext();
-    if (!user || status !== 'authenticated') return null;
+    const { user } = useAuth();
+    const { attendanceLogs, loading } = useData();
+    if (!user || loading) return null;
 
     const myLogs = attendanceLogs
         .filter(log => log.designerId === user.id)

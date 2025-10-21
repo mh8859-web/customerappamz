@@ -1,10 +1,10 @@
 import React from 'react';
 import Card from '../../components/ui/Card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
-import { useAppContext } from '../../context/AppContext';
+import { useData } from '../../context/DataContext';
 
 const FinancialReports: React.FC = () => {
-    const { projects, milestones, expenses, status } = useAppContext();
+    const { projects, milestones, expenses, loading } = useData();
     
     const monthlyData: Record<string, { revenue: number, expenses: number }> = {};
 
@@ -40,7 +40,7 @@ const FinancialReports: React.FC = () => {
     const totalExpenses = chartData.reduce((sum, d) => sum + d.Expenses, 0);
     const netProfit = totalRevenue - totalExpenses;
 
-    if (status !== 'authenticated') {
+    if (loading) {
         return <div>Loading financial reports...</div>;
     }
 

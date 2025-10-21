@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAppContext } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import Card from '../components/ui/Card';
 import { Project, Quote } from '../types';
+import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
+import { useData } from '../context/DataContext';
 import { createRecord } from '../services/api';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
-    const { findUserById } = useAppContext();
+    const { findUserById } = useUsers();
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
 
@@ -49,7 +51,8 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 };
 
 const ProjectsList: React.FC = () => {
-  const { user, projects, refetchAllData } = useAppContext();
+  const { user } = useAuth();
+  const { projects, refetchData } = useData();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const navigate = useNavigate();
@@ -95,7 +98,7 @@ const ProjectsList: React.FC = () => {
     
     await createRecord('quotes', initialQuote);
 
-    await refetchAllData();
+    await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);
   };

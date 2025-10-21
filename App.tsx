@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useAppContext } from './context/AppContext';
+import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
@@ -30,7 +30,7 @@ import AboutPage from './pages/shared/AboutPage';
 
 // Helper component to redirect to the correct dashboard based on user role
 const DashboardRedirect: React.FC = () => {
-    const { user } = useAppContext();
+    const { user } = useAuth();
     if (!user) return <Navigate to="/login" />; // Should be caught by ProtectedRoute, but here for safety
     
     switch (user.role) {
@@ -48,19 +48,19 @@ const DashboardRedirect: React.FC = () => {
 
 // Role-specific route wrappers to protect routes inside the dashboard
 const AdminRoutes: React.FC = () => {
-    const { user } = useAppContext();
+    const { user } = useAuth();
     return user?.role === 'Admin' || user?.role === 'Sub-Admin' ? <Outlet /> : <Navigate to="/" replace />;
 };
 const FullAdminRoutes: React.FC = () => {
-    const { user } = useAppContext();
+    const { user } = useAuth();
     return user?.role === 'Admin' ? <Outlet /> : <Navigate to="/" replace />;
 };
 const DesignerRoutes: React.FC = () => {
-    const { user } = useAppContext();
+    const { user } = useAuth();
     return user?.role === 'Designer' ? <Outlet /> : <Navigate to="/" replace />;
 };
 const CustomerRoutes: React.FC = () => {
-    const { user } = useAppContext();
+    const { user } = useAuth();
     return user?.role === 'Customer' ? <Outlet /> : <Navigate to="/" replace />;
 };
 

@@ -5,7 +5,8 @@ import { User, UserRole } from '../../types';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import EditUserModal from '../../components/admin/EditUserModal';
 import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
-import { useAppContext } from '../../context/AppContext';
+import { useUsers } from '../../context/UserContext';
+import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import SqlInstructionModal from '../../components/admin/SqlInstructionModal';
 
@@ -32,7 +33,8 @@ const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const { user: currentUser, users, refetchAllData } = useAppContext();
+  const { users, loading, refetchUsers } = useUsers();
+  const { user: currentUser } = useAuth();
   const [isSqlModalOpen, setSqlModalOpen] = useState(false);
 
 
@@ -79,7 +81,7 @@ const UserManagement: React.FC = () => {
       }
       
       // 5. Refresh the user list to show the new user.
-      await refetchAllData(); 
+      await refetchUsers(); 
       setCreateUserModalOpen(false); // Close modal only after all operations succeed
     } catch (error) {
         alert(`Failed to create user: ${(error as Error).message}`);
@@ -105,7 +107,7 @@ const UserManagement: React.FC = () => {
     if (error) {
         alert(`Failed to update user: ${error.message}`);
     } else {
-        await refetchAllData(); // Refresh list on successful update
+        await refetchUsers(); // Refresh list on successful update
     }
   };
 
@@ -128,7 +130,7 @@ const UserManagement: React.FC = () => {
         }
       } else {
         alert('User deleted successfully.');
-        await refetchAllData();
+        await refetchUsers();
       }
     }
   };
