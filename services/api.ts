@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import { User, UserRole } from '../types';
 
@@ -23,7 +24,7 @@ export const getUsers = async (): Promise<User[]> => {
         role: user.role,
         avatarUrl: user.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
         verified: !!user.verified,
-        verificationRequested: user.verification_requested,
+        verificationRequested: !!user.verification_requested,
         userId: user.user_id || '',
     }));
 };

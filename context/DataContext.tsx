@@ -112,7 +112,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setProducts(mapToCamelCase(dataMap.products, p => ({ ...p, projectId: p.project_id, imageUrl: p.image_url })));
             setProjectTemplates(mapToCamelCase(dataMap.project_templates, pt => ({ ...pt })));
             setAnnouncements(mapToCamelCase(dataMap.announcements, a => ({ ...a, authorId: a.author_id, createdAt: a.created_at })));
-            setPosts(mapToCamelCase(dataMap.posts, p => ({...p, authorId: p.author_id, isPinned: p.is_pinned, projectId: p.project_id, postType: p.post_type, showcaseDetails: p.showcase_details, mediaUrl: p.media_url, mediaType: p.media_type, beforeMediaUrl: p.before_media_url, createdAt: p.created_at })));
+            setPosts(mapToCamelCase(dataMap.posts, p => ({
+                ...p,
+                authorId: p.author_id,
+                isPinned: p.is_pinned,
+                projectId: p.project_id,
+                postType: p.post_type,
+                showcaseDetails: p.showcase_details,
+                mediaUrl: p.media_url,
+                mediaType: p.media_type,
+                beforeMediaUrl: p.before_media_url,
+                createdAt: p.created_at,
+                // FIX: Ensure required fields have default values
+                reactions: p.reactions || [],
+                visibility: p.visibility || 'everyone',
+                tags: p.tags || [],
+                content: p.content || '',
+            })));
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
 
         } catch (error) {
@@ -120,7 +136,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user]));
 
     useEffect(() => {
         if (!authLoading) {

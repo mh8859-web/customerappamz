@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -43,10 +44,10 @@ const fetchAndMapProfile = async (
     fullName: data.full_name || "User",
     email: data.email,
     role: data.role,
-    avatarUrl: data.avatar_url,
-    verified: data.verified,
-    verificationRequested: data.verification_requested,
-    userId: data.user_id,
+    avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+    verified: !!data.verified,
+    verificationRequested: !!data.verification_requested,
+    userId: data.user_id || '',
   };
 };
 
