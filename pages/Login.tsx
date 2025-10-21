@@ -4,6 +4,12 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, AlertTriangleIcon } from '../components/icons';
 
+const InitializingLoader = () => (
+    <div className="flex items-center justify-center h-screen bg-page-bg">
+        <div className="w-10 h-10 border-4 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin"></div>
+    </div>
+);
+
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -11,15 +17,15 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { user, login } = useAuth();
+  const { user, login, loading } = useAuth();
   const navigate = useNavigate();
 
+  // This handles redirection AFTER the initial auth check is complete.
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       navigate('/', { replace: true });
     }
-  }, [user, navigate]);
-
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +45,13 @@ const Login: React.FC = () => {
         }
     }
   };
+
+  // While the initial session is being checked, show a loader.
+  if (loading) {
+    return <InitializingLoader />;
+  }
   
-  // If the user object becomes available while on this page, redirect.
+  // If, after loading, the user object is somehow present, redirect.
   if (user) {
     return <Navigate to="/" replace />;
   }
