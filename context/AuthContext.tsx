@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useContext,
@@ -58,33 +57,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkSession = async () => {
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-      if (error) console.error("Session error:", error);
-
-      if (session?.user) {
-        const profile = await fetchAndMapProfile(session.user);
-        setUser(profile);
-      }
-      setLoading(false);
-    };
-    checkSession();
-
+    // onAuthStateChange fires an initial event with the current session.
+    // This is the single source of truth for the user's auth state.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
+        // If there's a session, fetch the detailed user profile.
+        if (session?.user) {
           const profile = await fetchAndMapProfile(session.user);
           setUser(profile);
-        } else if (event === "SIGNED_OUT") {
+        } else {
+          // If there's no session (e.g., SIGNED_OUT or initial state), clear the user.
           setUser(null);
         }
+        // The initial auth check is complete, so we can stop the main loading spinner.
+        setLoading(false);
       }
     );
 
-    return () => authListener.subscription.unsubscribe();
+    // Cleanup the listener when the component unmounts.
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (
@@ -92,6 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
+      setLoading(true);
       const trimmedUserId = userId.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
         .from("users")
@@ -100,21 +94,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (profileError || !profile?.email) {
+        setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword(
+      const { error: signInError } = await supabase.auth.signInWithPassword(
         {
           email: profile.email,
           password: password.trim(),
         }
       );
-
-      if (signInError || !data.user)
+      
+      // The onAuthStateChange listener will handle setting the user and loading state.
+      // We only need to check for errors here.
+      if (signInError) {
+        setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
-
+      }
+      
       return { success: true, error: null };
     } catch (e) {
+      setLoading(false);
       console.error("Login error:", e);
       return { success: false, error: "UNKNOWN_ERROR" };
     }
