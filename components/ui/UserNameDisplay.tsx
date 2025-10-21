@@ -16,18 +16,22 @@ const badgeMap: Record<UserRole, string> = {
   Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
 };
 
-const roleDetails: Record<UserRole, { text: string; }> = {
+const roleDetails: Record<UserRole, { text: string; description: string; }> = {
     Admin: {
         text: 'Official Amaz Company Account',
+        description: 'This account is verified because its admin level member account'
     },
     'Sub-Admin': {
         text: 'Official Amaz Company Account',
+        description: 'This account is verified because its admin level member account'
     },
     Designer: {
         text: 'Official Amaz Employee Account',
+        description: 'This account is verified because its Employee level member account can be used by designer, other team members'
     },
     Customer: {
         text: 'Official Amaz Client Account',
+        description: 'This account is verified because its Client account'
     },
 };
 
@@ -91,7 +95,10 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
                         alt="Verified Badge" 
                         className="w-5 h-5 flex-shrink-0 mt-0.5"
                      />
-                     <p className="text-sm text-text-secondary">{details.text}</p>
+                     <div>
+                        <p className="text-sm text-text-secondary">{details.text}</p>
+                        <p className="text-xs text-text-secondary mt-2">{details.description}</p>
+                     </div>
                 </div>
             </div>
           </div>
