@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AMAZ Interiors PM</title>
 
-    <!-- PWA & Themeing -->
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1e293b" />
     <link rel="icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png" type="image/png" />
     
     <!-- Aggressive Cache Control -->
@@ -143,17 +140,6 @@
       script.type = 'module';
       script.src = `/index.tsx?t=${new Date().getTime()}`; // Append timestamp to bust cache
       document.body.appendChild(script);
-    </script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js').then(registration => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          }, err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-        });
-      }
     </script>
   </body>
 </html>
