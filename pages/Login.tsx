@@ -4,12 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import { LockIcon, UserCircleIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 
-const InitializingLoader = () => (
-    <div className="flex items-center justify-center h-screen w-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
-    </div>
-);
-
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +14,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // If auth state is resolved and a user is logged in, redirect to dashboard.
     if (!loading && user) {
       navigate('/', { replace: true });
     }
@@ -49,14 +44,8 @@ const Login: React.FC = () => {
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
-  if (loading) {
-      return <InitializingLoader />;
-  }
-  
-  if (user) {
-      return <InitializingLoader />;
-  }
-  
+  // Always render the login page. The useEffect above will handle redirection for authenticated users.
+  // This avoids showing a loader on initial page load for unauthenticated users.
   return (
     <div className="flex items-center justify-center min-h-screen bg-page-bg p-4">
       <main className="w-full max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-center gap-16">
