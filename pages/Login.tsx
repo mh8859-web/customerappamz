@@ -5,12 +5,6 @@ import Button from '../components/ui/Button';
 import { LockIcon, UserCircleIcon, EyeIcon, EyeOffIcon } from '../components/icons';
 import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
 
-const InitializingLoader = () => (
-    <div className="flex items-center justify-center h-screen w-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
-    </div>
-);
-
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +16,7 @@ const Login: React.FC = () => {
   const [isForgotModalOpen, setForgotModalOpen] = useState(false);
 
   useEffect(() => {
+    // If auth has finished loading and we have a user, redirect away from login.
     if (!loading && user) {
       navigate('/', { replace: true });
     }
@@ -37,6 +32,7 @@ const Login: React.FC = () => {
     setIsSubmitting(false);
     
     if (success) {
+      // The redirect will be handled by the useEffect or the ProtectedRoute
       navigate('/');
     } else {
       if (loginError === 'INVALID_CREDENTIALS') {
@@ -51,12 +47,10 @@ const Login: React.FC = () => {
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
+  // Render nothing if we are still loading and a user might exist.
+  // This prevents a "flash" of the login form for already authenticated users.
   if (loading) {
-      return <InitializingLoader />;
-  }
-  
-  if (user) {
-      return <InitializingLoader />;
+    return null;
   }
   
   return (
