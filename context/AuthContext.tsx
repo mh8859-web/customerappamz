@@ -34,7 +34,7 @@ const fetchAndMapProfile = async (
 
   if (error || !data) {
     console.error("Failed to fetch user profile:", error?.message);
-    await supabase.auth.signOut();
+    // Don't sign out here, let the caller handle the null profile
     return null;
   }
 
@@ -57,22 +57,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // This function performs a one-time check for the initial session on app load.
+    // It's designed to be robust and ALWAYS resolve the loading state.
+    const resolveInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+
+        if (session?.user) {
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("Error resolving initial session:", e);
+        setUser(null);
+      } finally {
+        // This is critical: it guarantees the loading spinner is removed,
+        // regardless of whether the session check succeeded or failed.
+        setLoading(false);
+      }
+    };
+
+    resolveInitialSession();
+
+    // This listener then handles all subsequent auth changes (login, logout, token refresh).
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        try {
-          if (session?.user) {
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error("Error in onAuthStateChange handler:", error);
-          setUser(null); // Ensure user is logged out on any error
-        } finally {
-          // This is critical: it guarantees the loading spinner will always be removed,
-          // even if fetching the user profile fails for any reason (e.g., network error).
-          setLoading(false);
+        if (session?.user) {
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+        } else {
+          setUser(null);
         }
       }
     );
@@ -107,13 +127,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
       );
       
-      // The onAuthStateChange listener will handle setting the user and loading state.
-      // We only need to check for errors here.
+      // onAuthStateChange will handle success. We only need to handle errors here.
       if (signInError) {
         setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
+      // Do not set loading(false) on success, let the listener do it to prevent race conditions.
       return { success: true, error: null };
     } catch (e) {
       setLoading(false);

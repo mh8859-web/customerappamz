@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { BriefcaseIcon, DollarSignIcon, UsersIcon, CheckCircleIcon, MegaphoneIcon } from '../../components/icons';
@@ -119,12 +118,6 @@ const AdminDashboard: React.FC = () => {
   
   const designerActivity = activityLogs.filter(log => users.find(u => u.id === log.actorId)?.role === 'Designer').slice(0, 4);
 
-  const revenueData = [
-    { name: 'Jan', revenue: 40000 }, { name: 'Feb', revenue: 30000 },
-    { name: 'Mar', revenue: 50000 }, { name: 'Apr', revenue: 45000 },
-    { name: 'May', revenue: 60000 }, { name: 'Jun', revenue: 75000 },
-  ];
-
   return (
     <>
       <CreateProjectModal
@@ -155,21 +148,7 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
-            <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Revenue Trend</h2>
-            <div style={{ height: '300px' }}>
-                {isLoading ? <div className="h-full bg-secondary rounded-xl animate-pulse-fast"></div> : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={revenueData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                            <XAxis dataKey="name" stroke="#536471" fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid #CFD9DE', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} cursor={{fill: '#1D9BF0', fillOpacity: 0.1}}/>
-                            <Bar dataKey="revenue" fill="#1D9BF0" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
-          </Card>
-          <Card>
+          <Card className="lg:col-span-3">
               <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Live Designer Activity</h2>
               {isLoading ? <SkeletonList /> : (
                 <ul className="space-y-4">
