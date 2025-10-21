@@ -57,24 +57,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // onAuthStateChange fires an initial event with the current session.
-    // This is the single source of truth for the user's auth state.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // If there's a session, fetch the detailed user profile.
-        if (session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        } else {
-          // If there's no session (e.g., SIGNED_OUT or initial state), clear the user.
-          setUser(null);
+        try {
+          if (session?.user) {
+            const profile = await fetchAndMapProfile(session.user);
+            setUser(profile);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Error in onAuthStateChange handler:", error);
+          setUser(null); // Ensure user is logged out on any error
+        } finally {
+          // This is critical: it guarantees the loading spinner will always be removed,
+          // even if fetching the user profile fails for any reason (e.g., network error).
+          setLoading(false);
         }
-        // The initial auth check is complete, so we can stop the main loading spinner.
-        setLoading(false);
       }
     );
 
-    // Cleanup the listener when the component unmounts.
     return () => {
       authListener.subscription.unsubscribe();
     };
