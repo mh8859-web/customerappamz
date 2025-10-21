@@ -254,3 +254,12 @@ export interface FeedComment {
   content: string;
   createdAt: string;
 }
+
+export interface Status {
+  id: string;
+  authorId: string;
+  mediaUrl: string;
+  mediaType: 'image' | 'video';
+  content?: string;
+  createdAt: string;
+}

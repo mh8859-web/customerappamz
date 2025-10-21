@@ -3,7 +3,7 @@ import { supabase } from '../services/supabaseClient';
 import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
     SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate,
-    Expense, Product, ProjectTemplate, Announcement, Post, FeedComment
+    Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, Status
 } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -28,6 +28,7 @@ interface DataContextType {
     announcements: Announcement[];
     posts: Post[];
     feedComments: FeedComment[];
+    statuses: Status[];
     refetchData: () => Promise<void>;
     loading: boolean;
 }
@@ -62,6 +63,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [posts, setPosts] = useState<Post[]>([]);
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
+    const [statuses, setStatuses] = useState<Status[]>([]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -70,7 +72,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setQuotes([]); setActivityLogs([]); setSiteVisits([]); setSupportTickets([]);
             setAttendanceLogs([]); setLeaveRequests([]); setWorkLogs([]); setProjectUpdates([]);
             setFinalGalleryImages([]); setExpenses([]); setProducts([]); setProjectTemplates([]);
-            setAnnouncements([]); setPosts([]); setFeedComments([]);
+            setAnnouncements([]); setPosts([]); setFeedComments([]); setStatuses([]);
             setLoading(false);
             return;
         }
@@ -80,7 +82,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 'projects', 'tasks', 'designs', 'messages', 'milestones', 'quotes', 'activity_logs', 
                 'site_visits', 'support_tickets', 'attendance_logs', 'leave_requests', 'work_logs', 
                 'project_updates', 'final_gallery_images', 'expenses', 'products', 'project_templates', 
-                'announcements', 'posts', 'feed_comments'
+                'announcements', 'posts', 'feed_comments', 'statuses'
             ];
             
             const promises = tables.map(table => supabase.from(table).select('*'));
@@ -117,6 +119,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setAnnouncements(mapToCamelCase(dataMap.announcements, a => ({ id: a.id, authorId: a.author_id, content: a.content, target: a.target, createdAt: a.created_at })));
             setPosts(mapToCamelCase(dataMap.posts, p => ({...p, authorId: p.author_id, isPinned: p.is_pinned, projectId: p.project_id, postType: p.post_type, showcaseDetails: p.showcase_details, mediaUrl: p.media_url, mediaType: p.media_type, beforeMediaUrl: p.before_media_url, createdAt: p.created_at })));
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ id: fc.id, postId: fc.post_id, authorId: fc.author_id, content: fc.content, createdAt: fc.created_at })));
+            setStatuses(mapToCamelCase(dataMap.statuses, s => ({ id: s.id, authorId: s.author_id, mediaUrl: s.media_url, mediaType: s.media_type, content: s.content, createdAt: s.created_at })));
 
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -132,7 +135,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,
         supportTickets, attendanceLogs, leaveRequests, workLogs, projectUpdates,
-        finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments,
+        finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments, statuses,
         refetchData: fetchData,
         loading,
     };
