@@ -5,6 +5,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  loading: boolean;
   login: (userId: string, password: string) => Promise<{ success: boolean; error: string | null }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
@@ -39,37 +40,32 @@ const fetchAndMapProfile = async (supabaseUser: SupabaseUser): Promise<User | nu
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && !user) { // Set user only if not already set
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-        }
-      } catch (e) {
-        console.error("Error initializing session:", e);
+    setLoading(true);
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        const profile = await fetchAndMapProfile(session.user);
+        setUser(profile);
+      } else {
         setUser(null);
       }
-    };
-    
-    initializeSession();
+      setLoading(false);
+    });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
+    // Safety timeout in case onAuthStateChange doesn't fire for some reason (e.g. network issue)
+    const timeout = setTimeout(() => {
+        if (loading) {
+            console.warn("Authentication check timed out. Proceeding without a user.");
+            setLoading(false);
         }
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
+    }, 5000);
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, []);
 
@@ -98,16 +94,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return { success: false, error: 'INVALID_CREDENTIALS' };
         }
 
-        const userProfile = await fetchAndMapProfile(data.user);
-        
-        if (userProfile) {
-            setUser(userProfile);
-            return { success: true, error: null };
-        } else {
-            await supabase.auth.signOut();
-            setUser(null);
-            return { success: false, error: 'PROFILE_FETCH_FAILED' };
-        }
+        // onAuthStateChange will handle setting the user, but we can do it here for faster feedback if needed.
+        // For consistency, we rely on the listener.
+        return { success: true, error: null };
 
     } catch (e) {
         console.error("An unexpected error occurred during login:", e);
@@ -126,6 +115,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const value = {
     user,
+    loading,
     login,
     logout,
     updateUser,

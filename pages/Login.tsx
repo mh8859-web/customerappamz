@@ -1,48 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { UserIcon, LockIcon, EyeIcon, EyeOffIcon, AlertTriangleIcon } from '../components/icons';
+
+const InitializingLoader = () => (
+  <div className="flex h-screen w-full items-center justify-center bg-page-bg">
+    <div className="w-8 h-8 border-4 border-blue-200 border-t-brand-blue rounded-full animate-spin"></div>
+  </div>
+);
 
 const Login: React.FC = () => {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const auth = useAuth();
+  const { user, loading, login } = useAuth();
   const navigate = useNavigate();
-
-  // This effect handles redirection if the user is already authenticated.
-  useEffect(() => {
-    if (auth.user) {
-      navigate('/', { replace: true });
-    }
-  }, [auth.user, navigate]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
     setError(null);
 
-    const result = await auth.login(userId, password);
+    const result = await login(userId, password);
     
-    setIsLoading(false);
+    setIsSubmitting(false);
 
     if (result.success) {
       navigate('/', { replace: true });
     } else {
         if (result.error === 'INVALID_CREDENTIALS') {
             setError('Invalid User ID or Password. Please try again.');
-        } else if (result.error === 'PROFILE_FETCH_FAILED') {
-            setError('Login successful, but could not load your profile. Please contact support.');
         } else {
             setError('An unknown error occurred. Please try again later.');
         }
     }
   };
+
+  if (loading) {
+    return <InitializingLoader />;
+  }
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
   
   const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-4 pl-12 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
 
@@ -108,8 +112,8 @@ const Login: React.FC = () => {
                             {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                         </button>
                     </div>
-                    <Button type="submit" className="w-full !py-3 !text-base" disabled={isLoading}>
-                        {isLoading ? 'Signing In...' : 'Sign In'}
+                    <Button type="submit" className="w-full !py-3 !text-base" disabled={isSubmitting}>
+                        {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </Button>
                 </form>
              </main>
