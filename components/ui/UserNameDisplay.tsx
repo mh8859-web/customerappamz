@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
+import { AMAZ_SUPPORT_USER_ID } from '../../constants';
 
 interface UserNameDisplayProps {
   user: User | undefined;
@@ -43,18 +44,26 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
     return <span className={`${className} ${textClassName}`}>Unknown User</span>;
   }
 
-  const badgeUrl = user.verified ? badgeUrlMap[user.role] : null;
-  const details = user.verified ? roleDetails[user.role] : null;
+  const isSupportUser = user.id === AMAZ_SUPPORT_USER_ID;
 
-  // Team members get a clickable profile link. Customers do not.
-  const isTeamMember = user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer';
+  // Define specific properties for the support user
+  const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
+  const supportDetails = { title: 'Official Amaz Support', text: 'This is official amaz support team' };
+
+  // Determine which user details, badge, and popover to use
+  const displayName = isSupportUser ? 'AMAZ INTERIOR SUPPORT' : user.fullName;
+  const badgeUrl = isSupportUser ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
+  const details = isSupportUser ? supportDetails : (user.verified ? roleDetails[user.role] : null);
+
+  // Team members get a clickable profile link. Customers and Support user do not.
+  const isTeamMember = !isSupportUser && (user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer');
 
   const content = (
     <>
       {showAvatar && (
-          <img src={user.avatarUrl} alt={user.fullName} className={`${imageSize} rounded-full mr-1.5`} />
+          <img src={user.avatarUrl} alt={displayName} className={`${imageSize} rounded-full mr-1.5`} />
       )}
-      <span className={textClassName}>{user.fullName}</span>
+      <span className={textClassName}>{displayName}</span>
       {badgeUrl && details && (
         <div ref={badgeRef} className="verified-badge-container flex-shrink-0">
           <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}>

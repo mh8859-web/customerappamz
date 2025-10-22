@@ -343,14 +343,14 @@ const ProjectDetails: React.FC = () => {
                 const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {user?.role === 'Designer' && project.stage === 'design_phase' && !isProjectReadOnly && (
+                        {user?.role === 'Designer' && !isProjectReadOnly && (
                             <Card 
                                 onClick={() => setUploadDesignModalOpen(true)}
                                 className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg"
                             >
                                 <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
                                 <p className="text-text-primary font-semibold">Upload New Design</p>
-                                <p className="text-xs text-center">Supports up to 5 concepts</p>
+                                <p className="text-xs text-center">Upload new or revised designs</p>
                             </Card>
                         )}
                         {projectDesigns.map(d => (

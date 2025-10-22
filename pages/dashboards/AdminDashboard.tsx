@@ -91,10 +91,22 @@ const AdminDashboard: React.FC = () => {
         await createRecord('quotes', initialQuote);
     }
     
-    // 4. Send automated welcome message to chat
-    const supportMessage = `Welcome to your new project, "${newProject.title}"! Your assigned designer and our team will be in touch shortly. You can view your project details and track progress here.`;
+    // 4. Send personalized welcome message to all parties from the official support user
+    const customer = users.find(u => u.id === newProjectData.customerId);
+    const designer = users.find(u => u.id === newProjectData.designerId);
+    const admin = users.find(u => u.id === newProjectData.adminId);
+
+    const supportMessage = `🎉 Welcome to your new project, "${newProject.title}"! We're excited to start.
+
+- Client: ${customer?.fullName || 'N/A'}
+- Designer: ${designer?.fullName || 'N/A'}
+- Project Admin: ${admin?.fullName || 'N/A'}
+
+Everyone has been added to this chat. Let's create something amazing!`;
+
     await createRecord('messages', {
         chat_id: newProject.id,
+        sender_id: AMAZ_SUPPORT_USER_ID,
         body: supportMessage,
     });
 

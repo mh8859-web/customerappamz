@@ -34,10 +34,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, se
   const isSupportMessage = message.senderId === AMAZ_SUPPORT_USER_ID;
   const senderToDisplay = isSupportMessage 
     ? { 
-        fullName: 'Amaz Modular Support', 
+        id: AMAZ_SUPPORT_USER_ID,
+        fullName: 'AMAZ INTERIOR SUPPORT', 
         avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-        role: 'Admin'
-    } as User
+        role: 'Admin', // Base role for styling consistency
+        verified: true, // Mark as verified to show a badge
+      } as User
     : sender;
 
   const bubbleClasses = isOwnMessage
@@ -60,7 +62,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, se
                       <UserNameDisplay user={senderToDisplay} className="text-xs font-bold text-brand-blue" />
                     </div>
                 )}
-                {message.body && <p className="text-sm">{message.body}</p>}
+                {message.body && <p className="text-sm whitespace-pre-wrap">{message.body}</p>}
                 {message.attachments?.map((att, index) => (
                     <AttachmentPreview key={index} attachment={att} />
                 ))}
