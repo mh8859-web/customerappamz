@@ -8,7 +8,6 @@ import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, Me
 import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
-import ChatComponent from '../components/chat/ChatComponent';
 import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
@@ -28,10 +27,10 @@ type UnifiedUpdate = {
 };
 
 const TABS: Record<UserRole, string[]> = {
-    Customer: ['Live Updates', 'Timeline', 'Chat', 'Designs', 'Quotes & Docs', 'Milestones'],
-    Designer: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
-    Admin: ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
-    'Sub-Admin': ['Live Updates', 'Chat', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+    Customer: ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs', 'Milestones'],
+    Designer: ['Live Updates', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
+    Admin: ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+    'Sub-Admin': ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
 };
 
 // Moved outside for performance: prevents re-declaration on every render.
@@ -310,8 +309,6 @@ const ProjectDetails: React.FC = () => {
                 );
             case 'Timeline':
                 return <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />;
-            case 'Chat':
-                return <ChatComponent projectId={project.id} currentUser={user} isReadOnly={isProjectReadOnly}/>;
             case 'Designs':
                 const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
                 return (
@@ -661,7 +658,6 @@ const ProjectDetails: React.FC = () => {
                                 {tab === 'Sourcing' && <PackageIcon className="w-4 h-4" />}
                                 {tab === 'Feedback' && <AnnotationIcon className="w-4 h-4" />}
                                 {tab === 'Live Updates' && <ZapIcon className="w-4 h-4" />}
-                                {tab === 'Chat' && <MessageSquareIcon className="w-4 h-4" />}
                                 {tab}
                             </button>
                         ))}

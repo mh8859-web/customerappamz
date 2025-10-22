@@ -6,6 +6,7 @@ import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, Megaph
 import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
+import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget';
 
 const SkeletonStatCard = () => (
     <Card className="animate-pulse-fast">
@@ -146,6 +147,10 @@ const DesignerDashboard: React.FC = () => {
                )}
             </Card>
         </div>
+      </div>
+
+      <div>
+        <CommunityFeedWidget />
       </div>
     </div>
   );

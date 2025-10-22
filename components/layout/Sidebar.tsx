@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, InfoIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, InfoIcon, MessageSquareIcon } from '../icons';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -22,6 +22,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     Admin: [
       { to: '/admin/dashboard', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
       { to: '/admin/overview', icon: <TrendingUpIcon className="w-6 h-6" />, label: 'Overview' },
+      { to: '/chat', icon: <MessageSquareIcon className="w-6 h-6" />, label: 'Messages' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
       { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Projects' },
@@ -37,6 +38,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     'Sub-Admin': [
       { to: '/admin/dashboard', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
       { to: '/admin/overview', icon: <TrendingUpIcon className="w-6 h-6" />, label: 'Overview' },
+      { to: '/chat', icon: <MessageSquareIcon className="w-6 h-6" />, label: 'Messages' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
       { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Projects' },
@@ -50,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     ],
     Designer: [
       { to: '/designer/dashboard', icon: <HomeIcon className="w-6 h-6" />, label: 'Dashboard' },
+      { to: '/chat', icon: <MessageSquareIcon className="w-6 h-6" />, label: 'Messages' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
       { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'My Projects' },
@@ -66,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     ],
     Customer: [
       { to: '/customer/dashboard', icon: <HomeIcon className="w-6 h-6" />, label: 'My Project' },
+      { to: '/chat', icon: <MessageSquareIcon className="w-6 h-6" />, label: 'Messages' },
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
       { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Project Archive' },

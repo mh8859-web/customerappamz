@@ -1,14 +1,16 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Post, FeedComment, Poll, Project, ReactionType, User, PostVisibility } from '../../types';
+// FIX: Import ReactionType to resolve TypeScript error.
+import { Post, ReactionType } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
-import { ListBulletIcon, Squares2X2Icon, XMarkIcon } from '../../components/icons';
 import { useUsers } from '../../context/UserContext';
 import CommunityFeed from './CommunityFeed';
 import { useData } from '../../context/DataContext';
 import { createRecord, updateRecord, deleteRecord } from '../../services/api';
+import CommunitySidebar from '../../components/feed/CommunitySidebar';
+import CommunityTrending from '../../components/feed/CommunityTrending';
 
 const CommunityHub: React.FC = () => {
     const { user } = useAuth();
@@ -16,11 +18,23 @@ const CommunityHub: React.FC = () => {
     const { posts, feedComments, projects, refetchData, loading: dataLoading } = useData();
     
     const [postToDelete, setPostToDelete] = useState<string | null>(null);
-    const [layout, setLayout] = useState<'list' | 'grid'>('list');
     const [activeTag, setActiveTag] = useState<string | null>(null);
 
-    const sortedAndFilteredPosts = useMemo(() => {
-        if (!user) return [];
+    const { sortedAndFilteredPosts, popularTags } = useMemo(() => {
+        if (!user) return { sortedAndFilteredPosts: [], popularTags: [] };
+
+        const tagCounts: Record<string, number> = {};
+        posts.forEach(post => {
+            post.tags?.forEach(tag => {
+                const cleanTag = tag.replace('#', '');
+                tagCounts[cleanTag] = (tagCounts[cleanTag] || 0) + 1;
+            });
+        });
+        const popularTags = Object.entries(tagCounts)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([tag]) => tag);
+
 
         const canUserSeePost = (post: Post): boolean => {
             if (user.role === 'Admin') return true;
@@ -29,7 +43,7 @@ const CommunityHub: React.FC = () => {
                 case 'everyone':
                     return true;
                 case 'team_only':
-                    return user.role === 'Designer';
+                    return user.role === 'Designer' || user.role === 'Sub-Admin';
                 case 'project_members': {
                     if (!post.projectId) return false;
                     const project = projects.find(p => p.id === post.projectId);
@@ -41,59 +55,44 @@ const CommunityHub: React.FC = () => {
             }
         };
 
-        return [...posts]
-            .filter(p => {
-                const tagMatch = !activeTag || (p.tags && p.tags.includes(`#${activeTag}`));
-                const visibilityMatch = canUserSeePost(p);
-                return tagMatch && visibilityMatch;
-            })
-            .sort((a, b) => {
-                if (a.isPinned && !b.isPinned) return -1;
-                if (!a.isPinned && b.isPinned) return 1;
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            });
+        const filtered = posts.filter(p => {
+            const tagMatch = !activeTag || (p.tags && p.tags.includes(`#${activeTag}`));
+            const visibilityMatch = canUserSeePost(p);
+            return tagMatch && visibilityMatch;
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+        
+        return { sortedAndFilteredPosts: sorted, popularTags };
     }, [posts, activeTag, user, projects]);
 
     if (usersLoading || dataLoading || !user) {
         return null;
     }
-
+    
+    // All API interaction functions remain the same
     const handleCreatePost = async (
-        content: string, 
-        mediaFile?: File, 
-        addPoll?: boolean,
-        projectId?: string,
-        postType?: Post['postType'],
-        showcaseDetails?: Post['showcaseDetails'],
-        beforeMediaFile?: File,
-        visibility?: PostVisibility
+        content: string, mediaFile?: File, addPoll?: boolean, projectId?: string,
+        postType?: Post['postType'], showcaseDetails?: Post['showcaseDetails'],
+        beforeMediaFile?: File, visibility?: Post['visibility']
     ) => {
         let mediaUrl: string | undefined;
         let beforeMediaUrl: string | undefined;
-
-        // In a real app, file uploads would be more robust
-        if (mediaFile) {
-            mediaUrl = URL.createObjectURL(mediaFile);
-        }
-        if (beforeMediaFile) {
-            beforeMediaUrl = URL.createObjectURL(beforeMediaFile);
-        }
+        if (mediaFile) mediaUrl = URL.createObjectURL(mediaFile);
+        if (beforeMediaFile) beforeMediaUrl = URL.createObjectURL(beforeMediaFile);
 
         const newPostData = {
-            author_id: user.id,
-            content,
-            media_url: mediaUrl,
+            author_id: user.id, content, media_url: mediaUrl,
             media_type: mediaFile?.type.startsWith('image/') ? 'image' : 'video',
-            before_media_url: beforeMediaUrl,
-            reactions: [],
-            is_pinned: false,
-            project_id: projectId || null,
-            post_type: postType || 'standard',
-            showcase_details: showcaseDetails,
-            tags: content.match(/#\w+/g) || [],
+            before_media_url: beforeMediaUrl, reactions: [], is_pinned: false,
+            project_id: projectId || null, post_type: postType || 'standard',
+            showcase_details: showcaseDetails, tags: content.match(/#\w+/g) || [],
             visibility: visibility || 'everyone',
         };
-        
         await createRecord('posts', newPostData);
         await refetchData();
     };
@@ -105,10 +104,8 @@ const CommunityHub: React.FC = () => {
             await refetchData();
         }
     };
-
-    const handleVote = (postId: string, optionId: string) => {
-        // Voting logic would go here, updating the `poll` JSONB field.
-    };
+    
+    const handleVote = (postId: string, optionId: string) => {};
 
     const handleReact = async (postId: string, reaction: ReactionType) => {
         const post = posts.find(p => p.id === postId);
@@ -133,11 +130,7 @@ const CommunityHub: React.FC = () => {
     };
 
     const handleAddComment = async (postId: string, content: string) => {
-        const newComment = {
-            post_id: postId,
-            author_id: user.id,
-            content,
-        };
+        const newComment = { post_id: postId, author_id: user.id, content };
         await createRecord('feed_comments', newComment);
         await refetchData();
     };
@@ -145,61 +138,61 @@ const CommunityHub: React.FC = () => {
     const confirmDeletePost = async () => {
         if (!postToDelete) return;
         const { error } = await deleteRecord('posts', postToDelete);
-        if (error) {
-            alert('Failed to delete post. Please try again.');
-        }
+        if (error) alert('Failed to delete post. Please try again.');
         await refetchData();
         setPostToDelete(null);
     };
 
     const handleTagClick = (tag: string) => {
         setActiveTag(prev => (prev === tag ? null : tag));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
         <>
-            <Modal
-                isOpen={!!postToDelete}
-                onClose={() => setPostToDelete(null)}
-                title="Delete Post"
-            >
+            <Modal isOpen={!!postToDelete} onClose={() => setPostToDelete(null)} title="Delete Post">
                 <p className="text-text-secondary mb-6">Are you sure you want to permanently delete this post? This action cannot be undone.</p>
                 <div className="flex justify-end gap-3">
                     <Button variant="secondary" onClick={() => setPostToDelete(null)}>Cancel</Button>
                     <Button onClick={confirmDeletePost} className="!bg-red-600 hover:!bg-red-700 focus:ring-red-500">Delete</Button>
                 </div>
             </Modal>
-            <div className="max-w-3xl mx-auto space-y-6">
-                <CreatePost user={user} projects={projects} onCreatePost={handleCreatePost} />
-
-                <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2 p-1 bg-secondary rounded-lg">
-                        <button onClick={() => setLayout('list')} className={`p-1.5 rounded-md ${layout === 'list' ? 'bg-surface shadow-sm' : ''}`}><ListBulletIcon className="w-5 h-5"/></button>
-                        <button onClick={() => setLayout('grid')} className={`p-1.5 rounded-md ${layout === 'grid' ? 'bg-surface shadow-sm' : ''}`}><Squares2X2Icon className="w-5 h-5"/></button>
-                     </div>
-                     {activeTag && (
-                        <div className="flex items-center gap-2 bg-brand-blue/10 text-brand-blue text-sm font-semibold px-3 py-1.5 rounded-lg">
-                            <span>Filtering by: #{activeTag}</span>
-                            <button onClick={() => setActiveTag(null)} className="bg-brand-blue/20 rounded-full p-0.5"><XMarkIcon className="w-4 h-4"/></button>
-                        </div>
-                     )}
-                </div>
-
-                <CommunityFeed
-                    posts={sortedAndFilteredPosts}
-                    comments={feedComments}
-                    currentUser={user}
-                    projects={projects}
-                    layout={layout}
-                    activeTag={activeTag}
-                    onReact={handleReact}
-                    onAddComment={handleAddComment}
-                    onDelete={setPostToDelete}
-                    onVote={handleVote}
-                    onPinToggle={handlePinToggle}
-                    onTagClick={handleTagClick}
-                    onClearFilter={() => setActiveTag(null)}
+            
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 px-4">
+              {/* Left Sidebar */}
+              <div className="hidden lg:block lg:col-span-3">
+                <CommunitySidebar 
+                  user={user} 
+                  popularTags={popularTags} 
+                  activeTag={activeTag}
+                  onTagClick={handleTagClick} 
                 />
+              </div>
+
+              {/* Main Feed Content */}
+              <div className="col-span-1 lg:col-span-6 space-y-4">
+                  <CreatePost user={user} projects={projects} onCreatePost={handleCreatePost} />
+                  <CommunityFeed
+                      posts={sortedAndFilteredPosts}
+                      comments={feedComments}
+                      currentUser={user}
+                      projects={projects}
+                      layout="list" // Force list layout for a more modern feed
+                      activeTag={activeTag}
+                      onReact={handleReact}
+                      onAddComment={handleAddComment}
+                      onDelete={setPostToDelete}
+                      onVote={handleVote}
+                      onPinToggle={handlePinToggle}
+                      onTagClick={handleTagClick}
+                      onClearFilter={() => setActiveTag(null)}
+                  />
+              </div>
+
+              {/* Right Sidebar */}
+              <div className="hidden lg:block lg:col-span-3">
+                <CommunityTrending projects={projects} />
+              </div>
             </div>
         </>
     );

@@ -1,132 +1,84 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Task } from '../../types';
-import TaskCard from '../../components/designer/TaskCard';
-import Button from '../../components/ui/Button';
-import Modal from '../../components/ui/Modal';
 import { useData } from '../../context/DataContext';
-import { createRecord, updateRecord } from '../../services/api';
+import { updateRecord } from '../../services/api';
+import TaskCard from '../../components/designer/TaskCard';
 
 type TaskStatus = 'To Do' | 'In Progress' | 'For Review' | 'Done';
 
+const COLUMNS: TaskStatus[] = ['To Do', 'In Progress', 'For Review', 'Done'];
+
+const TaskColumn: React.FC<{
+  status: TaskStatus;
+  tasks: Task[];
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, taskId: string) => void;
+  onDrop: (e: React.DragEvent<HTMLDivElement>, status: TaskStatus) => void;
+  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
+}> = ({ status, tasks, onDragStart, onDrop, onDragOver }) => {
+  return (
+    <div
+      onDrop={(e) => onDrop(e, status)}
+      onDragOver={onDragOver}
+      className="bg-page-bg/80 rounded-xl w-72 flex-shrink-0"
+    >
+      <div className="p-4 border-b border-border-color">
+        <h3 className="font-semibold text-text-primary">{status} <span className="text-sm font-normal text-text-secondary">({tasks.length})</span></h3>
+      </div>
+      <div className="p-3 space-y-3 h-full overflow-y-auto">
+        {tasks.map(task => (
+          <TaskCard key={task.id} task={task} onDragStart={onDragStart} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const TaskBoard: React.FC = () => {
-    const { user } = useAuth();
-    const { tasks, projects, refetchData, loading } = useData();
-    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-    
-    const [newTask, setNewTask] = useState({
-        title: '',
-        projectId: '',
-        dueDate: ''
-    });
+  const { user } = useAuth();
+  const { tasks, refetchData, loading } = useData();
 
-    const columns: TaskStatus[] = ['To Do', 'In Progress', 'For Review', 'Done'];
+  const myTasks = useMemo(() => {
+    return tasks.filter(task => task.assigneeId === user?.id);
+  }, [tasks, user]);
 
-    const userTasks = useMemo(() => tasks.filter(t => t.assigneeId === user?.id), [tasks, user]);
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, taskId: string) => {
+    e.dataTransfer.setData('taskId', taskId);
+  };
 
-    const tasksByColumn = useMemo(() => {
-        const grouped: Record<TaskStatus, Task[]> = {
-            'To Do': [],
-            'In Progress': [],
-            'For Review': [],
-            'Done': []
-        };
-        userTasks.forEach(task => {
-            grouped[task.status].push(task);
-        });
-        return grouped;
-    }, [userTasks]);
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>, newStatus: TaskStatus) => {
+    const taskId = e.dataTransfer.getData('taskId');
+    const task = myTasks.find(t => t.id === taskId);
+    if (task && task.status !== newStatus) {
+      // Optimistic UI update can be done here if needed
+      await updateRecord('tasks', taskId, { status: newStatus });
+      await refetchData();
+    }
+  };
 
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>, taskId: string) => {
-        e.dataTransfer.setData("taskId", taskId);
-    };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+  
+  if (loading) return <div>Loading tasks...</div>;
 
-    const handleDrop = async (e: React.DragEvent<HTMLDivElement>, status: TaskStatus) => {
-        const taskId = e.dataTransfer.getData("taskId");
-        await updateRecord('tasks', taskId, { status });
-        await refetchData();
-    };
-    
-    const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-    };
-
-    const handleCreateTask = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if(!user || !newTask.title || !newTask.projectId || !newTask.dueDate) return;
-
-        const taskToAdd = {
-            title: newTask.title,
-            project_id: newTask.projectId,
-            assignee_id: user.id,
-            status: 'To Do' as TaskStatus,
-            due_date: newTask.dueDate,
-        };
-
-        await createRecord('tasks', taskToAdd);
-        await refetchData();
-        setCreateModalOpen(false);
-        setNewTask({ title: '', projectId: '', dueDate: '' });
-    };
-
-    if (loading) return null;
-
-    return (
-        <>
-            <Modal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} title="Create New Task">
-                 <form onSubmit={handleCreateTask} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-text-headline mb-1">Task Title</label>
-                        <input type="text" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} className="w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required />
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium text-text-headline mb-1">Project</label>
-                        <select value={newTask.projectId} onChange={e => setNewTask({...newTask, projectId: e.target.value})} className="w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required>
-                            <option value="" disabled>Select a project</option>
-                            {projects.filter(p => p.designerId === user?.id).map(p => (
-                                <option key={p.id} value={p.id}>{p.title}</option>
-                            ))}
-                        </select>
-                    </div>
-                     <div>
-                        <label className="block text-sm font-medium text-text-headline mb-1">Due Date</label>
-                        <input type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} className="w-full bg-primary-bg border border-border-color rounded-xl p-2 focus:outline-none focus:ring-2 focus:ring-accent" required />
-                    </div>
-                    <div className="flex justify-end pt-4 gap-3">
-                        <Button type="button" variant="secondary" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-                        <Button type="submit">Create Task</Button>
-                    </div>
-                </form>
-            </Modal>
-            <div className="space-y-6">
-                 <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                    <h1 className="text-3xl font-bold text-text-headline">My Task Board</h1>
-                    <Button onClick={() => setCreateModalOpen(true)}>+ Create Task</Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-                    {columns.map(status => (
-                        <div
-                            key={status}
-                            onDrop={(e) => handleDrop(e, status)}
-                            onDragOver={handleDragOver}
-                            className="bg-primary-bg p-3 rounded-xl min-h-[200px]"
-                        >
-                            <h3 className="font-bold text-text-headline mb-3 flex justify-between items-center">
-                                {status}
-                                <span className="text-sm font-normal bg-surface px-2 py-0.5 rounded-full">{tasksByColumn[status].length}</span>
-                            </h3>
-                            <div className="space-y-3">
-                                {tasksByColumn[status].map(task => (
-                                    <TaskCard key={task.id} task={task} onDragStart={handleDragStart} />
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </>
-    );
+  return (
+    <div className="space-y-6 h-full flex flex-col">
+      <h1 className="text-3xl font-bold font-display text-text-primary">Task Board</h1>
+      <div className="flex-1 flex gap-6 overflow-x-auto pb-4">
+        {COLUMNS.map(status => (
+          <TaskColumn
+            key={status}
+            status={status}
+            tasks={myTasks.filter(task => task.status === status)}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+          />
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default TaskBoard;

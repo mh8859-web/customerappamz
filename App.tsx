@@ -26,6 +26,8 @@ import CommunityHub from "./pages/shared/CommunityHub";
 import DownloadCenter from "./pages/shared/DownloadCenter";
 import ProjectWall from "./pages/shared/ProjectWall";
 import AboutPage from "./pages/shared/AboutPage";
+import ChatPage from "./pages/shared/ChatPage";
+import UserProfilePage from "./pages/shared/UserProfilePage"; // Import the new page
 
 const DashboardRedirect: React.FC = () => {
   const { user } = useAuth();
@@ -66,6 +68,9 @@ const App: React.FC = () => {
 
         {/* Shared Routes */}
         <Route path="hub" element={<CommunityHub />} />
+        <Route path="profile/:userId" element={<UserProfilePage />} /> {/* Add profile page route */}
+        <Route path="chat" element={<ChatPage />} />
+        <Route path="chat/:projectId" element={<ChatPage />} />
         <Route path="projects" element={<ProjectsList />} />
         <Route path="projects/:projectId" element={<ProjectDetails />} />
         <Route path="support" element={<SupportPage />} />

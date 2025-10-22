@@ -1,15 +1,6 @@
 
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer';
 
-export type ProjectStage = 
-  | 'design_phase'
-  | 'awaiting_updated_quote'
-  | 'material_selection'
-  | 'execution'
-  | 'awaiting_client_completion_approval'
-  | 'awaiting_admin_completion_approval'
-  | 'completed';
-
 export interface User {
   id: string;
   fullName: string;
@@ -21,6 +12,15 @@ export interface User {
   userId: string;
 }
 
+export type ProjectStage =
+  | 'design_phase'
+  | 'awaiting_updated_quote'
+  | 'material_selection'
+  | 'execution'
+  | 'awaiting_client_completion_approval'
+  | 'awaiting_admin_completion_approval'
+  | 'completed';
+
 export interface Project {
   id: string;
   title: string;
@@ -28,63 +28,25 @@ export interface Project {
   customerId: string;
   designerId: string;
   adminId: string;
+  address: string;
   budgetDisplay: number;
   areaSqft: number;
-  address: string;
-  status: 'Active' | 'Completed';
-  stage: ProjectStage;
   startDate: string;
   createdAt: string;
   updatedAt: string;
   revenueDisplay: number;
   progress: number;
+  status: 'Active' | 'Completed' | 'Archived';
+  stage: ProjectStage;
 }
 
-export interface Task {
+export interface Quote {
   id: string;
   projectId: string;
-  title: string;
-  assigneeId: string;
-  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
-  dueDate: string;
-}
-
-export interface Comment {
-  id: string;
-  x: number;
-  y: number;
-  text: string;
-  authorId: string;
-  createdAt: string;
-  status: 'Open' | 'Resolved';
-}
-
-export interface Design {
-  id:string;
-  projectId: string;
-  uploadedBy: string;
+  version: string;
   fileUrl: string;
-  type: 'image' | 'gltf';
-  version: number;
-  notes: string;
-  approved: boolean;
-  submittedForReview: boolean;
-  comments: Comment[];
-  approvedBy?: string;
-  approvedAt?: string;
-}
-
-export interface Message {
-  id: string;
-  chatId: string;
-  senderId: string;
-  body: string;
+  uploadedBy: string;
   createdAt: string;
-  attachments?: {
-      url: string;
-      type: 'image' | 'video' | 'file';
-      name: string;
-  }[];
 }
 
 export interface Milestone {
@@ -93,16 +55,40 @@ export interface Milestone {
   title: string;
   amountDisplay: number;
   dueDate: string;
-  statusDisplay: 'Paid' | 'Completed' | 'Pending';
+  statusDisplay: 'Pending' | 'Completed' | 'Paid';
   paidDateDisplay?: string;
 }
 
-export interface Quote {
+export interface Comment {
+    id: string;
+    authorId: string;
+    createdAt: string;
+    status: 'Open' | 'Resolved';
+    x: number;
+    y: number;
+    text: string;
+}
+
+export interface Design {
   id: string;
   projectId: string;
-  version: 'initial' | 'final';
+  version: number;
+  notes: string;
   fileUrl: string;
+  type: 'image' | 'gltf';
   uploadedBy: string;
+  submittedForReview: boolean;
+  approved: boolean;
+  comments: Comment[];
+  approvedBy?: string;
+  approvedAt?: string;
+}
+
+export interface ProjectUpdate {
+  id: string;
+  projectId: string;
+  authorId: string;
+  message: string;
   createdAt: string;
 }
 
@@ -115,12 +101,84 @@ export interface ActivityLog {
   createdAt: string;
 }
 
+export interface WorkLog {
+  id: string;
+  designerId: string;
+  projectId: string;
+  date: string;
+  tasksCompleted: string;
+  hoursSpent: number;
+}
+
+export interface Product {
+  id: string;
+  projectId: string;
+  name: string;
+  supplier: string;
+  imageUrl: string;
+  cost: number;
+  quantity: number;
+  status: 'Pending' | 'Ordered' | 'Delivered';
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  assigneeId: string;
+  title: string;
+  dueDate: string;
+  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
+}
+
+export interface AttendanceLog {
+  id: string;
+  designerId: string;
+  clockIn: string;
+  clockOut: string | null;
+  duration: string;
+  location: string;
+  ipAddress: string;
+  workSummary: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  designerId: string;
+  reason: string;
+  startDate: string;
+  endDate: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+}
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string;
+  milestones: {
+    title: string;
+    amountPercentage: number;
+  }[];
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  body: string;
+  attachments: {
+    url: string;
+    type: 'image' | 'video' | 'file';
+    name: string;
+  }[] | null;
+  createdAt: string;
+}
+
 export interface SiteVisit {
   id: string;
   projectId: string;
   scheduledAt: string;
   requestedBy: string;
-  status: 'Scheduled';
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
 export interface SupportTicket {
@@ -129,43 +187,7 @@ export interface SupportTicket {
     projectId: string;
     subject: string;
     message: string;
-    status: 'Open' | 'Closed' | 'In Progress';
-    createdAt: string;
-}
-
-export interface AttendanceLog {
-    id: string;
-    designerId: string;
-    clockIn: string;
-    clockOut: string | null;
-    duration: string;
-    location: string;
-    ipAddress: string;
-}
-
-export interface LeaveRequest {
-    id: string;
-    designerId: string;
-    reason: string;
-    startDate: string;
-    endDate: string;
-    status: 'Approved' | 'Pending' | 'Rejected';
-}
-
-export interface WorkLog {
-    id: string;
-    designerId: string;
-    projectId: string;
-    date: string;
-    tasksCompleted: string;
-    hoursSpent: number;
-}
-
-export interface ProjectUpdate {
-    id: string;
-    projectId: string;
-    authorId: string;
-    message: string;
+    status: 'Open' | 'In Progress' | 'Closed';
     createdAt: string;
 }
 
@@ -177,84 +199,50 @@ export interface Expense {
     date: string;
 }
 
-export interface Product {
+export interface FinalGalleryImage {
     id: string;
     projectId: string;
-    name: string;
-    supplier: string;
-    imageUrl: string;
-    cost: number;
-    quantity: number;
-    status: 'Ordered' | 'Pending' | 'Delivered';
-}
-
-export interface ProjectTemplate {
-    id: string;
-    name: string;
-    description: string;
-    milestones: {
-        title: string;
-        amountPercentage: number;
-    }[];
+    url: string;
+    caption: string;
 }
 
 export interface Announcement {
     id: string;
     authorId: string;
     content: string;
-    target: 'Designers' | 'Customers' | 'All';
+    target: 'All' | 'Designers' | 'Customers';
     createdAt: string;
 }
 
-export interface PollOption {
-  id: string;
-  text: string;
-  votes: string[];
-}
-
-export interface Poll {
-  question: string;
-  options: PollOption[];
-}
-
 export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
-export type Reaction = { type: ReactionType; userId: string };
 
 export type PostVisibility = 'everyone' | 'team_only' | 'project_members';
 
 export interface Post {
-  id: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-  reactions: Reaction[];
-  poll?: Poll;
-  isPinned: boolean;
-  projectId?: string;
-  postType: 'standard' | 'showcase' | 'before_after';
-  showcaseDetails?: {
-    style: string;
-    materials: string;
-    palette: string;
-  };
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video';
-  beforeMediaUrl?: string;
-  tags?: string[];
-  visibility: PostVisibility;
+    id: string;
+    authorId: string;
+    content: string;
+    mediaUrl?: string;
+    mediaType?: 'image' | 'video';
+    beforeMediaUrl?: string;
+    reactions: { userId: string; type: ReactionType }[];
+    isPinned: boolean;
+    projectId?: string;
+    postType: 'standard' | 'showcase' | 'before_after';
+    showcaseDetails?: {
+        style: string;
+        materials: string;
+        palette: string;
+    };
+    tags: string[];
+    visibility: PostVisibility;
+    createdAt: string;
 }
 
 export interface FeedComment {
-  id: string;
-  postId: string;
-  authorId: string;
-  content: string;
-  createdAt: string;
-}
-
-export interface FinalGalleryImage {
     id: string;
-    projectId: string;
-    url: string;
-    caption: string;
+    postId: string;
+    authorId: string;
+    content: string;
+    createdAt: string;
 }

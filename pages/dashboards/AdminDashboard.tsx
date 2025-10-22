@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { BriefcaseIcon, DollarSignIcon, UsersIcon, CheckCircleIcon, MegaphoneIcon } from '../../components/icons';
+import { BriefcaseIcon, DollarSignIcon, UsersIcon } from '../../components/icons';
 import { STAGE_DISPLAY_NAMES } from '../../constants';
 import CreateProjectModal from '../../components/admin/CreateProjectModal';
-import { Project, Quote, Announcement } from '../../types';
+import { Project, Quote } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { createRecord, uploadProjectFile } from '../../services/api';
+import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget';
 
 const SkeletonCard = () => (
     <Card className="flex items-center p-5 animate-pulse-fast">
@@ -45,14 +46,11 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { users, loading: usersLoading } = useUsers();
-  const { projects, activityLogs, milestones, announcements, refetchData, loading: dataLoading } = useData();
+  const { projects, activityLogs, milestones, refetchData, loading: dataLoading } = useData();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [announcement, setAnnouncement] = useState('');
   
   const isLoading = usersLoading || dataLoading;
   
-  const formInputClasses = "w-full bg-secondary border-2 border-transparent rounded-xl p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80 transition-all";
-
   const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
     // 1. Create project record to get an ID for file path
     const projectToCreate = {
@@ -91,20 +89,6 @@ const AdminDashboard: React.FC = () => {
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);
-  };
-
-  const handleSendAnnouncement = async () => {
-    if (!announcement.trim() || !user) return;
-    const newAnnouncement = {
-      author_id: user.id,
-      content: announcement,
-      target: 'Designers', // For now, target designers. This could be a dropdown.
-    };
-
-    await createRecord('announcements', newAnnouncement);
-    await refetchData();
-    setAnnouncement('');
-    alert('Announcement sent!');
   };
 
   const currentProjects = projects.filter(p => p.status === 'Active').length;
@@ -182,17 +166,8 @@ const AdminDashboard: React.FC = () => {
                   )}
               </Card>
               <div className="space-y-6">
-                  <Card>
-                    <h2 className="text-xl font-semibold font-display text-text-primary mb-4 flex items-center gap-2"><MegaphoneIcon className="w-5 h-5"/> Company Announcements</h2>
-                    <textarea 
-                        value={announcement}
-                        onChange={(e) => setAnnouncement(e.target.value)}
-                        placeholder="Send an announcement to your team..."
-                        className={formInputClasses}
-                        rows={3}
-                    />
-                    <Button onClick={handleSendAnnouncement} className="w-full mt-2" disabled={!announcement.trim()}>Send Announcement</Button>
-                  </Card>
+                 {/* The Community Feed Widget is more attractive and engaging than the static announcement box */}
+                 <CommunityFeedWidget />
               </div>
           </div>
       </div>

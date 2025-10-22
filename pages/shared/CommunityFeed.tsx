@@ -9,7 +9,7 @@ interface CommunityFeedProps {
   comments: FeedComment[];
   currentUser: User;
   projects: Project[];
-  layout: 'list' | 'grid';
+  layout: 'list'; // Layout is now fixed to 'list'
   activeTag: string | null;
   onReact: (postId: string, reaction: ReactionType) => void;
   onAddComment: (postId: string, content: string) => void;
@@ -25,7 +25,6 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
   comments,
   currentUser,
   projects,
-  layout,
   activeTag,
   onReact,
   onAddComment,
@@ -36,7 +35,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
   onClearFilter
 }) => {
   return (
-    <div className={layout === 'grid' ? 'grid grid-cols-2 md:grid-cols-3 gap-2' : 'space-y-4'}>
+    <div className="space-y-4">
       {posts.length > 0 ? (
         posts.map(post => (
           <PostCard
@@ -45,7 +44,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
             comments={comments.filter(c => c.postId === post.id)}
             currentUser={currentUser}
             projects={projects}
-            layout={layout}
+            layout="list"
             onReact={onReact}
             onAddComment={onAddComment}
             onDelete={onDelete}

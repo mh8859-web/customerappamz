@@ -22,13 +22,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onDragStart }) => {
       onDragStart={(e) => onDragStart(e, task.id)}
       className="bg-surface p-3 rounded-xl border border-border-color cursor-grab active:cursor-grabbing"
     >
-      <h4 className="text-sm font-semibold text-text-headline">{task.title}</h4>
-      <p className="text-xs text-text-muted mt-1">{project?.title}</p>
+      <h4 className="text-sm font-semibold text-text-primary">{task.title}</h4>
+      <p className="text-xs text-text-secondary mt-1">{project?.title}</p>
       <div className="mt-2 flex justify-between items-center">
         <span className={`text-xs px-2 py-0.5 rounded-md ${
             isOverdue ? 'bg-red-500/20 text-red-400' : 
             isDueToday ? 'bg-yellow-500/20 text-yellow-400' : 
-            'bg-primary-bg'
+            'bg-secondary'
         }`}>
             Due: {dueDate.toLocaleDateString()}
         </span>

@@ -23,6 +23,9 @@ interface AuthContextType {
   startImpersonation: (targetUser: User) => void;
   stopImpersonation: () => void;
   impersonatedUser: User | null;
+  // New Follow/Unfollow functionality
+  following: Set<string>;
+  toggleFollow: (userId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,15 +62,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
+  // State for the follow system (client-side simulation)
+  const [following, setFollowing] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // This is the most robust way to handle auth in Supabase.
-    // The listener fires immediately with the current session state, then
-    // listens for any changes. This avoids all race conditions.
     setLoading(true);
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        // Only act if not impersonating
         if (!sessionStorage.getItem('impersonation_admin')) {
             if (session?.user) {
               const profile = await fetchAndMapProfile(session.user);
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
               setUser(null);
             }
         }
-        setLoading(false); // ALWAYS stop loading after the first check.
+        setLoading(false);
       }
     );
 
@@ -115,8 +116,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // The onAuthStateChange listener will handle setting the user and loading state.
-      // We don't need to manually set it here anymore.
       return { success: true, error: null };
 
     } catch (e) {
@@ -128,18 +127,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
-    // Clear any impersonation state on logout
     sessionStorage.removeItem('impersonation_admin');
     setImpersonatedUser(null);
     setUser(null);
   }, []);
+  
+  const toggleFollow = useCallback((userId: string) => {
+    setFollowing(prevFollowing => {
+        const newFollowing = new Set(prevFollowing);
+        if (newFollowing.has(userId)) {
+            newFollowing.delete(userId);
+        } else {
+            newFollowing.add(userId);
+        }
+        return newFollowing;
+    });
+  }, []);
 
-  // --- New Impersonation Logic ---
   const startImpersonation = useCallback((targetUser: User) => {
     if (user && user.role === 'Admin') {
       sessionStorage.setItem('impersonation_admin', JSON.stringify(user));
       setImpersonatedUser(targetUser);
-      setUser(targetUser); // Switch the current user context
+      setUser(targetUser);
     }
   }, [user]);
 
@@ -147,41 +156,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const adminUserJson = sessionStorage.getItem('impersonation_admin');
     if (adminUserJson) {
       const adminUser = JSON.parse(adminUserJson);
-      setUser(adminUser); // Switch back to the admin user
+      setUser(adminUser);
       setImpersonatedUser(null);
       sessionStorage.removeItem('impersonation_admin');
     }
   }, []);
   
-  // --- Inactivity Logout Logic ---
   useEffect(() => {
     let inactivityTimer: number;
-
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
-      if (user && !impersonatedUser) { // Do not auto-logout during impersonation
+      if (user && !impersonatedUser) {
         inactivityTimer = window.setTimeout(() => {
           logout();
-        }, 10 * 60 * 1000); // 10 minutes
+        }, 10 * 60 * 1000);
       }
     };
-
-    const activityEvents: (keyof WindowEventMap)[] = [
-      'mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'
-    ];
-
+    const activityEvents: (keyof WindowEventMap)[] = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
     if (user) {
-      activityEvents.forEach(event => {
-        window.addEventListener(event, resetInactivityTimer);
-      });
+      activityEvents.forEach(event => window.addEventListener(event, resetInactivityTimer));
       resetInactivityTimer();
     }
-
     return () => {
       clearTimeout(inactivityTimer);
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, resetInactivityTimer);
-      });
+      activityEvents.forEach(event => window.removeEventListener(event, resetInactivityTimer));
     };
   }, [user, logout, impersonatedUser]);
 
@@ -198,7 +196,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     isImpersonating: !!impersonatedUser,
     startImpersonation,
     stopImpersonation,
-    impersonatedUser
+    impersonatedUser,
+    following, // provide follow state
+    toggleFollow, // provide follow function
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

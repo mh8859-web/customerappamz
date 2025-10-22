@@ -7,7 +7,6 @@ interface ButtonProps {
   className?: string;
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
-  // Fix: Add title prop to ButtonProps to allow passing the native title attribute.
   title?: string;
 }
 
@@ -24,7 +23,6 @@ const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'primary',
       type={type}
       onClick={onClick}
       disabled={disabled}
-      // Fix: Pass title prop to the underlying button element.
       title={title}
       className={`${baseClasses} ${variantClasses[variant]} ${className}`}
     >

@@ -1,5 +1,3 @@
-
-
 import { supabase } from './supabaseClient';
 import { User, UserRole } from '../types';
 
@@ -96,7 +94,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
-// NEW: Upload a generic project file (quote, design, etc.)
+// Upload a generic project file (quote, design, etc.)
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
 
@@ -116,24 +114,53 @@ export const uploadProjectFile = async (projectId: string, file: File): Promise<
     return data.publicUrl;
 };
 
-// NEW: Update the current user's password
+// Update the current user's password
 export const updateUserPassword = async (newPassword: string) => {
     const { data, error } = await supabase.auth.updateUser({ password: newPassword });
     return { data, error };
 };
 
-// Fix: Add missing adminUpdateUserPassword function.
-// NEW: (MOCKED) Admin function to update another user's password
-// In a real app, this would call a secure Supabase Edge Function.
+// Admin function to update another user's password by calling an edge function.
 export const adminUpdateUserPassword = async (userId: string, newPassword: string) => {
-    console.log(`[MOCK API] Admin is changing password for user ${userId}. New password: ${newPassword}`);
-    // This would be: await supabase.functions.invoke('change-user-password', { body: { userId, newPassword } });
-    return { error: null };
+    const { data, error } = await supabase.rpc('admin_set_user_password', {
+        user_id: userId,
+        new_password: newPassword,
+    });
+    return { data, error };
 };
-
 
 // Deletes a user by calling a Supabase RPC function.
 export const deleteUser = async (userId: string) => {
     const { data, error } = await supabase.rpc('delete_user', { user_id: userId });
+    return { data, error };
+};
+
+// API call to start a clock-in record
+export const startClockIn = async (designerId: string, clockInTime: string, location: string, ipAddress: string) => {
+    const { data, error } = await supabase
+        .from('attendance_logs')
+        .insert({
+            designer_id: designerId,
+            clock_in: clockInTime,
+            location: location,
+            ip_address: ipAddress
+        })
+        .select()
+        .single();
+    return { data, error };
+};
+
+// API call to end a clock-out record
+export const endClockOut = async (logId: string, clockOutTime: string, duration: string, workSummary: string) => {
+    const { data, error } = await supabase
+        .from('attendance_logs')
+        .update({
+            clock_out: clockOutTime,
+            duration: duration,
+            work_summary: workSummary
+        })
+        .eq('id', logId)
+        .select()
+        .single();
     return { data, error };
 };

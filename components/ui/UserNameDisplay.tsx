@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
 
 interface UserNameDisplayProps {
@@ -9,7 +10,6 @@ interface UserNameDisplayProps {
   imageSize?: string;
 }
 
-// --- NEW Badge URL and Details Maps ---
 const badgeUrlMap: Record<UserRole, string> = {
   Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
@@ -18,24 +18,11 @@ const badgeUrlMap: Record<UserRole, string> = {
 };
 
 const roleDetails: Record<UserRole, { title: string; text: string; }> = {
-    Admin: {
-        title: 'Official Amaz Admin',
-        text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members',
-    },
-    'Sub-Admin': {
-        title: 'Official Amaz Admin',
-        text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members',
-    },
-    Designer: {
-        title: 'Official Amaz Employee',
-        text: 'This Account Is Verified And This Account Belong To Senior Level Designers, Other Team',
-    },
-    Customer: {
-        title: 'Official Amaz Client',
-        text: 'This Account Is Verified And This Account Belong To Our Clients',
-    },
+    Admin: { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
+    'Sub-Admin': { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
+    Designer: { title: 'Official Amaz Employee', text: 'This Account Is Verified And This Account Belong To Senior Level Designers, Other Team' },
+    Customer: { title: 'Official Amaz Client', text: 'This Account Is Verified And This Account Belong To Our Clients' },
 };
-
 
 const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-8 h-8' }) => {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
@@ -44,17 +31,12 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (
-            popoverRef.current && !popoverRef.current.contains(event.target as Node) &&
-            badgeRef.current && !badgeRef.current.contains(event.target as Node)
-        ) {
+        if ( popoverRef.current && !popoverRef.current.contains(event.target as Node) && badgeRef.current && !badgeRef.current.contains(event.target as Node) ) {
             setPopoverOpen(false);
         }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   if (!user) {
@@ -64,15 +46,18 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   const badgeUrl = user.verified ? badgeUrlMap[user.role] : null;
   const details = user.verified ? roleDetails[user.role] : null;
 
-  return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+  // Team members get a clickable profile link. Customers do not.
+  const isTeamMember = user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer';
+
+  const content = (
+    <>
       {showAvatar && (
           <img src={user.avatarUrl} alt={user.fullName} className={`${imageSize} rounded-full mr-1.5`} />
       )}
       <span className={textClassName}>{user.fullName}</span>
       {badgeUrl && details && (
         <div ref={badgeRef} className="verified-badge-container flex-shrink-0">
-          <div className="cursor-pointer" onClick={() => setPopoverOpen(!isPopoverOpen)}>
+          <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}>
             <img src={badgeUrl} alt="Verified Badge" className="w-4 h-4" />
           </div>
           <div 
@@ -81,11 +66,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
           >
             <div className="p-4">
                 <div className="border-b border-border-color pb-3 mb-3">
-                     <img 
-                        src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-                        alt="AMAZ Interiors Logo" 
-                        className="h-8"
-                    />
+                     <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ Interiors Logo" className="h-8"/>
                 </div>
                 <div className="flex items-start gap-2">
                      <img src={badgeUrl} alt="Verified Badge" className="w-5 h-5 flex-shrink-0 mt-0.5"/>
@@ -98,6 +79,16 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (isTeamMember) {
+      return <Link to={`/profile/${user.id}`} className={`inline-flex items-center gap-1.5 ${className} hover:underline`}>{content}</Link>
+  }
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+      {content}
     </div>
   );
 };

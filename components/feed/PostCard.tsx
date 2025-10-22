@@ -3,21 +3,24 @@ import { Post, User, FeedComment, ReactionType, Project } from '../../types';
 import Card from '../ui/Card';
 import UserNameDisplay from '../ui/UserNameDisplay';
 import { useUsers } from '../../context/UserContext';
-import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinIcon, HeartIcon, SparklesIcon, QuestionMarkCircleIcon, HandRaisedIcon, BriefcaseIcon, GlobeAltIcon, UserGroupIcon } from '../icons';
+import { useAuth } from '../../context/AuthContext'; // Import useAuth for follow system
+import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinIcon, HeartIcon, SparklesIcon, QuestionMarkCircleIcon, HandRaisedIcon, BriefcaseIcon, GlobeAltIcon, UserGroupIcon, ThumbUpIcon, PaintBrushIcon, BuildingOffice2Icon } from '../icons';
 import CommentSection from './CommentSection';
 import { Link } from 'react-router-dom';
+import ReactionPicker from './ReactionPicker';
+import Button from '../ui/Button'; // Import Button for the follow button
 
 const reactionMap: Record<ReactionType, React.ReactNode> = {
     love: <HeartIcon className="w-5 h-5 text-red-500" solid />,
-    idea: <SparklesIcon className="w-5 h-5 text-yellow-500" />,
-    thought: <QuestionMarkCircleIcon className="w-5 h-5 text-blue-500" />,
-    kudos: <HandRaisedIcon className="w-5 h-5 text-green-500" />,
+    idea: <SparklesIcon className="w-5 h-5 text-yellow-500" solid />,
+    thought: <QuestionMarkCircleIcon className="w-5 h-5 text-blue-500" solid />,
+    kudos: <HandRaisedIcon className="w-5 h-5 text-green-500" solid />,
 };
 
 const reactionTooltips: Record<ReactionType, string> = {
     love: 'Love',
-    idea: 'Idea',
-    thought: 'Thought',
+    idea: 'Brilliant',
+    thought: 'Hmm',
     kudos: 'Kudos',
 };
 
@@ -53,43 +56,35 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projects, layout, onReact, onAddComment, onDelete, onVote, onPinToggle, onTagClick }) => {
     const { findUserById } = useUsers();
+    const { following, toggleFollow } = useAuth(); // Get follow state and function
     const author = findUserById(post.authorId);
     const [showComments, setShowComments] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
-    const [showReactions, setShowReactions] = useState(false);
     const optionsRef = useRef<HTMLDivElement>(null);
     
     const canModify = currentUser.id === post.authorId || currentUser.role === 'Admin';
     const isAdmin = currentUser.role === 'Admin';
     const project = useMemo(() => post.projectId ? projects.find(p => p.id === post.projectId) : null, [post.projectId, projects]);
 
+    const isFollowingAuthor = author ? following.has(author.id) : false;
+    const isTeamMember = author && (author.role === 'Admin' || author.role === 'Sub-Admin' || author.role === 'Designer');
+    const showFollowButton = isTeamMember && author?.id !== currentUser.id;
+
     const visibilityDetails = useMemo(() => {
         switch(post.visibility) {
-            case 'everyone':
-                return { icon: <GlobeAltIcon className="w-3.5 h-3.5"/>, text: 'Visible to Everyone' };
-            case 'team_only':
-                return { icon: <UserGroupIcon className="w-3.5 h-3.5"/>, text: 'Visible to Team Only' };
-            case 'project_members': {
-                if (!post.projectId) return false;
-                const project = projects.find(p => p.id === post.projectId);
-                if (!project) return false;
-                return { icon: <BriefcaseIcon className="w-3.5 h-3.5"/>, text: `Visible to members of ${project?.title || 'Project'}` };
-            }
-            default:
-                return null;
+            case 'everyone': return { icon: <GlobeAltIcon className="w-3.5 h-3.5"/>, text: 'Visible to Everyone' };
+            case 'team_only': return { icon: <UserGroupIcon className="w-3.h-3.5"/>, text: 'Visible to Team Only' };
+            case 'project_members': return { icon: <BriefcaseIcon className="w-3.5 h-3.5"/>, text: `Visible to members of ${project?.title || 'Project'}` };
+            default: return null;
         }
     }, [post.visibility, project]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-          if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
-            setShowOptions(false);
-          }
+          if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) setShowOptions(false);
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-          document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     const renderContentWithTags = (content: string) => {
@@ -105,85 +100,46 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
     
     const reactionSummary = useMemo(() => {
         const counts: { [key in ReactionType]?: number } = {};
-        post.reactions.forEach(r => {
-            counts[r.type] = (counts[r.type] || 0) + 1;
-        });
+        post.reactions.forEach(r => { counts[r.type] = (counts[r.type] || 0) + 1; });
         return (Object.keys(counts) as ReactionType[]).sort((a,b) => counts[b]! - counts[a]!);
     }, [post.reactions]);
     
     const currentUserReaction = post.reactions.find(r => r.userId === currentUser.id);
-
-    if (layout === 'grid') {
-        return (
-            <div className="relative group aspect-square bg-surface rounded-xl overflow-hidden cursor-pointer">
-                {post.mediaUrl ? (
-                    <img src={post.mediaUrl} alt="Post media" className="w-full h-full object-cover" />
-                ) : (
-                    <div className="p-4 text-sm text-text-primary">{post.content.substring(0, 150)}...</div>
-                )}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                    <div className="flex items-center gap-4 text-white font-bold">
-                        <div className="flex items-center gap-1.5">
-                            <HeartIcon className="w-6 h-6" solid />
-                            <span>{post.reactions.length}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />
-                            <span>{comments.length}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
 
     return (
         <Card className="p-0 flex flex-col">
             <div className="p-4 sm:p-5">
                 <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
-                        <img src={author?.avatarUrl} alt={author?.fullName} className="w-12 h-12 rounded-full" />
+                        <Link to={isTeamMember ? `/profile/${author?.id}` : '#'} className={isTeamMember ? '' : 'pointer-events-none'}>
+                           <img src={author?.avatarUrl} alt={author?.fullName} className="w-12 h-12 rounded-full" />
+                        </Link>
                         <div>
-                            <UserNameDisplay user={author} textClassName="font-semibold text-text-primary" />
+                            <div className="flex items-center gap-2">
+                                <UserNameDisplay user={author} textClassName="font-semibold text-text-primary" />
+                                {showFollowButton && (
+                                    <>
+                                        <span className="text-text-secondary">&middot;</span>
+                                        <button onClick={() => author && toggleFollow(author.id)} className={`text-sm font-semibold ${isFollowingAuthor ? 'text-text-secondary' : 'text-brand-blue'}`}>
+                                            {isFollowingAuthor ? 'Following' : 'Follow'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                              <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                {post.isPinned && (
-                                    <span className="flex items-center gap-1 font-semibold text-text-secondary">
-                                        <PinIcon className="w-3.5 h-3.5"/> Pinned
-                                    </span>
-                                )}
+                                {post.isPinned && <span className="flex items-center gap-1 font-semibold text-text-secondary"><PinIcon className="w-3.5 h-3.5"/> Pinned</span>}
                                 <span>{timeAgo(post.createdAt)}</span>
-                                {visibilityDetails && (
-                                    <span className="flex items-center gap-1" title={visibilityDetails.text}>
-                                        &middot;
-                                        {visibilityDetails.icon}
-                                    </span>
-                                )}
+                                {visibilityDetails && <span className="flex items-center gap-1" title={visibilityDetails.text}>&middot;{visibilityDetails.icon}</span>}
                             </div>
                         </div>
                     </div>
-
                     {canModify && (
                          <div className="relative" ref={optionsRef}>
-                            <button onClick={() => setShowOptions(!showOptions)} className="p-2 rounded-full hover:bg-secondary">
-                                <EllipsisHorizontalIcon className="w-6 h-6 text-text-secondary" />
-                            </button>
+                            <button onClick={() => setShowOptions(!showOptions)} className="p-2 rounded-full hover:bg-secondary"><EllipsisHorizontalIcon className="w-6 h-6 text-text-secondary" /></button>
                             {showOptions && (
                                 <div className="absolute top-full right-0 mt-1 bg-surface border border-border-color rounded-xl shadow-card z-10 w-40 py-1">
-                                    {isAdmin && (
-                                        <button 
-                                            onClick={() => { onPinToggle(post.id); setShowOptions(false); }}
-                                            className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-secondary flex items-center gap-2 rounded-md m-1"
-                                        >
-                                           <PinIcon className="w-4 h-4" /> {post.isPinned ? 'Unpin Post' : 'Pin Post'}
-                                        </button>
-                                    )}
-                                    <button 
-                                        onClick={() => { onDelete(post.id); setShowOptions(false); }}
-                                        className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-secondary rounded-md m-1"
-                                    >
-                                        Delete Post
-                                    </button>
+                                    {isAdmin && <button onClick={() => { onPinToggle(post.id); setShowOptions(false); }} className="w-full text-left px-3 py-2 text-sm text-text-primary hover:bg-secondary flex items-center gap-2 rounded-md m-1"><PinIcon className="w-4 h-4" /> {post.isPinned ? 'Unpin Post' : 'Pin Post'}</button>}
+                                    <button onClick={() => { onDelete(post.id); setShowOptions(false); }} className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-secondary rounded-md m-1">Delete Post</button>
                                 </div>
                             )}
                         </div>
@@ -194,30 +150,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
 
                 {project && (
                     <Link to={`/projects/${project.id}`} className="inline-flex items-center gap-2 text-xs bg-secondary px-2 py-1 rounded-md mb-2 hover:bg-secondary-hover">
-                        <BriefcaseIcon className="w-3.5 h-3.5"/>
-                        <span className="font-semibold">{project.title}</span>
+                        <BriefcaseIcon className="w-3.5 h-3.5"/><span className="font-semibold">{project.title}</span>
                     </Link>
                 )}
-
-                {post.postType === 'showcase' && post.showcaseDetails && (
-                    <div className="mt-3 border border-border-color bg-page-bg rounded-xl p-3 text-sm space-y-1">
-                        <p><strong className="text-text-secondary">Style:</strong> {post.showcaseDetails.style}</p>
-                        <p><strong className="text-text-secondary">Materials:</strong> {post.showcaseDetails.materials}</p>
-                        <p><strong className="text-text-secondary">Palette:</strong> {post.showcaseDetails.palette}</p>
-                    </div>
-                )}
+                 {post.postType === 'showcase' && <span className="inline-flex items-center gap-2 text-xs bg-brand-blue/10 text-brand-blue font-semibold px-2 py-1 rounded-md mb-2 ml-2"><BuildingOffice2Icon className="w-3.5 h-3.5"/>Showcase</span>}
+                 {post.postType === 'before_after' && <span className="inline-flex items-center gap-2 text-xs bg-purple-500/10 text-purple-500 font-semibold px-2 py-1 rounded-md mb-2 ml-2"><PaintBrushIcon className="w-3.5 h-3.5"/>Before & After</span>}
             </div>
             
             {post.mediaUrl && post.postType !== 'before_after' && (
-                <div className="bg-secondary">
-                     <img src={post.mediaUrl} alt="Post content" className="w-full max-h-[70vh] object-contain" />
-                </div>
+                <div className="bg-secondary -mx-px"><img src={post.mediaUrl} alt="Post content" className="w-full max-h-[70vh] object-contain" /></div>
             )}
 
             {post.postType === 'before_after' && post.beforeMediaUrl && post.mediaUrl && (
-                <div className="grid grid-cols-2">
-                    <div className="relative"><img src={post.beforeMediaUrl} className="w-full h-full object-cover"/><span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full font-semibold">Before</span></div>
-                    <div className="relative"><img src={post.mediaUrl} className="w-full h-full object-cover"/><span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full font-semibold">After</span></div>
+                <div className="grid grid-cols-2 -mx-px"><div className="relative"><img src={post.beforeMediaUrl} className="w-full h-full object-cover"/><span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full font-semibold">Before</span></div><div className="relative"><img src={post.mediaUrl} className="w-full h-full object-cover"/><span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full font-semibold">After</span></div></div>
+            )}
+            
+             {post.postType === 'showcase' && post.showcaseDetails && (
+                <div className="border-t border-b border-border-color bg-page-bg/50 px-5 py-3 text-sm grid grid-cols-3 gap-2">
+                    <p><strong className="text-text-secondary font-medium">Style:</strong> {post.showcaseDetails.style}</p>
+                    <p><strong className="text-text-secondary font-medium">Materials:</strong> {post.showcaseDetails.materials}</p>
+                    <p><strong className="text-text-secondary font-medium">Palette:</strong> {post.showcaseDetails.palette}</p>
                 </div>
             )}
 
@@ -229,61 +181,27 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
                             <span className="font-medium text-text-primary ml-1">{post.reactions.length}</span>
                         </div>
                     )}
-                     {comments.length > 0 && (
-                        <button onClick={() => setShowComments(!showComments)} className="hover:underline ml-auto">
-                            {comments.length} comment{comments.length > 1 ? 's' : ''}
-                        </button>
-                    )}
+                     {comments.length > 0 && <button onClick={() => setShowComments(!showComments)} className="hover:underline ml-auto">{comments.length} comment{comments.length > 1 ? 's' : ''}</button>}
                 </div>
 
                 <div className="border-t border-border-color my-2"></div>
 
                 <div className="grid grid-cols-3 -mx-2">
-                    <div className="relative" onMouseEnter={() => setShowReactions(true)} onMouseLeave={() => setShowReactions(false)}>
+                    <ReactionPicker onSelect={(reaction) => onReact(post.id, reaction)}>
                         <button
-                            onClick={() => onReact(post.id, currentUserReaction?.type || 'love')}
                             className={`flex justify-center items-center gap-2 py-2 rounded-lg font-semibold transition-colors w-full ${
                                 currentUserReaction ? 'text-brand-blue' : 'text-text-secondary hover:bg-secondary'
                             }`}
                         >
-                            {currentUserReaction ? reactionMap[currentUserReaction.type] : <HeartIcon className="w-5 h-5"/>}
-                            {currentUserReaction ? reactionTooltips[currentUserReaction.type] : 'React'}
+                            {currentUserReaction ? reactionMap[currentUserReaction.type] : <ThumbUpIcon className="w-5 h-5"/>}
+                            {currentUserReaction ? reactionTooltips[currentUserReaction.type] : 'Like'}
                         </button>
-                        {showReactions && (
-                             <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-surface p-1.5 rounded-full shadow-card flex gap-1.5 border border-border-color">
-                                {(Object.keys(reactionMap) as ReactionType[]).map(type => (
-                                    <button key={type} onClick={() => onReact(post.id, type)} className="p-1.5 rounded-full hover:bg-secondary scale-100 hover:scale-125 transition-transform">
-                                        {reactionMap[type]}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                     <button
-                        onClick={() => setShowComments(!showComments)}
-                        className="flex justify-center items-center gap-2 py-2 rounded-lg font-semibold text-text-secondary hover:bg-secondary transition-colors w-full"
-                    >
-                        <ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5" />
-                        Comment
-                    </button>
-                     <button
-                        className="flex justify-center items-center gap-2 py-2 rounded-lg font-semibold text-text-secondary hover:bg-secondary transition-colors w-full"
-                    >
-                        <ShareIcon className="w-5 h-5" />
-                        Share
-                    </button>
+                    </ReactionPicker>
+                     <button onClick={() => setShowComments(!showComments)} className="flex justify-center items-center gap-2 py-2 rounded-lg font-semibold text-text-secondary hover:bg-secondary transition-colors w-full"><ChatBubbleOvalLeftEllipsisIcon className="w-5 h-5" />Comment</button>
+                     <button className="flex justify-center items-center gap-2 py-2 rounded-lg font-semibold text-text-secondary hover:bg-secondary transition-colors w-full"><ShareIcon className="w-5 h-5" />Share</button>
                 </div>
                 
-                {showComments && (
-                    <div className="pt-2">
-                        <CommentSection
-                            postId={post.id}
-                            comments={comments}
-                            currentUser={currentUser}
-                            onAddComment={onAddComment}
-                        />
-                    </div>
-                )}
+                {showComments && <div className="pt-2"><CommentSection postId={post.id} comments={comments} currentUser={currentUser} onAddComment={onAddComment}/></div>}
             </div>
         </Card>
     );
