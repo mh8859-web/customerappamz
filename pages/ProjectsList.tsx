@@ -104,7 +104,6 @@ const ProjectsList: React.FC = () => {
     const supportMessage = `Welcome to your new project, "${newProject.title}"! Your assigned designer and our team will be in touch shortly. You can view your project details and track progress here.`;
     await createRecord('messages', {
         chat_id: newProject.id,
-        sender_id: AMAZ_SUPPORT_USER_ID,
         body: supportMessage,
     });
     

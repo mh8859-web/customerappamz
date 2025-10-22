@@ -15,7 +15,8 @@ import GeneratePOModal from '../components/designer/GeneratePOModal';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
-import { updateRecord, createRecord } from '../services/api';
+import { updateRecord, createRecord, uploadProjectFile } from '../services/api';
+import UploadDesignModal from '../components/design/UploadDesignModal';
 
 type UnifiedUpdate = {
     id: string;
@@ -57,6 +58,7 @@ const ProjectDetails: React.FC = () => {
     const [selectedDesignForAnnotation, setSelectedDesignForAnnotation] = useState<Design | null>(null);
     const [isAddProductModalOpen, setAddProductModalOpen] = useState(false);
     const [isPOModalOpen, setPOModalOpen] = useState(false);
+    const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
     
     const isLoading = dataLoading || usersLoading;
     const isProjectReadOnly = project?.status === 'Completed';
@@ -243,6 +245,34 @@ const ProjectDetails: React.FC = () => {
         await refetchData();
         setAddProductModalOpen(false);
     };
+    
+    const handleUploadDesign = async (file: File, notes: string, type: 'image' | 'gltf') => {
+        if (!user || !project) return;
+        
+        const fileUrl = await uploadProjectFile(project.id, file);
+        if (!fileUrl) {
+            alert('Failed to upload design file. Please try again.');
+            return;
+        }
+        
+        const existingVersions = projectDesigns.map(d => d.version);
+        const newVersion = existingVersions.length > 0 ? Math.max(...existingVersions) + 1 : 1;
+
+        const newDesign = {
+            project_id: project.id,
+            version: newVersion,
+            notes: notes,
+            file_url: fileUrl,
+            type: type,
+            uploaded_by: user.id,
+            submitted_for_review: true,
+            approved: false,
+            comments: [],
+        };
+
+        await createRecord('designs', newDesign);
+        await refetchData();
+    };
 
     const handleCommentStatusChange = async (commentId: string, designId: string, status: 'Open' | 'Resolved') => {
         const design = projectDesigns.find(d => d.id === designId);
@@ -314,7 +344,10 @@ const ProjectDetails: React.FC = () => {
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {user?.role === 'Designer' && project.stage === 'design_phase' && !isProjectReadOnly && (
-                            <Card className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg">
+                            <Card 
+                                onClick={() => setUploadDesignModalOpen(true)}
+                                className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg"
+                            >
                                 <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
                                 <p className="text-text-primary font-semibold">Upload New Design</p>
                                 <p className="text-xs text-center">Supports up to 5 concepts</p>
@@ -614,6 +647,12 @@ const ProjectDetails: React.FC = () => {
                 onClose={() => setPOModalOpen(false)}
                 products={projectProducts}
                 project={project}
+            />
+
+            <UploadDesignModal
+                isOpen={isUploadDesignModalOpen}
+                onClose={() => setUploadDesignModalOpen(false)}
+                onUpload={handleUploadDesign}
             />
 
             <div className="space-y-6">

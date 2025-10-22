@@ -5,7 +5,7 @@ import MessageBubble from './MessageBubble';
 import Card from '../ui/Card';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
-import { createRecord } from '../../services/api';
+import { createRecord, uploadChatAttachment } from '../../services/api';
 
 interface ChatComponentProps {
   projectId: string;
@@ -15,51 +15,70 @@ interface ChatComponentProps {
 
 const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, isReadOnly = false }) => {
   const [newMessage, setNewMessage] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { findUserById } = useUsers();
-  const { messages } = useData();
+  const { messages, refetchData } = useData();
 
   const projectMessages = messages
     .filter(m => m.chatId === projectId)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   useEffect(() => {
-    // Scroll to the bottom when new messages are added
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [projectMessages]);
 
-  const handleSendMessage = async (attachments?: Message['attachments']) => {
-    if ((!newMessage.trim() && !attachments) || isReadOnly) return;
+  const handleSendMessage = async (body: string, attachments?: Message['attachments']) => {
+    if ((!body.trim() && !attachments) || isReadOnly) return;
 
+    // The core fix: remove sender_id and let the database handle it via RLS + default value.
     const messageToSend = {
       chat_id: projectId,
-      sender_id: currentUser.id,
-      body: newMessage,
+      body: body,
       attachments: attachments || null,
     };
     
-    // The insert will be picked up by the real-time subscription in DataContext.
-    // No need to call refetchData() anymore.
-    await createRecord('messages', messageToSend);
-    setNewMessage('');
+    const { error } = await createRecord('messages', messageToSend);
+
+    if (error) {
+        console.error("Failed to send message:", error.message);
+        alert(`Could not send message: ${error.message}`);
+    } else {
+        setNewMessage('');
+        await refetchData();
+    }
+  };
+
+  const handleSendTextMessage = async () => {
+      await handleSendMessage(newMessage);
   };
   
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly) return;
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly || isUploading) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // In a real app, you would upload the file to a server and get a URL.
-    // Here we'll just simulate it.
+    setIsUploading(true);
+    const publicUrl = await uploadChatAttachment(projectId, currentUser.id, file);
+    setIsUploading(false);
+
+    if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
+
+    if (!publicUrl) {
+        alert('Failed to upload attachment. Please try again.');
+        return;
+    }
+
     const fileType: 'image' | 'video' | 'file' = file.type.startsWith('image') ? 'image' : file.type.startsWith('video') ? 'video' : 'file';
     const newAttachment = {
-        url: URL.createObjectURL(file),
+        url: publicUrl,
         type: fileType,
         name: file.name
     };
     
-    handleSendMessage([newAttachment]);
+    // Send message with attachment, the body can be empty.
+    await handleSendMessage(newMessage, [newAttachment]);
   };
 
   return (
@@ -78,32 +97,32 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
 
       <div className="p-4 border-t border-border-color">
         {isReadOnly ? (
-          <div className="text-center text-sm text-text-muted">This project is archived. Chat is read-only.</div>
+          <div className="text-center text-sm text-text-secondary">This project is archived. Chat is read-only.</div>
         ) : (
-          <div className="flex items-center bg-primary-bg rounded-xl p-2 border border-border-color focus-within:ring-2 focus-within:ring-brand-blue">
+          <div className="flex items-center bg-page-bg rounded-xl p-2 border border-border-color focus-within:ring-2 focus-within:ring-brand-blue">
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendMessage())}
-              placeholder="Type a message..."
-              className="flex-1 bg-transparent px-2 text-text-headline focus:outline-none"
-              disabled={isReadOnly}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSendTextMessage())}
+              placeholder={isUploading ? "Uploading attachment..." : "Type a message..."}
+              className="flex-1 bg-transparent px-2 text-text-primary focus:outline-none"
+              disabled={isReadOnly || isUploading}
             />
             <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
             <button 
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-text-muted hover:text-brand-blue transition-colors rounded-full"
+              className="p-2 text-text-secondary hover:text-brand-blue transition-colors rounded-full disabled:opacity-50"
               aria-label="Attach file"
-              disabled={isReadOnly}
+              disabled={isReadOnly || isUploading}
             >
               <PaperclipIcon className="w-5 h-5" />
             </button>
             <button 
-              onClick={() => handleSendMessage()}
-              className="p-2 text-text-muted hover:text-brand-blue transition-colors rounded-full"
+              onClick={handleSendTextMessage}
+              className="p-2 text-text-secondary hover:text-brand-blue transition-colors rounded-full disabled:opacity-50"
               aria-label="Send message"
-              disabled={isReadOnly}
+              disabled={isReadOnly || isUploading || !newMessage.trim()}
             >
               <SendIcon className="w-5 h-5" />
             </button>

@@ -184,3 +184,24 @@ export const endClockOut = async (logId: string, clockOutTime: string, duration:
         .single();
     return { data, error };
 };
+
+// Upload a file for a chat message
+export const uploadChatAttachment = async (projectId: string, userId: string, file: File): Promise<string | null> => {
+    // A more structured path to avoid collisions
+    const filePath = `${projectId}/chat/${userId}/${Date.now()}-${file.name}`;
+
+    const { error } = await supabase.storage
+        .from('project_files') // Re-using existing bucket, but organizing with folders
+        .upload(filePath, file);
+
+    if (error) {
+        console.error('Error uploading chat attachment:', error);
+        return null;
+    }
+
+    const { data } = supabase.storage
+        .from('project_files')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+};
