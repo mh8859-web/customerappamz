@@ -30,8 +30,14 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0] }> = (
 };
 
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, sender }) => {
-  const isSupportMessage = message.senderId === AMAZ_SUPPORT_USER_ID;
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: isOwnMessageProp, sender }) => {
+  // A system message is displayed as the official support user, regardless of the actual sender.
+  const isSupportMessage = !!message.isSystemMessage;
+
+  // An "own" message is one sent by the current user AND is not a system message.
+  // This makes system messages (like the welcome message) appear on the left for everyone.
+  const isOwnMessage = !isSupportMessage && isOwnMessageProp;
+
   const senderToDisplay = isSupportMessage 
     ? { 
         id: AMAZ_SUPPORT_USER_ID,

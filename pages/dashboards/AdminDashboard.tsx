@@ -106,8 +106,9 @@ Everyone has been added to this chat. Let's create something amazing!`;
 
     await createRecord('messages', {
         chat_id: newProject.id,
-        sender_id: AMAZ_SUPPORT_USER_ID,
+        sender_id: newProjectData.adminId, // Explicitly set sender to satisfy RLS
         body: supportMessage,
+        is_system_message: true,
     });
 
     // 5. Refresh data and navigate

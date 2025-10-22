@@ -156,7 +156,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setProjects(mapToCamelCase(dataMap.projects, p => ({ ...p, customerId: p.customer_id, designerId: p.designer_id, adminId: p.admin_id, budgetDisplay: p.budget_display, areaSqft: p.area_sqft, startDate: p.start_date, createdAt: p.created_at, updatedAt: p.updated_at, revenueDisplay: p.revenue_display })));
             setTasks(mapToCamelCase(dataMap.tasks, t => ({ ...t, projectId: t.project_id, assigneeId: t.assignee_id, dueDate: t.due_date })));
             setDesigns(mapToCamelCase(dataMap.designs, d => ({ ...d, projectId: d.project_id, uploadedBy: d.uploaded_by, fileUrl: d.file_url, submittedForReview: d.submitted_for_review, comments: d.comments || [], approvedBy: d.approved_by, approvedAt: d.approved_at })));
-            setMessages(mapToCamelCase(dataMap.messages, m => ({ ...m, chatId: m.chat_id, senderId: m.sender_id, createdAt: m.created_at })));
+            setMessages(mapToCamelCase(dataMap.messages, m => ({ ...m, chatId: m.chat_id, senderId: m.sender_id, createdAt: m.created_at, isSystemMessage: m.is_system_message })));
             setMilestones(mapToCamelCase(dataMap.milestones, m => ({ ...m, projectId: m.project_id, amountDisplay: m.amount_display, dueDate: m.due_date, statusDisplay: m.status_display, paidDateDisplay: m.paid_date_display })));
             setQuotes(mapToCamelCase(dataMap.quotes, q => ({ ...q, projectId: q.project_id, fileUrl: q.file_url, uploadedBy: q.uploaded_by, createdAt: q.created_at })));
             setActivityLogs(mapToCamelCase(dataMap.activity_logs, a => ({ ...a, projectId: a.project_id, actorId: a.actor_id, createdAt: a.created_at })));

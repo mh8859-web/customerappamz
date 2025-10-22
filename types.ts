@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer';
 
 export interface User {
@@ -171,6 +172,7 @@ export interface Message {
     name: string;
   }[] | null;
   createdAt: string;
+  isSystemMessage?: boolean;
 }
 
 export interface SiteVisit {

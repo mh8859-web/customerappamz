@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
@@ -15,7 +15,7 @@ import GeneratePOModal from '../components/designer/GeneratePOModal';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
-import { updateRecord, createRecord, uploadProjectFile } from '../services/api';
+import { updateRecord, createRecord, uploadProjectFile, deleteProjectAndRelatedData } from '../services/api';
 import UploadDesignModal from '../components/design/UploadDesignModal';
 
 type UnifiedUpdate = {
@@ -46,6 +46,7 @@ const UpdateIcon: React.FC<{ type: UnifiedUpdate['type'] }> = ({ type }) => {
 
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
     const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData, loading: dataLoading } = useData();
@@ -59,6 +60,8 @@ const ProjectDetails: React.FC = () => {
     const [isAddProductModalOpen, setAddProductModalOpen] = useState(false);
     const [isPOModalOpen, setPOModalOpen] = useState(false);
     const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
+    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     
     const isLoading = dataLoading || usersLoading;
     const isProjectReadOnly = project?.status === 'Completed';
@@ -283,6 +286,24 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
+    const handleDeleteProject = async () => {
+        if (deleteConfirmationText !== project.title) {
+            alert("Project name does not match. Deletion cancelled.");
+            return;
+        }
+        
+        const { error } = await deleteProjectAndRelatedData(project.id);
+    
+        if (error) {
+            alert(`Failed to delete project: ${error.message}`);
+        } else {
+            alert('Project deleted successfully.');
+            await refetchData();
+            navigate('/projects');
+        }
+        setDeleteModalOpen(false);
+    };
+
     const totalSourcedCost = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
 
 
@@ -343,7 +364,7 @@ const ProjectDetails: React.FC = () => {
                 const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {user?.role === 'Designer' && !isProjectReadOnly && (
+                        {user?.role === 'Designer' && (
                             <Card 
                                 onClick={() => setUploadDesignModalOpen(true)}
                                 className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg"
@@ -655,6 +676,41 @@ const ProjectDetails: React.FC = () => {
                 onUpload={handleUploadDesign}
             />
 
+            <Modal 
+                isOpen={isDeleteModalOpen} 
+                onClose={() => setDeleteModalOpen(false)}
+                title="Confirm Project Deletion"
+            >
+                <p className="text-text-secondary mb-4">
+                    You are about to permanently delete the project: <strong className="text-text-primary">{project.title}</strong>.
+                </p>
+                <p className="text-text-secondary mb-4">
+                    All associated designs, messages, milestones, and other data will be lost forever. This cannot be undone.
+                </p>
+                <div className="mt-4">
+                    <label htmlFor="delete-confirm" className="block text-sm font-medium text-text-primary mb-1">
+                        To confirm, type the project name: <span className="font-mono">{project.title}</span>
+                    </label>
+                    <input
+                        id="delete-confirm"
+                        type="text"
+                        value={deleteConfirmationText}
+                        onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                        className="w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                </div>
+                <div className="flex justify-end gap-4 mt-6">
+                    <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+                    <Button 
+                        onClick={handleDeleteProject}
+                        disabled={deleteConfirmationText !== project.title}
+                        className="!bg-red-600 hover:!bg-red-700 focus:ring-red-500 disabled:!bg-red-300"
+                    >
+                        Delete Forever
+                    </Button>
+                </div>
+            </Modal>
+
             <div className="space-y-6">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                     <div>
@@ -704,6 +760,18 @@ const ProjectDetails: React.FC = () => {
                 </div>
                 
                 <div>{renderTabContent()}</div>
+                
+                {user.role === 'Admin' && (
+                    <Card className="border-red-500/50 bg-red-500/5 mt-8">
+                        <h2 className="text-xl font-bold font-display text-red-600 mb-4">Admin Actions</h2>
+                        <div className="flex justify-between items-center">
+                            <p className="text-sm text-red-800">Permanently delete this project and all its associated data. This action is irreversible.</p>
+                            <Button onClick={() => setDeleteModalOpen(true)} className="!bg-red-600 hover:!bg-red-700 focus:ring-red-500">
+                                Delete Project
+                            </Button>
+                        </div>
+                    </Card>
+                )}
             </div>
         </>
     );

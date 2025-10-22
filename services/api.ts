@@ -205,3 +205,41 @@ export const uploadChatAttachment = async (projectId: string, userId: string, fi
 
     return data.publicUrl;
 };
+
+export const deleteProjectAndRelatedData = async (projectId: string) => {
+    // List of tables with a 'project_id' foreign key
+    const relatedTables = [
+        'tasks', 'designs', 'milestones', 'quotes', 'activity_logs', 
+        'site_visits', 'support_tickets', 'work_logs', 'project_updates', 
+        'final_gallery_images', 'expenses', 'products'
+    ];
+
+    // Create a promise for each deletion
+    const deletePromises = relatedTables.map(table => 
+        supabase.from(table).delete().eq('project_id', projectId)
+    );
+    
+    // Messages use 'chat_id' which is the project_id
+    deletePromises.push(supabase.from('messages').delete().eq('chat_id', projectId));
+
+    // Execute all deletions in parallel
+    const results = await Promise.all(deletePromises);
+
+    // Check if any of the deletions failed
+    const errorResult = results.find(res => res.error);
+    if (errorResult) {
+        console.error("Error deleting related project data:", errorResult.error);
+        return { error: errorResult.error };
+    }
+
+    // If all related data is deleted, delete the project itself
+    const { error: projectDeleteError } = await supabase.from('projects').delete().eq('id', projectId);
+
+    if (projectDeleteError) {
+        console.error("Error deleting project:", projectDeleteError);
+        return { error: projectDeleteError };
+    }
+
+    // Success
+    return { error: null };
+};
