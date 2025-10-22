@@ -64,34 +64,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
   // --- RE-ARCHITECTED AUTH FLOW (THE DEFINITIVE FIX) ---
-  // This new useEffect relies on onAuthStateChange as the single source of truth.
+  // This useEffect relies on onAuthStateChange as the single source of truth.
   // It fires immediately upon subscription with the initial session state,
-  // which eliminates all race conditions between getSession() and the listener.
+  // which eliminates race conditions. A try/finally block guarantees that
+  // the loading state is resolved, preventing the app from getting stuck.
   useEffect(() => {
-    // Set loading to true immediately. The listener will turn it off.
     setLoading(true);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        // This callback fires right away with the initial session,
-        // and then again on any auth change (login, logout).
-        if (session) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        } else {
-          setUser(null);
+        try {
+          if (session) {
+            const profile = await fetchAndMapProfile(session.user);
+            setUser(profile);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+            console.error("Error during auth state change processing:", error);
+            setUser(null); // Ensure user is logged out on error
+        } finally {
+            // This guarantees the app doesn't get stuck on the loading shell
+            setLoading(false);
         }
-        
-        // This is the GUARANTEE. Once the first check is done (session or no session),
-        // we are no longer in the initial loading state.
-        setLoading(false);
       }
     );
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []); // Empty dependency array ensures this runs only once on mount.
+  }, []);
 
 
   const login = useCallback(async (
