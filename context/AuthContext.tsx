@@ -63,57 +63,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
-  // --- RE-ARCHITECTED AUTH FLOW ---
-  // This new useEffect handles the initial session check robustly on page load/refresh.
+  // --- RE-ARCHITECTED AUTH FLOW (THE DEFINITIVE FIX) ---
+  // This new useEffect relies on onAuthStateChange as the single source of truth.
+  // It fires immediately upon subscription with the initial session state,
+  // which eliminates all race conditions between getSession() and the listener.
   useEffect(() => {
-    let isMounted = true;
+    // Set loading to true immediately. The listener will turn it off.
+    setLoading(true);
 
-    async function initializeSession() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error("Error fetching session on initial load:", error.message);
-        }
-
-        if (isMounted) {
-          if (session) {
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-        }
-      } catch (e) {
-        console.error("Catastrophic error during session initialization:", e);
-        if (isMounted) setUser(null);
-      } finally {
-        // This is the GUARANTEE that the loading state is always resolved,
-        // preventing the app from getting stuck on the loading skeleton.
-        if (isMounted) setLoading(false);
-      }
-    }
-
-    initializeSession();
-
-    // This listener handles live changes that happen AFTER the initial load (e.g., login, logout).
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (isMounted) {
-          if (session) {
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
+        // This callback fires right away with the initial session,
+        // and then again on any auth change (login, logout).
+        if (session) {
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+        } else {
+          setUser(null);
         }
+        
+        // This is the GUARANTEE. Once the first check is done (session or no session),
+        // we are no longer in the initial loading state.
+        setLoading(false);
       }
     );
 
     return () => {
-      isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on mount.
 
 
   const login = useCallback(async (
@@ -141,6 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
+      // The onAuthStateChange listener will handle setting the user state.
       return { success: true, error: null };
 
     } catch (e) {

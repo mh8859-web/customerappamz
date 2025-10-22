@@ -18,7 +18,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { findUserById } = useUsers();
-  const { messages, refetchData } = useData();
+  const { messages } = useData();
 
   const projectMessages = messages
     .filter(m => m.chatId === projectId)
@@ -39,8 +39,9 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
       attachments: attachments || null,
     };
     
+    // The insert will be picked up by the real-time subscription in DataContext.
+    // No need to call refetchData() anymore.
     await createRecord('messages', messageToSend);
-    await refetchData();
     setNewMessage('');
   };
   

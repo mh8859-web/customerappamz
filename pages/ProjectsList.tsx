@@ -61,9 +61,17 @@ const ProjectsList: React.FC = () => {
   if (!user) return null;
   
   const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
-    // 1. Create project record to get an ID for file path
+    // 1. Map frontend camelCase to backend snake_case and create project record
     const projectToCreate = {
-        ...newProjectData,
+        title: newProjectData.title,
+        description: newProjectData.description,
+        customer_id: newProjectData.customerId,
+        designer_id: newProjectData.designerId,
+        admin_id: newProjectData.adminId,
+        address: newProjectData.address,
+        budget_display: newProjectData.budgetDisplay,
+        area_sqft: newProjectData.areaSqft,
+        start_date: newProjectData.startDate,
         revenue_display: 0,
         progress: 10,
         status: 'Active',

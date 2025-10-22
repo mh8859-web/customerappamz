@@ -202,6 +202,40 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [authLoading, fetchData]);
 
+    // --- REAL-TIME CHAT IMPLEMENTATION ---
+    useEffect(() => {
+        if (!user) return;
+
+        // Set up the real-time subscription for new messages
+        const messageSubscription = supabase
+            .channel('public:messages')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'messages' },
+                (payload) => {
+                    const newMessage = payload.new as any;
+                    // Map from snake_case to camelCase
+                    const mappedMessage: Message = {
+                        id: newMessage.id,
+                        chatId: newMessage.chat_id,
+                        senderId: newMessage.sender_id,
+                        body: newMessage.body,
+                        attachments: newMessage.attachments,
+                        createdAt: newMessage.created_at,
+                    };
+                    
+                    // Add the new message to the local state
+                    setMessages((prevMessages) => [...prevMessages, mappedMessage]);
+                }
+            )
+            .subscribe();
+        
+        // Cleanup function to remove the subscription on component unmount
+        return () => {
+            supabase.removeChannel(messageSubscription);
+        };
+    }, [user]); // Rerun this effect if the user logs in or out
+
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,
         supportTickets, attendanceLogs, leaveRequests, workLogs, projectUpdates,

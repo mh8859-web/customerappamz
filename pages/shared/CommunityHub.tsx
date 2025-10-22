@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import CommunityFeed from './CommunityFeed';
 import { useData } from '../../context/DataContext';
-import { createRecord, updateRecord, deleteRecord } from '../../services/api';
+import { createRecord, updateRecord, deleteRecord, uploadPostMedia } from '../../services/api';
 import CommunitySidebar from '../../components/feed/CommunitySidebar';
 import CommunityTrending from '../../components/feed/CommunityTrending';
 
@@ -74,7 +74,6 @@ const CommunityHub: React.FC = () => {
         return null;
     }
     
-    // All API interaction functions remain the same
     const handleCreatePost = async (
         content: string, mediaFile?: File, addPoll?: boolean, projectId?: string,
         postType?: Post['postType'], showcaseDetails?: Post['showcaseDetails'],
@@ -82,8 +81,23 @@ const CommunityHub: React.FC = () => {
     ) => {
         let mediaUrl: string | undefined;
         let beforeMediaUrl: string | undefined;
-        if (mediaFile) mediaUrl = URL.createObjectURL(mediaFile);
-        if (beforeMediaFile) beforeMediaUrl = URL.createObjectURL(beforeMediaFile);
+
+        if (mediaFile) {
+            const uploadedUrl = await uploadPostMedia(user.id, mediaFile);
+            if (!uploadedUrl) {
+                alert("Failed to upload your media. The post was not created. Please try again.");
+                return;
+            }
+            mediaUrl = uploadedUrl;
+        }
+        if (beforeMediaFile) {
+            const uploadedBeforeUrl = await uploadPostMedia(user.id, beforeMediaFile);
+            if (!uploadedBeforeUrl) {
+                alert("Failed to upload your 'before' media. The post was not created. Please try again.");
+                return;
+            }
+            beforeMediaUrl = uploadedBeforeUrl;
+        }
 
         const newPostData = {
             author_id: user.id, content, media_url: mediaUrl,

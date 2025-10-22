@@ -114,6 +114,26 @@ export const uploadProjectFile = async (projectId: string, file: File): Promise<
     return data.publicUrl;
 };
 
+// Upload media for a community post
+export const uploadPostMedia = async (userId: string, file: File): Promise<string | null> => {
+    const filePath = `public/${userId}/posts/${Date.now()}_${file.name}`;
+
+    const { error } = await supabase.storage
+        .from('post_media') // This requires a 'post_media' bucket in Supabase
+        .upload(filePath, file, { upsert: true });
+
+    if (error) {
+        console.error('Error uploading post media:', error);
+        return null;
+    }
+
+    const { data } = supabase.storage
+        .from('post_media')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+};
+
 // Update the current user's password
 export const updateUserPassword = async (newPassword: string) => {
     const { data, error } = await supabase.auth.updateUser({ password: newPassword });
