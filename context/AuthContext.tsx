@@ -64,33 +64,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
   // --- RE-ARCHITECTED AUTH FLOW ---
-  // This is now the single source of truth for authentication state.
-  // It handles initial session load, sign-ins, and sign-outs reliably.
+  // This new useEffect handles the initial session check robustly on page load/refresh.
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        try {
-          const isAdminImpersonating = !!sessionStorage.getItem('impersonation_admin');
-          if (session?.user && !isAdminImpersonating) {
+    let isMounted = true;
+
+    async function initializeSession() {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error fetching session on initial load:", error.message);
+        }
+
+        if (isMounted) {
+          if (session) {
             const profile = await fetchAndMapProfile(session.user);
             setUser(profile);
-          } else if (!isAdminImpersonating) {
+          } else {
             setUser(null);
           }
-        } catch (error) {
-           console.error("Error processing auth state change:", error);
-           setUser(null);
-        } finally {
-          // This guarantees the loading state is always resolved, fixing the stuck screen.
-          setLoading(false);
+        }
+      } catch (e) {
+        console.error("Catastrophic error during session initialization:", e);
+        if (isMounted) setUser(null);
+      } finally {
+        // This is the GUARANTEE that the loading state is always resolved,
+        // preventing the app from getting stuck on the loading skeleton.
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    initializeSession();
+
+    // This listener handles live changes that happen AFTER the initial load (e.g., login, logout).
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (isMounted) {
+          if (session) {
+            const profile = await fetchAndMapProfile(session.user);
+            setUser(profile);
+          } else {
+            setUser(null);
+          }
         }
       }
     );
 
     return () => {
+      isMounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
+
 
   const login = useCallback(async (
     userId: string,
@@ -117,7 +141,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // On success, the `onAuthStateChange` listener will handle everything else.
       return { success: true, error: null };
 
     } catch (e) {
@@ -131,7 +154,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     sessionStorage.removeItem('impersonation_admin');
     setImpersonatedUser(null);
     setUser(null);
-    // The listener will handle the user state change.
   }, []);
   
   const toggleFollow = useCallback((userId: string) => {
