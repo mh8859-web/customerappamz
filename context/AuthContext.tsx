@@ -23,7 +23,6 @@ interface AuthContextType {
   startImpersonation: (targetUser: User) => void;
   stopImpersonation: () => void;
   impersonatedUser: User | null;
-  // New Follow/Unfollow functionality
   following: Set<string>;
   toggleFollow: (userId: string) => void;
 }
@@ -62,22 +61,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
-  // State for the follow system (client-side simulation)
   const [following, setFollowing] = useState<Set<string>>(new Set());
 
+  // --- RE-ARCHITECTED AUTH FLOW ---
+  // This is now the single source of truth for authentication state.
+  // It handles initial session load, sign-ins, and sign-outs reliably.
   useEffect(() => {
-    setLoading(true);
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (!sessionStorage.getItem('impersonation_admin')) {
-            if (session?.user) {
-              const profile = await fetchAndMapProfile(session.user);
-              setUser(profile);
-            } else {
-              setUser(null);
-            }
+        try {
+          const isAdminImpersonating = !!sessionStorage.getItem('impersonation_admin');
+          if (session?.user && !isAdminImpersonating) {
+            const profile = await fetchAndMapProfile(session.user);
+            setUser(profile);
+          } else if (!isAdminImpersonating) {
+            setUser(null);
+          }
+        } catch (error) {
+           console.error("Error processing auth state change:", error);
+           setUser(null);
+        } finally {
+          // This guarantees the loading state is always resolved, fixing the stuck screen.
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
@@ -91,7 +97,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
-      setLoading(true); 
       const trimmedUserId = userId.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
         .from("users")
@@ -100,26 +105,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (profileError || !profile?.email) {
-        setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword(
-        {
-          email: profile.email,
-          password: password.trim(),
-        }
-      );
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: password.trim(),
+      });
       
       if (signInError) {
-        setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
+      // On success, the `onAuthStateChange` listener will handle everything else.
       return { success: true, error: null };
 
     } catch (e) {
-      setLoading(false);
       console.error("Login error:", e);
       return { success: false, error: "UNKNOWN_ERROR" };
     }
@@ -130,6 +131,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     sessionStorage.removeItem('impersonation_admin');
     setImpersonatedUser(null);
     setUser(null);
+    // The listener will handle the user state change.
   }, []);
   
   const toggleFollow = useCallback((userId: string) => {
@@ -197,8 +199,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     startImpersonation,
     stopImpersonation,
     impersonatedUser,
-    following, // provide follow state
-    toggleFollow, // provide follow function
+    following,
+    toggleFollow,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

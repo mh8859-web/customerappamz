@@ -9,6 +9,7 @@ import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile } from '../services/api';
+import { AMAZ_SUPPORT_USER_ID } from '../constants';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -91,14 +92,22 @@ const ProjectsList: React.FC = () => {
         await createRecord('quotes', initialQuote);
     }
     
-    // 4. Refresh data and navigate
+    // 4. Send automated welcome message to chat
+    const supportMessage = `Welcome to your new project, "${newProject.title}"! Your assigned designer and our team will be in touch shortly. You can view your project details and track progress here.`;
+    await createRecord('messages', {
+        chat_id: newProject.id,
+        sender_id: AMAZ_SUPPORT_USER_ID,
+        body: supportMessage,
+    });
+    
+    // 5. Refresh data and navigate
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);
   };
 
   const projectsForUser = projects.filter(p => 
-      user.role === 'Admin' || p.designerId === user.id || p.customerId === user.id
+      user.role === 'Admin' || user.role === 'Sub-Admin' || p.designerId === user.id || p.customerId === user.id
   );
 
   const activeProjects = projectsForUser.filter(p => p.status === 'Active');

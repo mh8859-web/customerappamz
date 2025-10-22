@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Project } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { CheckCircleIcon, MicIcon, VideoIcon } from '../icons';
+// FIX: Changed VideoIcon to VideoCameraIcon, as 'VideoIcon' is not an exported member of '../icons'.
+import { CheckCircleIcon, MicIcon, VideoCameraIcon } from '../icons';
 
 interface TestimonialFlowProps {
     project: Project;
@@ -69,7 +70,7 @@ const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
                         Record Voice
                     </Button>
                     <Button onClick={() => setSubmitted(true)} className="flex items-center gap-2">
-                        <VideoIcon className="w-5 h-5" />
+                        <VideoCameraIcon className="w-5 h-5" />
                         Record Video
                     </Button>
                 </div>

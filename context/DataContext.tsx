@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
@@ -30,6 +30,9 @@ interface DataContextType {
     feedComments: FeedComment[];
     refetchData: () => Promise<void>;
     loading: boolean;
+    // For notifications
+    unreadCounts: Record<string, number>;
+    markChatAsRead: (projectId: string) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -42,7 +45,9 @@ const mapToCamelCase = <T,>(data: any[] | null, mapper: (item: any) => T): T[] =
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { user, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(true);
+    const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
+    // ... (all other state declarations)
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [designs, setDesigns] = useState<Design[]>([]);
@@ -64,7 +69,62 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [posts, setPosts] = useState<Post[]>([]);
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
 
+    const conversations = useMemo(() => {
+        if (!user || !projects) return [];
+        const activeProjects = projects.filter(p => p.status === 'Active');
+        switch (user.role) {
+            case 'Admin':
+            case 'Sub-Admin':
+                return activeProjects;
+            case 'Designer':
+                return activeProjects.filter(p => p.designerId === user.id);
+            case 'Customer':
+                return activeProjects.filter(p => p.customerId === user.id);
+            default:
+                return [];
+        }
+    }, [user, projects]);
+
+    const calculateUnreadCounts = useCallback(() => {
+        if (!user || messages.length === 0 || conversations.length === 0) {
+            setUnreadCounts({});
+            return;
+        }
+
+        const counts: Record<string, number> = {};
+        conversations.forEach(project => {
+            const lastViewed = sessionStorage.getItem(`lastViewed_${project.id}`);
+            const lastViewedTimestamp = lastViewed ? new Date(lastViewed).getTime() : 0;
+            
+            const unread = messages.filter(m => 
+                m.chatId === project.id && 
+                m.senderId !== user.id &&
+                new Date(m.createdAt).getTime() > lastViewedTimestamp
+            ).length;
+            
+            if (unread > 0) {
+                counts[project.id] = unread;
+            }
+        });
+        setUnreadCounts(counts);
+
+    }, [messages, user, conversations]);
+
+    useEffect(() => {
+        calculateUnreadCounts();
+    }, [calculateUnreadCounts]);
+    
+    const markChatAsRead = useCallback((projectId: string) => {
+        sessionStorage.setItem(`lastViewed_${projectId}`, new Date().toISOString());
+        setUnreadCounts(prev => {
+            const newCounts = { ...prev };
+            delete newCounts[projectId];
+            return newCounts;
+        });
+    }, []);
+
     const fetchData = useCallback(async () => {
+        // ... (rest of the fetchData function remains the same)
         if (!user) {
             setLoading(false);
             return;
@@ -122,7 +182,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 mediaType: p.media_type,
                 beforeMediaUrl: p.before_media_url,
                 createdAt: p.created_at,
-                // FIX: Ensure required fields have default values
                 reactions: p.reactions || [],
                 visibility: p.visibility || 'everyone',
                 tags: p.tags || [],
@@ -149,6 +208,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments,
         refetchData: fetchData,
         loading,
+        unreadCounts,
+        markChatAsRead,
     };
 
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

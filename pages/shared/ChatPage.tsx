@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -11,8 +11,14 @@ import UserNameDisplay from '../../components/ui/UserNameDisplay';
 const ChatPage: React.FC = () => {
   const { projectId: activeProjectId } = useParams();
   const { user } = useAuth();
-  const { projects, loading: dataLoading } = useData();
+  const { projects, loading: dataLoading, unreadCounts, markChatAsRead } = useData();
   const { findUserById, loading: usersLoading } = useUsers();
+
+  useEffect(() => {
+    if (activeProjectId) {
+      markChatAsRead(activeProjectId);
+    }
+  }, [activeProjectId, markChatAsRead]);
 
   const conversations: Project[] = React.useMemo(() => {
     if (!user || !projects) return [];
@@ -69,26 +75,25 @@ const ChatPage: React.FC = () => {
             let partnerName = 'Chat';
             let avatarUrl = '';
             
-            // FIX: Use a type guard ('in' operator) to correctly differentiate between
-            // a single user partner and an admin's view of customer/designer partners.
-            // This resolves TypeScript errors and makes the logic for displaying names more robust.
-            if (partner && 'customer' in partner) {
-              // Admin/Sub-Admin view, where partner is { customer, designer }
-              const customerName = partner.customer?.fullName.split(' ')[0];
-              const designerName = partner.designer?.fullName.split(' ')[0];
-              
-              if (customerName && designerName) {
-                partnerName = `${customerName} / ${designerName}`;
+            if (partner) {
+              if ('customer' in partner) {
+                const customerName = partner.customer?.fullName.split(' ')[0];
+                const designerName = partner.designer?.fullName.split(' ')[0];
+                
+                if (customerName && designerName) {
+                  partnerName = `${customerName} / ${designerName}`;
+                } else {
+                  partnerName = customerName || designerName || project.title;
+                }
+  
+                avatarUrl = partner.customer?.avatarUrl || '';
               } else {
-                partnerName = customerName || designerName || project.title;
+                partnerName = partner.fullName || 'Chat';
+                avatarUrl = partner.avatarUrl || '';
               }
-
-              avatarUrl = partner.customer?.avatarUrl || '';
-            } else if (partner) {
-              // Designer/Customer view, where partner is a single User
-              partnerName = partner.fullName || 'Chat';
-              avatarUrl = partner.avatarUrl || '';
             }
+            
+            const unreadCount = unreadCounts[project.id] || 0;
 
             return (
               <NavLink
@@ -96,7 +101,14 @@ const ChatPage: React.FC = () => {
                 to={`/chat/${project.id}`}
                 className={({ isActive }) => `flex items-start gap-3 p-3 border-b border-border-color transition-colors ${isActive ? 'bg-secondary' : 'hover:bg-page-bg'}`}
               >
-                <img src={avatarUrl} alt={partnerName} className="w-10 h-10 rounded-full flex-shrink-0"/>
+                <div className="relative flex-shrink-0">
+                  <img src={avatarUrl} alt={partnerName} className="w-10 h-10 rounded-full"/>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 block h-4 w-4 rounded-full bg-brand-blue text-white text-xs flex items-center justify-center border-2 border-surface">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
                 <div className="flex-1 overflow-hidden">
                   <h2 className="font-semibold text-text-primary truncate">{project.title}</h2>
                   <p className="text-sm text-text-secondary truncate">{partnerName}</p>

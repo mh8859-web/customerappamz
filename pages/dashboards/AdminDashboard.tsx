@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { BriefcaseIcon, DollarSignIcon, UsersIcon } from '../../components/icons';
-import { STAGE_DISPLAY_NAMES } from '../../constants';
+import { STAGE_DISPLAY_NAMES, AMAZ_SUPPORT_USER_ID } from '../../constants';
 import CreateProjectModal from '../../components/admin/CreateProjectModal';
 import { Project, Quote } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -72,8 +72,6 @@ const AdminDashboard: React.FC = () => {
     const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
     if (!quoteUrl) {
         alert('Project created, but failed to upload quote. Please upload it manually.');
-        // Optionally, delete the created project for consistency
-        // await deleteRecord('projects', newProject.id);
     } else {
         // 3. Create the quote record with the file URL
         const initialQuote = {
@@ -85,7 +83,15 @@ const AdminDashboard: React.FC = () => {
         await createRecord('quotes', initialQuote);
     }
     
-    // 4. Refresh data and navigate
+    // 4. Send automated welcome message to chat
+    const supportMessage = `Welcome to your new project, "${newProject.title}"! Your assigned designer and our team will be in touch shortly. You can view your project details and track progress here.`;
+    await createRecord('messages', {
+        chat_id: newProject.id,
+        sender_id: AMAZ_SUPPORT_USER_ID,
+        body: supportMessage,
+    });
+
+    // 5. Refresh data and navigate
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);

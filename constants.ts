@@ -23,3 +23,6 @@ export const STAGE_DISPLAY_NAMES: Record<ProjectStage, string> = {
     awaiting_admin_completion_approval: 'Awaiting Admin Completion Approval',
     completed: 'Completed',
 };
+
+// A constant ID for the system user that sends automated messages
+export const AMAZ_SUPPORT_USER_ID = '00000000-0000-0000-0000-000000000000';

@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, UserCircleIcon, LogOutIcon } from '../icons';
+import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, UserCircleIcon, LogOutIcon, ChevronDoubleLeftIcon } from '../icons';
 import { Link, useNavigate } from 'react-router-dom';
 import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
+  toggleSidebarCollapse: () => void;
+  isSidebarCollapsed: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
+const Header: React.FC<HeaderProps> = ({ setSidebarOpen, toggleSidebarCollapse, isSidebarCollapsed }) => {
   const { user, logout, isImpersonating, stopImpersonation, impersonatedUser } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -41,6 +43,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
       )}
       <header className="sticky top-0 z-10 h-20 px-4 md:px-8 bg-surface/80 backdrop-blur-sm border-b border-border-color/50 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          {/* Mobile Menu Button */}
           <button
             className="md:hidden text-text-primary"
             onClick={() => setSidebarOpen(true)}
@@ -48,6 +51,16 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           >
             <MenuIcon className="w-6 h-6" />
           </button>
+
+          {/* Desktop Sidebar Toggle Button */}
+          <button
+            className="hidden md:block text-text-primary p-2 rounded-full hover:bg-secondary"
+            onClick={toggleSidebarCollapse}
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <ChevronDoubleLeftIcon className={`w-6 h-6 transition-transform duration-300 ${isSidebarCollapsed ? 'rotate-180' : ''}`} />
+          </button>
+          
           <div className="relative hidden lg:block">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
             <input

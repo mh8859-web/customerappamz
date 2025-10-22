@@ -2,6 +2,7 @@ import React from 'react';
 import { Message, User } from '../../types';
 import { DownloadIcon, FileTextIcon } from '../icons';
 import UserNameDisplay from '../ui/UserNameDisplay';
+import { AMAZ_SUPPORT_USER_ID } from '../../constants';
 
 interface MessageBubbleProps {
   message: Message;
@@ -30,6 +31,15 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0] }> = (
 
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, sender }) => {
+  const isSupportMessage = message.senderId === AMAZ_SUPPORT_USER_ID;
+  const senderToDisplay = isSupportMessage 
+    ? { 
+        fullName: 'Amaz Modular Support', 
+        avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+        role: 'Admin'
+    } as User
+    : sender;
+
   const bubbleClasses = isOwnMessage
     ? 'bg-brand-blue text-white'
     : 'bg-secondary';
@@ -42,12 +52,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage, se
     <div className={`flex flex-col ${alignmentClasses}`}>
         <div className="flex items-start gap-3 max-w-md">
             {!isOwnMessage && (
-                <img src={sender?.avatarUrl} alt={sender?.fullName} className="w-8 h-8 rounded-full" />
+                <img src={senderToDisplay?.avatarUrl} alt={senderToDisplay?.fullName} className="w-8 h-8 rounded-full" />
             )}
             <div className={`rounded-xl p-3 ${bubbleClasses}`}>
                  {!isOwnMessage && (
                     <div className="mb-1">
-                      <UserNameDisplay user={sender} className="text-xs font-bold text-brand-blue" />
+                      <UserNameDisplay user={senderToDisplay} className="text-xs font-bold text-brand-blue" />
                     </div>
                 )}
                 {message.body && <p className="text-sm">{message.body}</p>}
