@@ -82,10 +82,10 @@ const App: React.FC = () => {
           <Route path="admin/overview" element={<AdminOverview />} />
           <Route path="admin/attendance" element={<AttendanceLogs />} />
           <Route path="admin/reports" element={<FinancialReports />} />
+          <Route path="admin/users" element={<UserManagement />} />
 
           {/* Full Admin only */}
           <Route element={<RoleBasedRoutes allowedRoles={["Admin"]} />}>
-            <Route path="admin/users" element={<UserManagement />} />
             <Route path="admin/settings" element={<AdminSettings />} />
           </Route>
         </Route>

@@ -3,6 +3,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { User, UserRole } from '../../types';
 import { USER_ROLES } from '../../constants';
+import AdminChangePasswordModal from './AdminChangePasswordModal';
 
 interface EditUserModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
     verified: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -57,7 +59,6 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
 
         if (trimmedFullName !== user.fullName) updates.fullName = trimmedFullName;
         if (formData.role !== user.role) updates.role = formData.role;
-        // User ID is no longer editable, so it's not included in the updates
         if (formData.verified !== user.verified) updates.verified = formData.verified;
         
         if (Object.keys(updates).length > 0) {
@@ -74,38 +75,50 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user, on
   if (!user) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Edit User: ${user.fullName}`}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Full Name">
-          <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={formInputClasses} required />
-        </FormField>
-        <FormField label="Role">
-            <select name="role" value={formData.role} onChange={handleChange} className={formInputClasses} required>
-                {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
-            </select>
-        </FormField>
-        <FormField label="User ID (Cannot be changed)">
-            <input type="text" name="userId" value={formData.userId} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
-        </FormField>
-         <FormField label="Email (System - Cannot be changed)">
-            <input type="email" value={user.email} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
-        </FormField>
-        
-        <div className="flex items-center">
-            <input type="checkbox" id="edit-verified" name="verified" checked={formData.verified} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
-            <label htmlFor="edit-verified" className="ml-2 block text-sm text-text-primary">
-                Mark as Verified
-            </label>
-        </div>
-        
-        <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+    <>
+      <AdminChangePasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        user={user}
+      />
+      <Modal isOpen={isOpen} onClose={onClose} title={`Edit User: ${user.fullName}`}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <FormField label="Full Name">
+            <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={formInputClasses} required />
+          </FormField>
+          <FormField label="Role">
+              <select name="role" value={formData.role} onChange={handleChange} className={formInputClasses} required>
+                  {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
+              </select>
+          </FormField>
+          <FormField label="User ID (Cannot be changed)">
+              <input type="text" name="userId" value={formData.userId} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
+          </FormField>
+          <FormField label="Email (System - Cannot be changed)">
+              <input type="email" value={user.email} readOnly className={`${formInputClasses} bg-secondary cursor-not-allowed text-text-secondary`} />
+          </FormField>
+          
+          <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                  <input type="checkbox" id="edit-verified" name="verified" checked={formData.verified} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent" />
+                  <label htmlFor="edit-verified" className="ml-2 block text-sm text-text-primary">
+                      Mark as Verified
+                  </label>
+              </div>
+              <Button type="button" variant="secondary" className="!py-1.5 !px-3 !text-xs" onClick={() => setPasswordModalOpen(true)}>
+                  Change Password
+              </Button>
+          </div>
+          
+          <div className="flex justify-end pt-4 gap-3">
+            <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </>
   );
 };
 

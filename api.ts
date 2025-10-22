@@ -1,5 +1,3 @@
-
-
 import { supabase } from './supabaseClient';
 import { User, UserRole } from '../types';
 
@@ -96,7 +94,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
-// NEW: Upload a generic project file (quote, design, etc.)
+// Upload a generic project file (quote, design, etc.)
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
 
@@ -116,13 +114,12 @@ export const uploadProjectFile = async (projectId: string, file: File): Promise<
     return data.publicUrl;
 };
 
-// NEW: Update the current user's password
+// Update the current user's password
 export const updateUserPassword = async (newPassword: string) => {
     const { data, error } = await supabase.auth.updateUser({ password: newPassword });
     return { data, error };
 };
 
-// Fix: Add missing adminUpdateUserPassword function.
 // NEW: (MOCKED) Admin function to update another user's password
 // In a real app, this would call a secure Supabase Edge Function.
 export const adminUpdateUserPassword = async (userId: string, newPassword: string) => {

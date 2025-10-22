@@ -19,6 +19,10 @@ interface AuthContextType {
   ) => Promise<{ success: boolean; error: string | null }>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
+  isImpersonating: boolean;
+  startImpersonation: (targetUser: User) => void;
+  stopImpersonation: () => void;
+  impersonatedUser: User | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,39 +58,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
-  // This re-architected useEffect hook ensures the app never gets stuck loading.
   useEffect(() => {
-    // 1. Perform a one-time, guaranteed check for the initial session.
-    const checkInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Error during initial session check:", error);
-        setUser(null); // Ensure user is null on error
-      } finally {
-        // 2. GUARANTEE that loading stops, no matter what. This fixes the infinite load.
-        setLoading(false);
-      }
-    };
-
-    checkInitialSession();
-
-    // 3. Listen for subsequent auth changes (e.g., login, logout in another tab).
+    // This is the most robust way to handle auth in Supabase.
+    // The listener fires immediately with the current session state, then
+    // listens for any changes. This avoids all race conditions.
+    setLoading(true);
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+      async (_event, session) => {
+        // Only act if not impersonating
+        if (!sessionStorage.getItem('impersonation_admin')) {
+            if (session?.user) {
+              const profile = await fetchAndMapProfile(session.user);
+              setUser(profile);
+            } else {
+              setUser(null);
+            }
         }
+        setLoading(false); // ALWAYS stop loading after the first check.
       }
     );
 
@@ -100,7 +90,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
-      setLoading(true); // Show loader immediately
+      setLoading(true); 
       const trimmedUserId = userId.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
         .from("users")
@@ -113,29 +103,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
 
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword(
+      const { error: signInError } = await supabase.auth.signInWithPassword(
         {
           email: profile.email,
           password: password.trim(),
         }
       );
       
-      if (signInError || !signInData.user) {
+      if (signInError) {
         setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // Instead of waiting for the listener, we now take control for a deterministic flow.
-      const userProfile = await fetchAndMapProfile(signInData.user);
-      if (!userProfile) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setLoading(false);
-          return { success: false, error: "PROFILE_FETCH_FAILED" };
-      }
-
-      setUser(userProfile); // Manually set user state
-      setLoading(false);    // Manually stop loading
+      // The onAuthStateChange listener will handle setting the user and loading state.
+      // We don't need to manually set it here anymore.
       return { success: true, error: null };
 
     } catch (e) {
@@ -147,7 +128,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
+    // Clear any impersonation state on logout
+    sessionStorage.removeItem('impersonation_admin');
+    setImpersonatedUser(null);
     setUser(null);
+  }, []);
+
+  // --- New Impersonation Logic ---
+  const startImpersonation = useCallback((targetUser: User) => {
+    if (user && user.role === 'Admin') {
+      sessionStorage.setItem('impersonation_admin', JSON.stringify(user));
+      setImpersonatedUser(targetUser);
+      setUser(targetUser); // Switch the current user context
+    }
+  }, [user]);
+
+  const stopImpersonation = useCallback(() => {
+    const adminUserJson = sessionStorage.getItem('impersonation_admin');
+    if (adminUserJson) {
+      const adminUser = JSON.parse(adminUserJson);
+      setUser(adminUser); // Switch back to the admin user
+      setImpersonatedUser(null);
+      sessionStorage.removeItem('impersonation_admin');
+    }
   }, []);
   
   // --- Inactivity Logout Logic ---
@@ -156,44 +159,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
-      // If there's a user, set a new timer to log them out after 1 minute.
-      if (user) {
+      if (user && !impersonatedUser) { // Do not auto-logout during impersonation
         inactivityTimer = window.setTimeout(() => {
-          // Timer expired, call the logout function.
           logout();
-        }, 1 * 60 * 1000); // 1 minute
+        }, 10 * 60 * 1000); // 10 minutes
       }
     };
 
-    // List of events that indicate user activity.
     const activityEvents: (keyof WindowEventMap)[] = [
       'mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'
     ];
 
-    // If a user is logged in, start tracking their activity.
     if (user) {
-      // Add event listeners that reset the timer on any activity.
       activityEvents.forEach(event => {
         window.addEventListener(event, resetInactivityTimer);
       });
-      // Start the initial timer.
       resetInactivityTimer();
     }
 
-    // Cleanup function: This runs when the component unmounts or when the user state changes.
     return () => {
       clearTimeout(inactivityTimer);
       activityEvents.forEach(event => {
         window.removeEventListener(event, resetInactivityTimer);
       });
     };
-  }, [user, logout]); // Re-run this effect whenever the user logs in or out.
+  }, [user, logout, impersonatedUser]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
-  const value = { user, loading, login, logout, updateUser };
+  const value = { 
+    user, 
+    loading, 
+    login, 
+    logout, 
+    updateUser, 
+    isImpersonating: !!impersonatedUser,
+    startImpersonation,
+    stopImpersonation,
+    impersonatedUser
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

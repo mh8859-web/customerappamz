@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
 import { EditIcon } from '../../components/icons';
 import { uploadAvatar, updateRecord } from '../../services/api';
-import ChangePasswordModal from '../../components/auth/ChangePasswordModal';
+import UserNameDisplay from '../../components/ui/UserNameDisplay';
 
 const MyAccount: React.FC = () => {
     const { user, updateUser } = useAuth();
@@ -14,7 +14,6 @@ const MyAccount: React.FC = () => {
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
     
     useEffect(() => {
         if(user) {
@@ -93,13 +92,9 @@ const MyAccount: React.FC = () => {
 
     return (
         <>
-            <ChangePasswordModal 
-                isOpen={isPasswordModalOpen}
-                onClose={() => setPasswordModalOpen(false)}
-            />
             <div className="space-y-6 max-w-2xl mx-auto">
                 <div className="flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-text-headline">My Account</h1>
+                    <h1 className="text-3xl font-bold font-display text-text-headline">My Account</h1>
                     <div className="flex gap-2">
                         {isEditing && (
                             <Button onClick={handleCancel} variant="secondary" disabled={isSaving}>
@@ -127,13 +122,18 @@ const MyAccount: React.FC = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm font-medium text-text-headline mb-1">Full Name</label>
-                                    <input 
-                                        type="text" 
-                                        value={formData.fullName}
-                                        onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                                        readOnly={!isEditing}
-                                        className={`${inputClasses} ${!isEditing ? 'bg-surface border-transparent' : ''}`}
-                                    />
+                                    {isEditing ? (
+                                        <input 
+                                            type="text" 
+                                            value={formData.fullName}
+                                            onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                                            className={inputClasses}
+                                        />
+                                    ) : (
+                                        <div className={`${inputClasses} bg-surface border-transparent flex items-center !p-3`}>
+                                            <UserNameDisplay user={user} textClassName="text-text-primary" />
+                                        </div>
+                                    )}
                                 </div>
                                  <div>
                                     <label className="block text-sm font-medium text-text-headline mb-1">Email (System)</label>
@@ -158,10 +158,14 @@ const MyAccount: React.FC = () => {
                     </div>
                 </Card>
                 <Card>
-                    <h2 className="text-lg font-bold text-text-headline mb-2">Security</h2>
-                    <div className="flex justify-between items-center">
-                        <p className="text-text-secondary">Update your password to keep your account secure.</p>
-                        <Button variant="secondary" onClick={() => setPasswordModalOpen(true)}>Change Password</Button>
+                    <h2 className="text-lg font-bold text-text-headline mb-2">Role Information</h2>
+                    <div className="flex items-center gap-2 bg-page-bg p-3 rounded-xl">
+                        <p className="text-text-secondary">Your Current Role:</p>
+                        <UserNameDisplay 
+                            user={{ ...user, fullName: user.role }} 
+                            showAvatar={false} 
+                            textClassName="font-semibold text-text-primary" 
+                        />
                     </div>
                 </Card>
             </div>

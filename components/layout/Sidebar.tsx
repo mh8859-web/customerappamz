@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6" />, label: 'Community Hub' },
       { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6" />, label: 'Project Wall' },
       { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6" />, label: 'Projects' },
+      { to: '/admin/users', icon: <UsersIcon className="w-6 h-6" />, label: 'User Management' },
       { to: '/admin/attendance', icon: <ClockIcon className="w-6 h-6" />, label: 'Attendance' },
       { to: '/admin/reports', icon: <PieChartIcon className="w-6 h-6" />, label: 'Financial Reports' },
       { to: '/downloads', icon: <DownloadIcon className="w-6 h-6" />, label: 'Downloads' },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { User, UserRole } from '../../types';
@@ -8,13 +8,22 @@ import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import { EyeIcon } from '../../components/icons';
 
 const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { users, loading, refetchUsers } = useUsers();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, startImpersonation } = useAuth();
+
+  // Filter users based on role. Sub-Admins cannot see Admins.
+  const filteredUsers = useMemo(() => {
+    if (currentUser?.role === 'Sub-Admin') {
+      return users.filter(user => user.role !== 'Admin');
+    }
+    return users;
+  }, [users, currentUser]);
 
   const handleCreateUser = async (newUser: {
     fullName: string;
@@ -24,26 +33,18 @@ const UserManagement: React.FC = () => {
     verified: boolean;
   }) => {
     try {
-      // 1. Generate a "proxy" email for Supabase Auth, which is invisible to the user.
       const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
-
-      // 2. Prepare metadata to be stored in the public.users table via the trigger.
       const metadata = {
           fullName: newUser.fullName,
           role: newUser.role,
           userId: newUser.userId,
       };
 
-      // 3. Call the Supabase Auth sign-up function.
       const { user, error: signUpError } = await signUpNewUser(proxyEmail, newUser.password, metadata);
 
-      if (signUpError) {
-          throw signUpError;
-      }
+      if (signUpError) throw signUpError;
       
       if (user) {
-          // 4. The trigger creates the user profile, but we now explicitly set all
-          // necessary fields to make the process more robust against trigger failures.
           const { error: updateError } = await updateRecord('users', user.id, {
               full_name: newUser.fullName,
               role: newUser.role,
@@ -52,19 +53,16 @@ const UserManagement: React.FC = () => {
           });
           
           if (updateError) {
-               // This is a partial failure, but we still want to refresh and close.
-               // The user is created in auth but not correctly in public.users.
-              alert(`User account was created, but setting the profile failed: ${updateError.message}. Please edit the user manually to set their User ID and Verified status.`);
+              alert(`User account was created, but setting the profile failed: ${updateError.message}. Please edit the user manually.`);
           }
       }
       
-      // 5. Refresh the user list to show the new user.
       await refetchUsers(); 
-      setCreateUserModalOpen(false); // Close modal only after all operations succeed
+      setCreateUserModalOpen(false);
     } catch (error) {
         alert(`Failed to create user: ${(error as Error).message}`);
         console.error(error);
-        setCreateUserModalOpen(false); // Ensure modal closes even on failure
+        setCreateUserModalOpen(false);
     }
   };
 
@@ -74,7 +72,6 @@ const UserManagement: React.FC = () => {
   };
 
   const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
-    // Map camelCase from the app to snake_case for the database
     const updatesForDb: Record<string, any> = {};
     if (updates.fullName !== undefined) updatesForDb.full_name = updates.fullName;
     if (updates.role !== undefined) updatesForDb.role = updates.role;
@@ -85,12 +82,11 @@ const UserManagement: React.FC = () => {
     if (error) {
         alert(`Failed to update user: ${error.message}`);
     } else {
-        await refetchUsers(); // Refresh list on successful update
+        await refetchUsers();
     }
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
-    // Prevent an admin from deleting their own account
     if (currentUser && currentUser.id === userToDelete.id) {
       alert("For security reasons, you cannot delete your own account from this panel.");
       return;
@@ -108,6 +104,16 @@ const UserManagement: React.FC = () => {
       }
     }
   };
+  
+  const handleImpersonate = (userToImpersonate: User) => {
+      if (currentUser && currentUser.id === userToImpersonate.id) {
+          alert("You cannot impersonate yourself.");
+          return;
+      }
+      if (window.confirm(`You are about to view the application as ${userToImpersonate.fullName}. You will see exactly what they see. Do you want to continue?`)) {
+          startImpersonation(userToImpersonate);
+      }
+  }
 
   return (
     <>
@@ -141,7 +147,7 @@ const UserManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user: User, index: number) => (
+                {filteredUsers.map((user: User, index: number) => (
                   <tr key={user.id} className={`border-t border-border-color ${index === 0 ? 'border-t-0' : ''}`}>
                     <td className="px-6 py-4 font-medium text-text-primary">
                         <UserNameDisplay user={user} showAvatar={true} textClassName="font-semibold"/>
@@ -160,8 +166,11 @@ const UserManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex gap-2 justify-end">
+                          <Button variant="secondary" title="View as User" className="!px-2 !py-1 text-xs" onClick={() => handleImpersonate(user)} disabled={currentUser?.id === user.id}>
+                            <EyeIcon className="w-4 h-4" />
+                          </Button>
                           <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                          <Button variant="secondary" className="!px-3 !py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-500" onClick={() => handleDeleteUser(user)}>Delete</Button>
+                          <Button variant="secondary" className="!px-3 !py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-500" onClick={() => handleDeleteUser(user)} disabled={currentUser?.id === user.id}>Delete</Button>
                       </div>
                     </td>
                   </tr>
