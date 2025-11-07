@@ -159,6 +159,7 @@ const UserManagement: React.FC = () => {
                         user.role === 'Admin' ? 'bg-brand-blue/20 text-brand-blue' :
                         user.role === 'Sub-Admin' ? 'bg-purple-500/20 text-purple-500' :
                         user.role === 'Designer' ? 'bg-orange-500/20 text-orange-500' :
+                        user.role === 'Accounts' ? 'bg-teal-500/20 text-teal-500' :
                         'bg-green-500/20 text-green-500'
                       }`}>
                         {user.role}

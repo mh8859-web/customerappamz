@@ -11,18 +11,22 @@ interface UserNameDisplayProps {
   imageSize?: string;
 }
 
+// FIX: Added 'Accounts' role to satisfy the 'Record<UserRole, string>' type.
 const badgeUrlMap: Record<UserRole, string> = {
   Admin: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
+  Accounts: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
 };
 
+// FIX: Added 'Accounts' role to satisfy the 'Record<UserRole, { title: string; text: string; }>' type.
 const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     Admin: { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
     'Sub-Admin': { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
     Designer: { title: 'Official Amaz Employee', text: 'This Account Is Verified And This Account Belong To Senior Level Designers, Other Team' },
     Customer: { title: 'Official Amaz Client', text: 'This Account Is Verified And This Account Belong To Our Clients' },
+    Accounts: { title: 'Official Amaz Finance Team', text: 'This Account Is Verified And This Account Belongs To The Finance Department.' },
 };
 
 const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-8 h-8' }) => {

@@ -27,11 +27,13 @@ type UnifiedUpdate = {
     hours?: number;
 };
 
+// FIX: Added 'Accounts' role to satisfy the 'Record<UserRole, string[]>' type.
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs', 'Milestones'],
     Designer: ['Live Updates', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
     Admin: ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
     'Sub-Admin': ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+    Accounts: ['Live Updates', 'Quotes & Docs', 'Milestones'],
 };
 
 // Moved outside for performance: prevents re-declaration on every render.

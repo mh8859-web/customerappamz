@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import DesignerDashboard from "./pages/dashboards/DesignerDashboard";
 import CustomerDashboard from "./pages/dashboards/CustomerDashboard";
+import AccountsDashboard from "./pages/dashboards/AccountsDashboard"; // Import new dashboard
 import ProjectDetails from "./pages/ProjectDetails";
 import ProjectsList from "./pages/ProjectsList";
 import UserManagement from "./pages/admin/UserManagement";
@@ -41,6 +42,8 @@ const DashboardRedirect: React.FC = () => {
       return <Navigate to="/designer/dashboard" replace />;
     case "Customer":
       return <Navigate to="/customer/dashboard" replace />;
+    case "Accounts":
+      return <Navigate to="/accounts/dashboard" replace />;
     default:
       return <Navigate to="/login" replace />;
   }
@@ -110,6 +113,11 @@ const App: React.FC = () => {
         <Route element={<RoleBasedRoutes allowedRoles={["Customer"]} />}>
           <Route path="customer/dashboard" element={<CustomerDashboard />} />
           <Route path="customer/billing" element={<BillingHistory />} />
+        </Route>
+
+        {/* Accounts */}
+        <Route element={<RoleBasedRoutes allowedRoles={["Accounts"]} />}>
+          <Route path="accounts/dashboard" element={<AccountsDashboard />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -3,7 +3,7 @@ import { Post, User, FeedComment, ReactionType, Project } from '../../types';
 import Card from '../ui/Card';
 import UserNameDisplay from '../ui/UserNameDisplay';
 import { useUsers } from '../../context/UserContext';
-import { useAuth } from '../../context/AuthContext'; // Import useAuth for follow system
+import { useAuth } from '../../context/AuthContext';
 import { ChatBubbleOvalLeftEllipsisIcon, ShareIcon, EllipsisHorizontalIcon, PinIcon, HeartIcon, SparklesIcon, QuestionMarkCircleIcon, HandRaisedIcon, BriefcaseIcon, GlobeAltIcon, UserGroupIcon, ThumbUpIcon, PaintBrushIcon, BuildingOffice2Icon } from '../icons';
 import CommentSection from './CommentSection';
 import { Link } from 'react-router-dom';
@@ -56,7 +56,6 @@ interface PostCardProps {
 
 const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projects, layout, onReact, onAddComment, onDelete, onVote, onPinToggle, onTagClick }) => {
     const { findUserById } = useUsers();
-    const { following, toggleFollow } = useAuth(); // Get follow state and function
     const author = findUserById(post.authorId);
     const [showComments, setShowComments] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
@@ -66,9 +65,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
     const isAdmin = currentUser.role === 'Admin';
     const project = useMemo(() => post.projectId ? projects.find(p => p.id === post.projectId) : null, [post.projectId, projects]);
 
-    const isFollowingAuthor = author ? following.has(author.id) : false;
     const isTeamMember = author && (author.role === 'Admin' || author.role === 'Sub-Admin' || author.role === 'Designer');
-    const showFollowButton = isTeamMember && author?.id !== currentUser.id;
 
     const visibilityDetails = useMemo(() => {
         switch(post.visibility) {
@@ -117,14 +114,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, comments, currentUser, projec
                         <div>
                             <div className="flex items-center gap-2">
                                 <UserNameDisplay user={author} textClassName="font-semibold text-text-primary" />
-                                {showFollowButton && (
-                                    <>
-                                        <span className="text-text-secondary">&middot;</span>
-                                        <button onClick={() => author && toggleFollow(author.id)} className={`text-sm font-semibold ${isFollowingAuthor ? 'text-text-secondary' : 'text-brand-blue'}`}>
-                                            {isFollowingAuthor ? 'Following' : 'Follow'}
-                                        </button>
-                                    </>
-                                )}
                             </div>
                              <div className="flex items-center gap-2 text-xs text-text-secondary">
                                 {post.isPinned && <span className="flex items-center gap-1 font-semibold text-text-secondary"><PinIcon className="w-3.5 h-3.5"/> Pinned</span>}

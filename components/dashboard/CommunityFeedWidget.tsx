@@ -53,21 +53,18 @@ const CommunityFeedWidget: React.FC = () => {
         if (!user) return [];
 
         const canUserSeePost = (post: Post): boolean => {
-            if (user.role === 'Admin' || user.role === 'Sub-Admin') return true;
-            
-            switch (post.visibility) {
-                case 'everyone':
-                    return true;
-                case 'team_only':
-                    return user.role === 'Designer';
-                case 'project_members': {
-                    if (!post.projectId) return false;
-                    const project = projects.find(p => p.id === post.projectId);
-                    if (!project) return false;
-                    return user.id === project.customerId || user.id === project.designerId;
-                }
-                default:
-                    return true;
+            const isTeamMember = user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer';
+
+            if (post.projectId) {
+                // Post is linked to a project
+                const project = projects.find(p => p.id === post.projectId);
+                if (!project) return false; // Should not be visible if project is not found
+
+                // Check if user is on the project team
+                return user.id === project.customerId || user.id === project.designerId || user.id === project.adminId;
+            } else {
+                // Post is not linked to a project, treat as "team only"
+                return isTeamMember;
             }
         };
 

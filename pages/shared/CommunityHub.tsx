@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 // FIX: Import ReactionType to resolve TypeScript error.
-import { Post, ReactionType } from '../../types';
+import { Post, ReactionType, PostVisibility } from '../../types';
 import CreatePost from '../../components/feed/CreatePost';
 import Modal from '../../components/ui/Modal';
 import Button from '../../components/ui/Button';
@@ -37,21 +37,18 @@ const CommunityHub: React.FC = () => {
 
 
         const canUserSeePost = (post: Post): boolean => {
-            if (user.role === 'Admin') return true;
-            
-            switch (post.visibility) {
-                case 'everyone':
-                    return true;
-                case 'team_only':
-                    return user.role === 'Designer' || user.role === 'Sub-Admin';
-                case 'project_members': {
-                    if (!post.projectId) return false;
-                    const project = projects.find(p => p.id === post.projectId);
-                    if (!project) return false;
-                    return user.id === project.customerId || user.id === project.designerId;
-                }
-                default:
-                    return true;
+            const isTeamMember = user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer';
+
+            if (post.projectId) {
+                // Post is linked to a project
+                const project = projects.find(p => p.id === post.projectId);
+                if (!project) return false; // Should not be visible if project is not found
+
+                // Check if user is on the project team
+                return user.id === project.customerId || user.id === project.designerId || user.id === project.adminId;
+            } else {
+                // Post is not linked to a project, treat as "team only"
+                return isTeamMember;
             }
         };
 
@@ -77,7 +74,7 @@ const CommunityHub: React.FC = () => {
     const handleCreatePost = async (
         content: string, mediaFile?: File, addPoll?: boolean, projectId?: string,
         postType?: Post['postType'], showcaseDetails?: Post['showcaseDetails'],
-        beforeMediaFile?: File, visibility?: Post['visibility']
+        beforeMediaFile?: File
     ) => {
         let mediaUrl: string | undefined;
         let beforeMediaUrl: string | undefined;
@@ -99,13 +96,15 @@ const CommunityHub: React.FC = () => {
             beforeMediaUrl = uploadedBeforeUrl;
         }
 
+        const newVisibility: PostVisibility = projectId ? 'project_members' : 'team_only';
+        
         const newPostData = {
             author_id: user.id, content, media_url: mediaUrl,
             media_type: mediaFile?.type.startsWith('image/') ? 'image' : 'video',
             before_media_url: beforeMediaUrl, reactions: [], is_pinned: false,
             project_id: projectId || null, post_type: postType || 'standard',
             showcase_details: showcaseDetails, tags: content.match(/#\w+/g) || [],
-            visibility: visibility || 'everyone',
+            visibility: newVisibility,
         };
         await createRecord('posts', newPostData);
         await refetchData();

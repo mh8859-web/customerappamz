@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
-import { BuildingIcon, ShieldCheckIcon, PaletteIcon, CreditCardIcon, MailIcon, DatabaseIcon } from '../../components/icons';
+import { BuildingIcon, ShieldCheckIcon, PaletteIcon, CreditCardIcon, MailIcon, DatabaseIcon, AlertTriangleIcon } from '../../components/icons';
+import SqlInstructionModal from '../../components/admin/SqlInstructionModal';
 
 type SettingsTab = 'profile' | 'permissions' | 'customization' | 'billing' | 'notifications' | 'security';
 
@@ -230,6 +231,7 @@ const DataSecuritySettings = () => {
 
 const AdminSettings: React.FC = () => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+    const [isSqlModalOpen, setSqlModalOpen] = useState(false);
     
     const settingsTabs = [
         { id: 'profile', label: 'Company Profile', icon: <BuildingIcon className="w-5 h-5" /> },
@@ -253,33 +255,48 @@ const AdminSettings: React.FC = () => {
     };
     
     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-text-headline">Admin Settings</h1>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                <Card className="lg:col-span-1 h-fit">
-                    <nav className="space-y-2">
-                        {settingsTabs.map(tab => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as SettingsTab)}
-                                className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-colors ${
-                                    activeTab === tab.id
-                                        ? 'bg-brand-blue/10 text-brand-blue font-semibold'
-                                        : 'hover:bg-secondary text-text-primary'
-                                }`}
-                            >
-                                {tab.icon}
-                                {tab.label}
-                            </button>
-                        ))}
-                    </nav>
-                </Card>
-                <div className="lg:col-span-3">
-                    {renderContent()}
+        <>
+            <SqlInstructionModal
+                isOpen={isSqlModalOpen}
+                onClose={() => setSqlModalOpen(false)}
+            />
+            <div className="space-y-6">
+                <h1 className="text-3xl font-bold text-text-headline">Admin Settings</h1>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1 h-fit space-y-4">
+                        <Card className="!p-2">
+                            <nav className="space-y-1">
+                                {settingsTabs.map(tab => (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id as SettingsTab)}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                                            activeTab === tab.id
+                                                ? 'bg-brand-blue/10 text-brand-blue font-semibold'
+                                                : 'hover:bg-secondary text-text-primary'
+                                        }`}
+                                    >
+                                        {tab.icon}
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </nav>
+                        </Card>
+                        <Card className="border-red-500/50 bg-red-500/5">
+                            <h3 className="text-lg font-bold text-red-600 mb-2 flex items-center gap-2"><AlertTriangleIcon className="w-5 h-5" />Danger Zone</h3>
+                            <p className="text-sm text-red-800/80 mb-4">Perform advanced administrative actions with caution.</p>
+                            <Button onClick={() => setSqlModalOpen(true)} className="w-full !bg-red-600 hover:!bg-red-700 focus:ring-red-500">
+                                Advanced Admin Actions
+                            </Button>
+                        </Card>
+                    </div>
+                    <div className="lg:col-span-3">
+                        {renderContent()}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

@@ -10,7 +10,7 @@ const UserProfilePage: React.FC = () => {
     const { userId } = useParams<{ userId: string }>();
     const { findUserById, loading: usersLoading } = useUsers();
     const { posts, loading: dataLoading } = useData();
-    const { user: currentUser, following, toggleFollow } = useAuth();
+    const { user: currentUser } = useAuth();
 
     const profileUser = useMemo(() => findUserById(userId || ''), [userId, findUserById]);
     
@@ -46,7 +46,6 @@ const UserProfilePage: React.FC = () => {
          return <div className="text-center text-text-primary">This user's profile is private.</div>;
     }
 
-    const isFollowing = following.has(profileUser.id);
     const isCurrentUser = currentUser?.id === profileUser.id;
 
     return (
@@ -54,11 +53,7 @@ const UserProfilePage: React.FC = () => {
             <UserProfileHeader
                 user={profileUser}
                 postCount={userPosts.length}
-                followerCount={123} // Mocked data
-                followingCount={45} // Mocked data
-                isFollowing={isFollowing}
                 isCurrentUser={isCurrentUser}
-                onFollowToggle={() => toggleFollow(profileUser.id)}
             />
             <main className="mt-8">
                 <ProfilePostGrid posts={userPosts} />

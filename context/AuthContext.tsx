@@ -23,8 +23,6 @@ interface AuthContextType {
   startImpersonation: (targetUser: User) => void;
   stopImpersonation: () => void;
   impersonatedUser: User | null;
-  following: Set<string>;
-  toggleFollow: (userId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +59,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
-  const [following, setFollowing] = useState<Set<string>>(new Set());
 
   // --- RE-ARCHITECTED AUTH FLOW (THE DEFINITIVE FIX) ---
   // This useEffect relies on onAuthStateChange as the single source of truth.
@@ -137,18 +134,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     setUser(null);
   }, []);
   
-  const toggleFollow = useCallback((userId: string) => {
-    setFollowing(prevFollowing => {
-        const newFollowing = new Set(prevFollowing);
-        if (newFollowing.has(userId)) {
-            newFollowing.delete(userId);
-        } else {
-            newFollowing.add(userId);
-        }
-        return newFollowing;
-    });
-  }, []);
-
   const startImpersonation = useCallback((targetUser: User) => {
     if (user && user.role === 'Admin') {
       sessionStorage.setItem('impersonation_admin', JSON.stringify(user));
@@ -202,8 +187,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     startImpersonation,
     stopImpersonation,
     impersonatedUser,
-    following,
-    toggleFollow,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

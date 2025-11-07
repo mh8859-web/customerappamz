@@ -14,8 +14,7 @@ interface CreatePostProps {
     projectId?: string,
     postType?: Post['postType'],
     showcaseDetails?: Post['showcaseDetails'],
-    beforeMediaFile?: File,
-    visibility?: PostVisibility
+    beforeMediaFile?: File
   ) => void;
 }
 

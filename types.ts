@@ -1,6 +1,6 @@
 
 
-export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer';
+export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts';
 
 export interface User {
   id: string;

@@ -105,6 +105,14 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6 flex-shrink-0" />, label: 'Help & Support' },
         { to: '/about', icon: <InfoIcon className="w-6 h-6 flex-shrink-0" />, label: 'About' },
       ],
+      Accounts: [
+        { to: '/accounts/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
+        { to: '/admin/reports', icon: <PieChartIcon className="w-6 h-6 flex-shrink-0" />, label: 'Financial Reports' },
+        { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'All Projects' },
+        { to: '/account', icon: <UserCircleIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Account' },
+        { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6 flex-shrink-0" />, label: 'Support' },
+        { to: '/about', icon: <InfoIcon className="w-6 h-6 flex-shrink-0" />, label: 'About' },
+      ],
     };
   }, [user, totalUnreadCount]);
 

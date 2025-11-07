@@ -16,8 +16,7 @@ interface CreatePostModalProps {
     projectId?: string,
     postType?: Post['postType'],
     showcaseDetails?: Post['showcaseDetails'],
-    beforeMediaFile?: File,
-    visibility?: PostVisibility
+    beforeMediaFile?: File
   ) => void;
 }
 
@@ -31,7 +30,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
     // New state for advanced features
     const [postType, setPostType] = useState<Post['postType']>('standard');
     const [projectId, setProjectId] = useState<string>('');
-    const [visibility, setVisibility] = useState<PostVisibility>('everyone');
     const [showcaseDetails, setShowcaseDetails] = useState({ style: '', materials: '', palette: ''});
     const [beforeMediaFile, setBeforeMediaFile] = useState<File | null>(null);
     const [beforeMediaPreview, setBeforeMediaPreview] = useState<string | null>(null);
@@ -48,7 +46,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
             setAddPoll(false);
             setPostType('standard');
             setProjectId('');
-            setVisibility('everyone');
             setShowcaseDetails({ style: '', materials: '', palette: ''});
             setBeforeMediaFile(null);
             setBeforeMediaPreview(null);
@@ -84,7 +81,7 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
     const handleSubmit = () => {
         try {
             if (content.trim() || mediaFile) {
-                onCreatePost(content, mediaFile || undefined, addPoll, projectId, postType, showcaseDetails, beforeMediaFile || undefined, visibility);
+                onCreatePost(content, mediaFile || undefined, addPoll, projectId, postType, showcaseDetails, beforeMediaFile || undefined);
             }
         } catch (error) {
             console.error("Failed to create post:", error);
@@ -96,12 +93,6 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
 
     const inputClasses = "w-full bg-page-bg/80 border border-border-color rounded-lg p-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80";
     
-    const visibilityOptions = [
-        { id: 'everyone', label: 'Everyone', icon: <GlobeAltIcon className="w-5 h-5"/> },
-        { id: 'team_only', label: 'Team Only', icon: <UserGroupIcon className="w-5 h-5"/> },
-        { id: 'project_members', label: 'Project Members', icon: <BriefcaseIcon className="w-5 h-5"/>, disabled: !projectId },
-    ];
-
     if (!isOpen) {
       return null;
     }
@@ -136,35 +127,11 @@ const CreatePostModal: React.FC<CreatePostModalProps> = ({ isOpen, onClose, user
                         </div>
                     </div>
 
-                    {isDesignerOrAdmin && (
-                        <div className="my-4">
-                            <label className="text-sm font-semibold text-text-primary mb-2 block">Visible to</label>
-                            <div className="flex gap-2 rounded-xl bg-secondary p-1">
-                                {visibilityOptions.map(option => (
-                                    <button 
-                                        key={option.id} 
-                                        onClick={() => !option.disabled && setVisibility(option.id as PostVisibility)}
-                                        disabled={option.disabled}
-                                        className={`flex-1 flex items-center justify-center gap-2 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                                            visibility === option.id 
-                                                ? 'bg-surface shadow-sm text-text-primary font-semibold' 
-                                                : 'text-text-secondary hover:bg-surface/50'
-                                        } ${option.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        title={option.disabled ? 'Link a project to enable this option' : option.label}
-                                    >
-                                        {option.icon}
-                                        {option.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     <textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         placeholder={`Share a project update or inspiration...`}
-                        className="w-full bg-transparent pt-0 pb-4 text-lg text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
+                        className="w-full bg-transparent pt-4 pb-4 text-lg text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
                         rows={3}
                         autoFocus
                     />
