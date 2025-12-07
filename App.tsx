@@ -7,6 +7,9 @@ import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import DesignerDashboard from "./pages/dashboards/DesignerDashboard";
 import CustomerDashboard from "./pages/dashboards/CustomerDashboard";
 import AccountsDashboard from "./pages/dashboards/AccountsDashboard"; // Import new dashboard
+import ProjectHeadDashboard from "./pages/dashboards/ProjectHeadDashboard";
+import ProductionHeadDashboard from "./pages/dashboards/ProductionHeadDashboard";
+import SiteHeadDashboard from "./pages/dashboards/SiteHeadDashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import ProjectsList from "./pages/ProjectsList";
 import UserManagement from "./pages/admin/UserManagement";
@@ -29,9 +32,10 @@ import ProjectWall from "./pages/shared/ProjectWall";
 import AboutPage from "./pages/shared/AboutPage";
 import ChatPage from "./pages/shared/ChatPage";
 import UserProfilePage from "./pages/shared/UserProfilePage"; // Import the new page
+import Button from "./components/ui/Button";
 
 const DashboardRedirect: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
 
   switch (user.role) {
@@ -44,8 +48,25 @@ const DashboardRedirect: React.FC = () => {
       return <Navigate to="/customer/dashboard" replace />;
     case "Accounts":
       return <Navigate to="/accounts/dashboard" replace />;
+    case "Project Head":
+      return <Navigate to="/project-head/dashboard" replace />;
+    case "Production Head":
+      return <Navigate to="/production-head/dashboard" replace />;
+    case "Site Head":
+      return <Navigate to="/site-head/dashboard" replace />;
     default:
-      return <Navigate to="/login" replace />;
+      // Fallback for unknown roles to prevent infinite redirect loops
+      return (
+        <div className="flex flex-col items-center justify-center h-screen bg-page-bg p-4">
+          <div className="bg-surface p-8 rounded-2xl shadow-card text-center max-w-md">
+            <h1 className="text-xl font-bold text-text-primary mb-2">Access Issue</h1>
+            <p className="text-text-secondary mb-6">
+              Your account has a role ({user.role}) that is not configured for a dashboard. Please contact support.
+            </p>
+            <Button onClick={() => logout()}>Logout</Button>
+          </div>
+        </div>
+      );
   }
 };
 
@@ -70,7 +91,6 @@ const App: React.FC = () => {
         <Route index element={<DashboardRedirect />} />
 
         {/* Shared Routes */}
-        <Route path="hub" element={<CommunityHub />} />
         <Route path="profile/:userId" element={<UserProfilePage />} /> {/* Add profile page route */}
         <Route path="chat" element={<ChatPage />} />
         <Route path="chat/:projectId" element={<ChatPage />} />
@@ -118,6 +138,21 @@ const App: React.FC = () => {
         {/* Accounts */}
         <Route element={<RoleBasedRoutes allowedRoles={["Accounts"]} />}>
           <Route path="accounts/dashboard" element={<AccountsDashboard />} />
+        </Route>
+        
+        {/* Project Head */}
+        <Route element={<RoleBasedRoutes allowedRoles={["Project Head"]} />}>
+          <Route path="project-head/dashboard" element={<ProjectHeadDashboard />} />
+        </Route>
+
+        {/* Production Head */}
+        <Route element={<RoleBasedRoutes allowedRoles={["Production Head"]} />}>
+          <Route path="production-head/dashboard" element={<ProductionHeadDashboard />} />
+        </Route>
+
+        {/* Site Head */}
+        <Route element={<RoleBasedRoutes allowedRoles={["Site Head"]} />}>
+          <Route path="site-head/dashboard" element={<SiteHeadDashboard />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -124,7 +124,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const fetchData = useCallback(async () => {
-        // ... (rest of the fetchData function remains the same)
         if (!user) {
             setLoading(false);
             return;
@@ -202,39 +201,65 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [authLoading, fetchData]);
 
-    // --- REAL-TIME CHAT IMPLEMENTATION ---
+    // --- REAL-TIME UPDATES IMPLEMENTATION ---
     useEffect(() => {
         if (!user) return;
 
-        // Set up the real-time subscription for new messages
-        const messageSubscription = supabase
-            .channel('public:messages')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'messages' },
-                (payload) => {
-                    const newMessage = payload.new as any;
-                    // Map from snake_case to camelCase
-                    const mappedMessage: Message = {
-                        id: newMessage.id,
-                        chatId: newMessage.chat_id,
-                        senderId: newMessage.sender_id,
-                        body: newMessage.body,
-                        attachments: newMessage.attachments,
-                        createdAt: newMessage.created_at,
-                    };
-                    
-                    // Add the new message to the local state
-                    setMessages((prevMessages) => [...prevMessages, mappedMessage]);
-                }
-            )
-            .subscribe();
+        // Create a single channel for all relevant table subscriptions
+        const channel = supabase.channel('realtime_data_changes');
+
+        // 1. MESSAGES: Listen for new chats
+        channel.on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'messages' },
+            (payload) => {
+                const newMessage = payload.new as any;
+                const mappedMessage: Message = {
+                    id: newMessage.id,
+                    chatId: newMessage.chat_id,
+                    senderId: newMessage.sender_id,
+                    body: newMessage.body,
+                    attachments: newMessage.attachments,
+                    createdAt: newMessage.created_at,
+                };
+                setMessages((prev) => [...prev, mappedMessage]);
+            }
+        );
+
+        // 2. PROJECTS: Listen for new projects (e.g. from Quote App)
+        channel.on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'projects' },
+            (payload) => {
+                const newProject = payload.new as any;
+                const mappedProject: Project = {
+                    id: newProject.id,
+                    title: newProject.title,
+                    description: newProject.description,
+                    customerId: newProject.customer_id,
+                    designerId: newProject.designer_id,
+                    adminId: newProject.admin_id,
+                    address: newProject.address,
+                    budgetDisplay: newProject.budget_display,
+                    areaSqft: newProject.area_sqft,
+                    startDate: newProject.start_date,
+                    createdAt: newProject.created_at,
+                    updatedAt: newProject.updated_at,
+                    revenueDisplay: newProject.revenue_display,
+                    progress: newProject.progress,
+                    status: newProject.status,
+                    stage: newProject.stage,
+                };
+                setProjects((prev) => [mappedProject, ...prev]);
+            }
+        );
+
+        channel.subscribe();
         
-        // Cleanup function to remove the subscription on component unmount
         return () => {
-            supabase.removeChannel(messageSubscription);
+            supabase.removeChannel(channel);
         };
-    }, [user]); // Rerun this effect if the user logs in or out
+    }, [user]); 
 
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,

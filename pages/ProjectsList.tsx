@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -7,9 +8,11 @@ import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
+import SyncQuotesModal from '../components/admin/SyncQuotesModal'; // Import Sync Modal
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile } from '../services/api';
 import { AMAZ_SUPPORT_USER_ID } from '../constants';
+import { RefreshIcon } from '../components/icons';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -57,6 +60,7 @@ const ProjectsList: React.FC = () => {
   const { users } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+  const [isSyncModalOpen, setSyncModalOpen] = useState(false); // State for Sync Modal
   const navigate = useNavigate();
   
   if (!user) return null;
@@ -164,13 +168,25 @@ Everyone has been added to this chat. Let's create something amazing!`;
           onClose={() => setCreateModalOpen(false)}
           onCreate={handleCreateProject}
       />
+      
+      <SyncQuotesModal
+          isOpen={isSyncModalOpen}
+          onClose={() => setSyncModalOpen(false)}
+          onSyncComplete={refetchData}
+      />
+
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <h1 className="text-3xl font-bold text-text-headline">
                 {user.role === 'Customer' ? 'Project Archive' : 'Projects'}
             </h1>
             {user.role === 'Admin' && (
-                <Button onClick={() => setCreateModalOpen(true)}>+ Create New Project</Button>
+                <div className="flex gap-3">
+                    <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="flex items-center gap-2">
+                        <RefreshIcon className="w-5 h-5" /> Sync from Quote App
+                    </Button>
+                    <Button onClick={() => setCreateModalOpen(true)}>+ Create New Project</Button>
+                </div>
             )}
         </div>
         

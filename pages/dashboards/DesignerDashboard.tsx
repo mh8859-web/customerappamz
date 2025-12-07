@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/ui/Card';
@@ -6,7 +7,7 @@ import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, Megaph
 import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
-import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget';
+// import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget'; // Hidden
 
 const SkeletonStatCard = () => (
     <Card className="animate-pulse-fast">
@@ -147,10 +148,6 @@ const DesignerDashboard: React.FC = () => {
                )}
             </Card>
         </div>
-      </div>
-
-      <div>
-        <CommunityFeedWidget />
       </div>
     </div>
   );

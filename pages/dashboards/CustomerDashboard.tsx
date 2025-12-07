@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Project, Milestone } from '../../types';
@@ -10,7 +11,7 @@ import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import { useData } from '../../context/DataContext';
-import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget';
+// import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget'; // Hidden
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -182,11 +183,6 @@ const CustomerDashboard: React.FC = () => {
                             </div>
                         </Card>
                     </div>
-                </div>
-                
-                {/* Add the Community Feed Widget at the bottom */}
-                <div>
-                  <CommunityFeedWidget />
                 </div>
             </div>
         </>

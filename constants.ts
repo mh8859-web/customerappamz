@@ -2,7 +2,7 @@
 
 import { ProjectStage } from './types';
 
-export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts'];
+export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts', 'Project Head', 'Production Head', 'Site Head'];
 
 export const PROJECT_STAGES: ProjectStage[] = [
   'design_phase',

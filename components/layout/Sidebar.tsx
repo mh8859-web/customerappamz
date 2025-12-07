@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, InfoIcon, MessageSquareIcon, ChevronDoubleLeftIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, UsersIcon, SettingsIcon, LogOutIcon, LifeBuoyIcon, ClockIcon, CalendarIcon, ClipboardIcon, TrendingUpIcon, CreditCardIcon, UserCircleIcon, LayoutGridIcon, PieChartIcon, ChatBubbleOvalLeftEllipsisIcon, UserGroupIcon, DownloadIcon, PhotoIcon, InfoIcon, MessageSquareIcon, ChevronDoubleLeftIcon, PackageIcon } from '../icons';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -49,7 +49,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         { to: '/admin/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
         { to: '/admin/overview', icon: <TrendingUpIcon className="w-6 h-6 flex-shrink-0" />, label: 'Overview' },
         getMessagesNavItem(totalUnreadCount),
-        { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 flex-shrink-0" />, label: 'Community Hub' },
         { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6 flex-shrink-0" />, label: 'Project Wall' },
         { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'Projects' },
         { to: '/admin/users', icon: <UsersIcon className="w-6 h-6 flex-shrink-0" />, label: 'User Management' },
@@ -65,7 +64,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         { to: '/admin/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
         { to: '/admin/overview', icon: <TrendingUpIcon className="w-6 h-6 flex-shrink-0" />, label: 'Overview' },
         getMessagesNavItem(totalUnreadCount),
-        { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 flex-shrink-0" />, label: 'Community Hub' },
         { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6 flex-shrink-0" />, label: 'Project Wall' },
         { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'Projects' },
         { to: '/admin/users', icon: <UsersIcon className="w-6 h-6 flex-shrink-0" />, label: 'User Management' },
@@ -79,7 +77,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       Designer: [
         { to: '/designer/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
         getMessagesNavItem(totalUnreadCount),
-        { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 flex-shrink-0" />, label: 'Community Hub' },
         { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6 flex-shrink-0" />, label: 'Project Wall' },
         { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Projects' },
         { to: '/designer/task-board', icon: <LayoutGridIcon className="w-6 h-6 flex-shrink-0" />, label: 'Task Board' },
@@ -96,7 +93,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       Customer: [
         { to: '/customer/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Project' },
         getMessagesNavItem(totalUnreadCount),
-        { to: '/hub', icon: <ChatBubbleOvalLeftEllipsisIcon className="w-6 h-6 flex-shrink-0" />, label: 'Community Hub' },
         { to: '/project-wall', icon: <PhotoIcon className="w-6 h-6 flex-shrink-0" />, label: 'Project Wall' },
         { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'Project Archive' },
         { to: '/customer/billing', icon: <CreditCardIcon className="w-6 h-6 flex-shrink-0" />, label: 'Billing History' },
@@ -112,6 +108,28 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         { to: '/account', icon: <UserCircleIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Account' },
         { to: '/support', icon: <LifeBuoyIcon className="w-6 h-6 flex-shrink-0" />, label: 'Support' },
         { to: '/about', icon: <InfoIcon className="w-6 h-6 flex-shrink-0" />, label: 'About' },
+      ],
+      'Project Head': [
+        { to: '/project-head/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
+        getMessagesNavItem(totalUnreadCount),
+        { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'All Projects' },
+        { to: '/designer/team-calendar', icon: <UserGroupIcon className="w-6 h-6 flex-shrink-0" />, label: 'Team Calendar' },
+        { to: '/admin/reports', icon: <PieChartIcon className="w-6 h-6 flex-shrink-0" />, label: 'Financials' },
+        { to: '/admin/users', icon: <UsersIcon className="w-6 h-6 flex-shrink-0" />, label: 'Team Management' },
+        { to: '/account', icon: <UserCircleIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Account' },
+      ],
+      'Production Head': [
+          { to: '/production-head/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
+          getMessagesNavItem(totalUnreadCount),
+          { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'All Projects' },
+          { to: '/account', icon: <UserCircleIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Account' },
+      ],
+      'Site Head': [
+          { to: '/site-head/dashboard', icon: <HomeIcon className="w-6 h-6 flex-shrink-0" />, label: 'Dashboard' },
+          getMessagesNavItem(totalUnreadCount),
+          { to: '/projects', icon: <BriefcaseIcon className="w-6 h-6 flex-shrink-0" />, label: 'All Projects' },
+          { to: '/designer/team-calendar', icon: <CalendarIcon className="w-6 h-6 flex-shrink-0" />, label: 'Schedules' },
+          { to: '/account', icon: <UserCircleIcon className="w-6 h-6 flex-shrink-0" />, label: 'My Account' },
       ],
     };
   }, [user, totalUnreadCount]);

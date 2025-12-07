@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -10,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUsers } from '../../context/UserContext';
 import { useData } from '../../context/DataContext';
 import { createRecord, uploadProjectFile } from '../../services/api';
-import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget';
+// import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget'; // Hidden
 
 const SkeletonCard = () => (
     <Card className="flex items-center p-5 animate-pulse-fast">
@@ -175,7 +176,7 @@ Everyone has been added to this chat. Let's create something amazing!`;
         </div>
           
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-3">
                   <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Recently Created Projects</h2>
                   {isLoading ? <SkeletonList /> : (
                     <div className="space-y-3">
@@ -191,10 +192,6 @@ Everyone has been added to this chat. Let's create something amazing!`;
                     </div>
                   )}
               </Card>
-              <div className="space-y-6">
-                 {/* The Community Feed Widget is more attractive and engaging than the static announcement box */}
-                 <CommunityFeedWidget />
-              </div>
           </div>
       </div>
     </>
