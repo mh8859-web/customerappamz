@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { User } from '../types';
-import { getUsers } from '../services/api';
-import { useAuth } from './AuthContext';
+import { User } from '../types.ts';
+import { getUsers } from '../services/api.ts';
+import { useAuth } from './AuthContext.tsx';
 
 interface UserContextType {
   users: User[];
@@ -31,14 +30,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(userList);
     } catch (error) {
         console.error("UserContext: Failed to fetch users.", error);
-        setUsers([]); // Clear users on error to prevent stale data
+        setUsers([]);
     } finally {
         setLoading(false);
     }
   }, [authUser]);
 
   useEffect(() => {
-    // Fetch users only when authentication is resolved and there's a user
     if (!authLoading) {
       fetchAllUsers();
     }

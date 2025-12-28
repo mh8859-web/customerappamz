@@ -1,38 +1,38 @@
 import React from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
-import Login from "./pages/Login";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import AdminDashboard from "./pages/dashboards/AdminDashboard";
-import DesignerDashboard from "./pages/dashboards/DesignerDashboard";
-import CustomerDashboard from "./pages/dashboards/CustomerDashboard";
-import AccountsDashboard from "./pages/dashboards/AccountsDashboard";
-import ProjectHeadDashboard from "./pages/dashboards/ProjectHeadDashboard";
-import ProductionHeadDashboard from "./pages/dashboards/ProductionHeadDashboard";
-import SiteHeadDashboard from "./pages/dashboards/SiteHeadDashboard";
-import ProjectDetails from "./pages/ProjectDetails";
-import ProjectsList from "./pages/ProjectsList";
-import UserManagement from "./pages/admin/UserManagement";
-import AttendanceLogs from "./pages/admin/AttendanceLogs";
-import LeaveManagement from "./pages/designer/LeaveManagement";
-import SupportPage from "./pages/shared/SupportPage";
-import DailyWork from "./pages/designer/WorkDiary";
-import MyAttendance from "./pages/designer/MyAttendance";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AdminOverview from "./pages/admin/AdminOverview";
-import BillingHistory from "./pages/customer/BillingHistory";
-import MyAccount from "./pages/customer/MyAccount";
-import TaskBoard from "./pages/designer/TaskBoard";
-import MyCalendar from "./pages/designer/MyCalendar";
-import FinancialReports from "./pages/admin/FinancialReports";
-import TeamCalendar from "./pages/designer/TeamCalendar";
-import CommunityHub from "./pages/shared/CommunityHub";
-import DownloadCenter from "./pages/shared/DownloadCenter";
-import ProjectWall from "./pages/shared/ProjectWall";
-import AboutPage from "./pages/shared/AboutPage";
-import ChatPage from "./pages/shared/ChatPage";
-import UserProfilePage from "./pages/shared/UserProfilePage";
-import Button from "./components/ui/Button";
+import { useAuth } from "./context/AuthContext.tsx";
+import Login from "./pages/Login.tsx";
+import ProtectedRoute from "./components/auth/ProtectedRoute.tsx";
+import AdminDashboard from "./pages/dashboards/AdminDashboard.tsx";
+import DesignerDashboard from "./pages/dashboards/DesignerDashboard.tsx";
+import CustomerDashboard from "./pages/dashboards/CustomerDashboard.tsx";
+import AccountsDashboard from "./pages/dashboards/AccountsDashboard.tsx";
+import ProjectHeadDashboard from "./pages/dashboards/ProjectHeadDashboard.tsx";
+import ProductionHeadDashboard from "./pages/dashboards/ProductionHeadDashboard.tsx";
+import SiteHeadDashboard from "./pages/dashboards/SiteHeadDashboard.tsx";
+import ProjectDetails from "./pages/ProjectDetails.tsx";
+import ProjectsList from "./pages/ProjectsList.tsx";
+import UserManagement from "./pages/admin/UserManagement.tsx";
+import AttendanceLogs from "./pages/admin/AttendanceLogs.tsx";
+import LeaveManagement from "./pages/designer/LeaveManagement.tsx";
+import SupportPage from "./pages/shared/SupportPage.tsx";
+import DailyWork from "./pages/designer/WorkDiary.tsx";
+import MyAttendance from "./pages/designer/MyAttendance.tsx";
+import AdminSettings from "./pages/admin/AdminSettings.tsx";
+import AdminOverview from "./pages/admin/AdminOverview.tsx";
+import BillingHistory from "./pages/customer/BillingHistory.tsx";
+import MyAccount from "./pages/customer/MyAccount.tsx";
+import TaskBoard from "./pages/designer/TaskBoard.tsx";
+import MyCalendar from "./pages/designer/MyCalendar.tsx";
+import FinancialReports from "./pages/admin/FinancialReports.tsx";
+import TeamCalendar from "./pages/designer/TeamCalendar.tsx";
+import CommunityHub from "./pages/shared/CommunityHub.tsx";
+import DownloadCenter from "./pages/shared/DownloadCenter.tsx";
+import ProjectWall from "./pages/shared/ProjectWall.tsx";
+import AboutPage from "./pages/shared/AboutPage.tsx";
+import ChatPage from "./pages/shared/ChatPage.tsx";
+import UserProfilePage from "./pages/shared/UserProfilePage.tsx";
+import Button from "./components/ui/Button.tsx";
 
 const DashboardRedirect: React.FC = () => {
   const { user, logout } = useAuth();
@@ -83,17 +83,9 @@ const RoleBasedRoutes: React.FC<{ allowedRoles: string[] }> = ({
 const App: React.FC = () => {
   return (
     <Routes>
-      {/* 
-        NOTE: Login route is kept for internal logic but users 
-        will default to the Dashboard via ProtectedRoute/MockAdmin 
-      */}
       <Route path="/login" element={<Login />} />
-
-      {/* Main App Container */}
       <Route path="/" element={<ProtectedRoute />}>
         <Route index element={<DashboardRedirect />} />
-
-        {/* Shared Routes */}
         <Route path="profile/:userId" element={<UserProfilePage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="chat/:projectId" element={<ChatPage />} />
@@ -104,11 +96,7 @@ const App: React.FC = () => {
         <Route path="downloads" element={<DownloadCenter />} />
         <Route path="project-wall" element={<ProjectWall />} />
         <Route path="about" element={<AboutPage />} />
-
-        {/* Admin & Sub-Admin */}
-        <Route
-          element={<RoleBasedRoutes allowedRoles={["Admin", "Sub-Admin"]} />}
-        >
+        <Route element={<RoleBasedRoutes allowedRoles={["Admin", "Sub-Admin"]} />}>
           <Route path="admin/dashboard" element={<AdminDashboard />} />
           <Route path="admin/overview" element={<AdminOverview />} />
           <Route path="admin/attendance" element={<AttendanceLogs />} />
@@ -116,8 +104,6 @@ const App: React.FC = () => {
           <Route path="admin/users" element={<UserManagement />} />
           <Route path="admin/settings" element={<AdminSettings />} />
         </Route>
-
-        {/* Designer */}
         <Route element={<RoleBasedRoutes allowedRoles={["Designer"]} />}>
           <Route path="designer/dashboard" element={<DesignerDashboard />} />
           <Route path="designer/task-board" element={<TaskBoard />} />
@@ -127,19 +113,13 @@ const App: React.FC = () => {
           <Route path="designer/daily-work" element={<DailyWork />} />
           <Route path="designer/my-attendance" element={<MyAttendance />} />
         </Route>
-
-        {/* Customer */}
         <Route element={<RoleBasedRoutes allowedRoles={["Customer"]} />}>
           <Route path="customer/dashboard" element={<CustomerDashboard />} />
           <Route path="customer/billing" element={<BillingHistory />} />
         </Route>
-
-        {/* Accounts */}
         <Route element={<RoleBasedRoutes allowedRoles={["Accounts"]} />}>
           <Route path="accounts/dashboard" element={<AccountsDashboard />} />
         </Route>
-        
-        {/* Management Roles */}
         <Route element={<RoleBasedRoutes allowedRoles={["Project Head"]} />}>
           <Route path="project-head/dashboard" element={<ProjectHeadDashboard />} />
         </Route>
@@ -149,7 +129,6 @@ const App: React.FC = () => {
         <Route element={<RoleBasedRoutes allowedRoles={["Site Head"]} />}>
           <Route path="site-head/dashboard" element={<SiteHeadDashboard />} />
         </Route>
-
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

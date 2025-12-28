@@ -6,8 +6,8 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
-import { supabase } from "../services/supabaseClient";
-import { User } from "../types";
+import { supabase } from "../services/supabaseClient.ts";
+import { User } from "../types.ts";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AuthContextType {
@@ -171,7 +171,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     let inactivityTimer: number;
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
-      // Only set inactivity timer for real logged-in users, not for null/unauth
       if (user && !impersonatedUser) {
         inactivityTimer = window.setTimeout(() => {
           logout();

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseClient.ts';
 import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
     SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate,
     Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, FinalGalleryImage
-} from '../types';
-import { useAuth } from './AuthContext';
+} from '../types.ts';
+import { useAuth } from './AuthContext.tsx';
 
 interface DataContextType {
     projects: Project[];
@@ -30,7 +30,6 @@ interface DataContextType {
     feedComments: FeedComment[];
     refetchData: () => Promise<void>;
     loading: boolean;
-    // For notifications
     unreadCounts: Record<string, number>;
     markChatAsRead: (projectId: string) => void;
 }
@@ -143,13 +142,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const dataMap: { [key: string]: any[] } = {};
             results.forEach((result, index) => {
                 const tableName = tables[index];
-                if (result.error) {
-                    // Suppress noise in console, but keep it available for debugging
-                    console.debug(`Table "${tableName}" fetch failed. This is expected if the table doesn't exist yet.`);
-                    dataMap[tableName] = [];
-                } else {
-                    dataMap[tableName] = result.data || [];
-                }
+                dataMap[tableName] = result.data || [];
             });
             
             setProjects(mapToCamelCase(dataMap.projects, p => ({ ...p, customerId: p.customer_id, designerId: p.designer_id, adminId: p.admin_id, budgetDisplay: p.budget_display, areaSqft: p.area_sqft, startDate: p.start_date, createdAt: p.created_at, updatedAt: p.updated_at, revenueDisplay: p.revenue_display })));
@@ -201,14 +194,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [authLoading, fetchData]);
 
-    // --- REAL-TIME UPDATES IMPLEMENTATION ---
     useEffect(() => {
         if (!user) return;
-
-        // Create a single channel for all relevant table subscriptions
         const channel = supabase.channel('realtime_data_changes');
-
-        // 1. MESSAGES: Listen for new chats
         channel.on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -225,8 +213,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setMessages((prev) => [...prev, mappedMessage]);
             }
         );
-
-        // 2. PROJECTS: Listen for new projects (e.g. from Quote App)
         channel.on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'projects' },
@@ -253,9 +239,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setProjects((prev) => [mappedProject, ...prev]);
             }
         );
-
         channel.subscribe();
-        
         return () => {
             supabase.removeChannel(channel);
         };
