@@ -7,7 +7,7 @@ import App from "./App.tsx";
 const rootEl = document.getElementById("root");
 
 if (!rootEl) {
-  console.error("Critical: Root element '#root' not found in index.html");
+  console.error("Critical Error: Root element '#root' not found.");
 } else {
   try {
     const root = createRoot(rootEl);
@@ -21,12 +21,15 @@ if (!rootEl) {
       </React.StrictMode>
     );
   } catch (error) {
-    console.error("Failed to render the application:", error);
+    console.error("Rendering Failure:", error);
     rootEl.innerHTML = `
-      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
-        <h1 style="color: #0F1419;">Application Loading Error</h1>
-        <p style="color: #536471;">Something went wrong while starting the app. Please check the console for details.</p>
-        <pre style="text-align: left; background: #eee; padding: 10px; border-radius: 8px; margin-top: 20px; overflow: auto;">${error instanceof Error ? error.stack : String(error)}</pre>
+      <div style="padding: 40px; text-align: center; font-family: 'Inter', sans-serif; background: #F7F9FA; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+        <h1 style="color: #0F1419; font-size: 24px; margin-bottom: 12px;">App Failed to Start</h1>
+        <p style="color: #536471; max-width: 400px; line-height: 1.5;">The system encountered a version conflict or initialization error. Please clear your cache and try again.</p>
+        <div style="margin-top: 30px; text-align: left; background: #FFF; padding: 20px; border-radius: 12px; border: 1px solid #CFD9DE; max-width: 90%; overflow: auto;">
+          <code style="font-size: 12px; color: #E0245E;">${error instanceof Error ? error.message : String(error)}</code>
+          <pre style="font-size: 10px; color: #536471; margin-top: 10px;">${error instanceof Error ? error.stack : ''}</pre>
+        </div>
       </div>
     `;
   }
