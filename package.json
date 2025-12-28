@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "echo 'No build step required'"
+    "build": "mkdir -p dist && cp index.html index.tsx App.tsx metadata.json types.ts constants.ts dist/ && cp -r components context pages services dist/"
   },
   "dependencies": {
     "react": "18.3.1",
