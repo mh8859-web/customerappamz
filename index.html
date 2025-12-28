@@ -61,6 +61,45 @@
                     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
+      @keyframes modal-fade-in {
+        from { opacity: 0; transform: translateY(10px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .modal-content-animation {
+        animation: modal-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .verified-badge-container { position: relative; }
+      .verification-popover {
+        position: absolute;
+        bottom: 120%;
+        left: 50%;
+        transform: translateX(-50%) translateY(10px) scale(0.95);
+        z-index: 50;
+        width: 280px;
+        background-color: #FFFFFF;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+      }
+      .verification-popover.open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0) scale(1);
+        pointer-events: auto;
+      }
+      .verification-popover::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 8px;
+        border-style: solid;
+        border-color: #FFFFFF transparent transparent transparent;
+      }
     </style>
 
     <script type="importmap">
