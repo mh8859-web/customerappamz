@@ -6,7 +6,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminDashboard from "./pages/dashboards/AdminDashboard";
 import DesignerDashboard from "./pages/dashboards/DesignerDashboard";
 import CustomerDashboard from "./pages/dashboards/CustomerDashboard";
-import AccountsDashboard from "./pages/dashboards/AccountsDashboard"; // Import new dashboard
+import AccountsDashboard from "./pages/dashboards/AccountsDashboard";
 import ProjectHeadDashboard from "./pages/dashboards/ProjectHeadDashboard";
 import ProductionHeadDashboard from "./pages/dashboards/ProductionHeadDashboard";
 import SiteHeadDashboard from "./pages/dashboards/SiteHeadDashboard";
@@ -31,12 +31,12 @@ import DownloadCenter from "./pages/shared/DownloadCenter";
 import ProjectWall from "./pages/shared/ProjectWall";
 import AboutPage from "./pages/shared/AboutPage";
 import ChatPage from "./pages/shared/ChatPage";
-import UserProfilePage from "./pages/shared/UserProfilePage"; // Import the new page
+import UserProfilePage from "./pages/shared/UserProfilePage";
 import Button from "./components/ui/Button";
 
 const DashboardRedirect: React.FC = () => {
   const { user, logout } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <div className="p-10 text-center">Initializing...</div>;
 
   switch (user.role) {
     case "Admin":
@@ -55,13 +55,12 @@ const DashboardRedirect: React.FC = () => {
     case "Site Head":
       return <Navigate to="/site-head/dashboard" replace />;
     default:
-      // Fallback for unknown roles to prevent infinite redirect loops
       return (
         <div className="flex flex-col items-center justify-center h-screen bg-page-bg p-4">
           <div className="bg-surface p-8 rounded-2xl shadow-card text-center max-w-md">
             <h1 className="text-xl font-bold text-text-primary mb-2">Access Issue</h1>
             <p className="text-text-secondary mb-6">
-              Your account has a role ({user.role}) that is not configured for a dashboard. Please contact support.
+              Your account has a role ({user.role}) that is not configured for a dashboard.
             </p>
             <Button onClick={() => logout()}>Logout</Button>
           </div>
@@ -84,14 +83,18 @@ const RoleBasedRoutes: React.FC<{ allowedRoles: string[] }> = ({
 const App: React.FC = () => {
   return (
     <Routes>
+      {/* 
+        NOTE: Login route is kept for internal logic but users 
+        will default to the Dashboard via ProtectedRoute/MockAdmin 
+      */}
       <Route path="/login" element={<Login />} />
 
-      {/* Wrap everything inside ProtectedRoute */}
+      {/* Main App Container */}
       <Route path="/" element={<ProtectedRoute />}>
         <Route index element={<DashboardRedirect />} />
 
         {/* Shared Routes */}
-        <Route path="profile/:userId" element={<UserProfilePage />} /> {/* Add profile page route */}
+        <Route path="profile/:userId" element={<UserProfilePage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="chat/:projectId" element={<ChatPage />} />
         <Route path="projects" element={<ProjectsList />} />
@@ -111,11 +114,7 @@ const App: React.FC = () => {
           <Route path="admin/attendance" element={<AttendanceLogs />} />
           <Route path="admin/reports" element={<FinancialReports />} />
           <Route path="admin/users" element={<UserManagement />} />
-
-          {/* Full Admin only */}
-          <Route element={<RoleBasedRoutes allowedRoles={["Admin"]} />}>
-            <Route path="admin/settings" element={<AdminSettings />} />
-          </Route>
+          <Route path="admin/settings" element={<AdminSettings />} />
         </Route>
 
         {/* Designer */}
@@ -140,17 +139,13 @@ const App: React.FC = () => {
           <Route path="accounts/dashboard" element={<AccountsDashboard />} />
         </Route>
         
-        {/* Project Head */}
+        {/* Management Roles */}
         <Route element={<RoleBasedRoutes allowedRoles={["Project Head"]} />}>
           <Route path="project-head/dashboard" element={<ProjectHeadDashboard />} />
         </Route>
-
-        {/* Production Head */}
         <Route element={<RoleBasedRoutes allowedRoles={["Production Head"]} />}>
           <Route path="production-head/dashboard" element={<ProductionHeadDashboard />} />
         </Route>
-
-        {/* Site Head */}
         <Route element={<RoleBasedRoutes allowedRoles={["Site Head"]} />}>
           <Route path="site-head/dashboard" element={<SiteHeadDashboard />} />
         </Route>

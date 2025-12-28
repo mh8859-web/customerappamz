@@ -14,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (
-    userId: string,
+    identifier: string,
     password: string
   ) => Promise<{ success: boolean; error: string | null }>;
   logout: () => Promise<void>;
@@ -30,27 +30,41 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", supabaseUser.id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", supabaseUser.id)
+      .single();
 
-  if (error || !data) {
-    console.error("Failed to fetch user profile:", error?.message);
+    if (error || !data) {
+      console.warn("User record missing in public.users. Falling back to metadata.");
+      return {
+        id: supabaseUser.id,
+        fullName: supabaseUser.user_metadata?.full_name || "User",
+        email: supabaseUser.email || "",
+        role: (supabaseUser.user_metadata?.role as any) || "Customer",
+        avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+        verified: !!supabaseUser.user_metadata?.verified,
+        verificationRequested: false,
+        userId: supabaseUser.user_metadata?.user_id || "",
+      };
+    }
+
+    return {
+      id: data.id,
+      fullName: data.full_name || "User",
+      email: data.email,
+      role: data.role,
+      avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+      verified: !!data.verified,
+      verificationRequested: !!data.verification_requested,
+      userId: data.user_id || '',
+    };
+  } catch (e) {
+    console.error("Critical error mapping profile:", e);
     return null;
   }
-
-  return {
-    id: data.id,
-    fullName: data.full_name || "User",
-    email: data.email,
-    role: data.role,
-    avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-    verified: !!data.verified,
-    verificationRequested: !!data.verification_requested,
-    userId: data.user_id || '',
-  };
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
@@ -60,16 +74,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
-  // --- RE-ARCHITECTED AUTH FLOW (THE DEFINITIVE FIX) ---
-  // This useEffect relies on onAuthStateChange as the single source of truth.
-  // It fires immediately upon subscription with the initial session state,
-  // which eliminates race conditions. A try/finally block guarantees that
-  // the loading state is resolved, preventing the app from getting stuck.
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    sessionStorage.removeItem('impersonation_admin');
+    setImpersonatedUser(null);
+    setUser(null);
+  }, []);
+
   useEffect(() => {
     setLoading(true);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         try {
           if (session) {
             const profile = await fetchAndMapProfile(session.user);
@@ -78,10 +94,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             setUser(null);
           }
         } catch (error) {
-            console.error("Error during auth state change processing:", error);
-            setUser(null); // Ensure user is logged out on error
+            console.error("Auth state change error:", error);
+            setUser(null);
         } finally {
-            // This guarantees the app doesn't get stuck on the loading shell
             setLoading(false);
         }
       }
@@ -94,44 +109,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
 
   const login = useCallback(async (
-    userId: string,
+    identifier: string,
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
-      const trimmedUserId = userId.trim().toLowerCase();
-      const { data: profile, error: profileError } = await supabase
-        .from("users")
-        .select("email")
-        .eq("user_id", trimmedUserId)
-        .single();
+      const trimmedId = identifier.trim();
+      const isEmailInput = trimmedId.includes('@');
+      let targetEmail = trimmedId;
 
-      if (profileError || !profile?.email) {
-        return { success: false, error: "INVALID_CREDENTIALS" };
+      if (!isEmailInput) {
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("email")
+          .ilike("user_id", trimmedId)
+          .single();
+
+        if (profileError || !profile?.email) {
+          return { success: false, error: "USER_NOT_FOUND" };
+        }
+        targetEmail = profile.email;
       }
 
+      const finalEmail = targetEmail.trim().toLowerCase();
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
-        password: password.trim(),
+        email: finalEmail,
+        password: password,
       });
       
       if (signInError) {
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // The onAuthStateChange listener will handle setting the user state.
       return { success: true, error: null };
-
     } catch (e) {
-      console.error("Login error:", e);
       return { success: false, error: "UNKNOWN_ERROR" };
     }
-  }, []);
-
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    sessionStorage.removeItem('impersonation_admin');
-    setImpersonatedUser(null);
-    setUser(null);
   }, []);
   
   const startImpersonation = useCallback((targetUser: User) => {
@@ -149,6 +161,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setUser(adminUser);
       setImpersonatedUser(null);
       sessionStorage.removeItem('impersonation_admin');
+    } else {
+      setUser(null);
+      setImpersonatedUser(null);
     }
   }, []);
   
@@ -156,6 +171,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     let inactivityTimer: number;
     const resetInactivityTimer = () => {
       clearTimeout(inactivityTimer);
+      // Only set inactivity timer for real logged-in users, not for null/unauth
       if (user && !impersonatedUser) {
         inactivityTimer = window.setTimeout(() => {
           logout();
@@ -195,6 +211,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context)
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within AuthProvider");
   return context;
 };

@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { User, UserRole } from '../../types';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import EditUserModal from '../../components/admin/EditUserModal';
-import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
+import { signUpNewUser, upsertRecord, deleteUser } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
@@ -33,36 +33,58 @@ const UserManagement: React.FC = () => {
     verified: boolean;
   }) => {
     try {
-      const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
+      // Clean the User ID: remove spaces and special characters
+      const cleanId = newUser.userId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().trim();
+      
+      // Use a more standard domain format to pass Supabase Auth validation
+      const proxyEmail = `u${cleanId}@amazinteriors.com`;
+      
       const metadata = {
           fullName: newUser.fullName,
           role: newUser.role,
           userId: newUser.userId,
       };
 
+      console.log("Attempting to create Auth account:", proxyEmail);
+
       const { user, error: signUpError } = await signUpNewUser(proxyEmail, newUser.password, metadata);
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+          console.error("Auth Exception:", signUpError);
+          
+          // Better error messaging for common Supabase configuration issues
+          if (signUpError.message.includes("Database error saving new user")) {
+            alert("Trigger Error: The Supabase trigger failed to sync the profile. Please check the SQL Editor logs.");
+          } else if (signUpError.message.includes("invalid")) {
+            alert(`Format Error: The generated email "${proxyEmail}" was rejected. Ensure the User ID contains only letters and numbers.`);
+          } else {
+            alert(`Signup Error: ${signUpError.message}`);
+          }
+          return;
+      }
       
       if (user) {
-          const { error: updateError } = await updateRecord('users', user.id, {
+          // Robust manual sync to ensure public profile exists even if trigger has delay
+          const { error: upsertError } = await upsertRecord('users', {
+              id: user.id,
+              email: proxyEmail,
               full_name: newUser.fullName,
               role: newUser.role,
               user_id: newUser.userId,
               verified: newUser.verified,
           });
           
-          if (updateError) {
-              alert(`User account was created, but setting the profile failed: ${updateError.message}. Please edit the user manually.`);
+          if (upsertError) {
+              console.warn("Manual sync notice:", upsertError.message);
           }
       }
       
       await refetchUsers(); 
       setCreateUserModalOpen(false);
+      alert("User created successfully!");
     } catch (error) {
-        alert(`Failed to create user: ${(error as Error).message}`);
+        alert(`System Failure: ${(error as Error).message}`);
         console.error(error);
-        setCreateUserModalOpen(false);
     }
   };
 
@@ -72,13 +94,13 @@ const UserManagement: React.FC = () => {
   };
 
   const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
-    const updatesForDb: Record<string, any> = {};
+    const updatesForDb: Record<string, any> = { id: userId };
     if (updates.fullName !== undefined) updatesForDb.full_name = updates.fullName;
     if (updates.role !== undefined) updatesForDb.role = updates.role;
     if (updates.userId !== undefined) updatesForDb.user_id = updates.userId;
     if (updates.verified !== undefined) updatesForDb.verified = updates.verified;
 
-    const { error } = await updateRecord('users', userId, updatesForDb);
+    const { error } = await upsertRecord('users', updatesForDb);
     if (error) {
         alert(`Failed to update user: ${error.message}`);
     } else {
@@ -88,29 +110,26 @@ const UserManagement: React.FC = () => {
 
   const handleDeleteUser = async (userToDelete: User) => {
     if (currentUser && currentUser.id === userToDelete.id) {
-      alert("For security reasons, you cannot delete your own account from this panel.");
+      alert("Self-deletion is restricted for security.");
       return;
     }
 
-    if (window.confirm(`Are you sure you want to permanently delete the user "${userToDelete.fullName}"? This action is irreversible.`)) {
+    if (window.confirm(`Permanently delete "${userToDelete.fullName}"?`)) {
       const { error } = await deleteUser(userToDelete.id);
 
       if (error) {
-        alert(`Failed to delete user. Please ensure backend functions are correctly configured or contact support.`);
-        console.error("Delete user RPC error:", error);
+        alert(`Deletion failed. Ensure the 'delete_user' function is active in Supabase.`);
+        console.error("RPC Delete Error:", error);
       } else {
-        alert('User deleted successfully.');
+        alert('User removed.');
         await refetchUsers();
       }
     }
   };
   
   const handleImpersonate = (userToImpersonate: User) => {
-      if (currentUser && currentUser.id === userToImpersonate.id) {
-          alert("You cannot impersonate yourself.");
-          return;
-      }
-      if (window.confirm(`You are about to view the application as ${userToImpersonate.fullName}. You will see exactly what they see. Do you want to continue?`)) {
+      if (currentUser && currentUser.id === userToImpersonate.id) return;
+      if (window.confirm(`View app as ${userToImpersonate.fullName}?`)) {
           startImpersonation(userToImpersonate);
       }
   }

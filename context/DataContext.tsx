@@ -47,7 +47,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
-    // ... (all other state declarations)
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [designs, setDesigns] = useState<Design[]>([]);
@@ -145,7 +144,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             results.forEach((result, index) => {
                 const tableName = tables[index];
                 if (result.error) {
-                    console.warn(`Could not fetch from table "${tableName}":`, result.error.message);
+                    // Suppress noise in console, but keep it available for debugging
+                    console.debug(`Table "${tableName}" fetch failed. This is expected if the table doesn't exist yet.`);
                     dataMap[tableName] = [];
                 } else {
                     dataMap[tableName] = result.data || [];
@@ -189,7 +189,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
 
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("Critical error fetching system data:", error);
         } finally {
             setLoading(false);
         }

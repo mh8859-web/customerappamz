@@ -1,5 +1,8 @@
 {
   "name": "AMAZ-CUS-DES",
   "description": "My amaz app for amaz members and clients.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
 }
