@@ -8,7 +8,6 @@
     <meta http-equiv="Expires" content="0" />
     <title>AMAZ Interiors PM</title>
 
-    <!-- Scripts & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,22 +18,22 @@
         theme: {
           extend: {
             colors: {
-              'page-bg': '#F7F9FA',      // Lighter, cleaner background
-              'surface': '#FFFFFF',      // White (for cards, headers)
-              'brand-blue': '#1D9BF0',   // Vibrant Blue (X.com inspired)
-              'brand-blue-hover': '#1A8CD8', // Darker Blue for hover
-              'secondary': '#EFF3F4',     // Very light gray for subtle backgrounds
-              'secondary-hover': '#E7EAED',// Darker subtle gray
-              'text-primary': '#0F1419',    // Primary Text (almost black)
-              'text-secondary': '#536471',  // Secondary Text (gray)
-              'border-color': '#CFD9DE',    // Subtle border color
+              'page-bg': '#F7F9FA',
+              'surface': '#FFFFFF',
+              'brand-blue': '#1D9BF0',
+              'brand-blue-hover': '#1A8CD8',
+              'secondary': '#EFF3F4',
+              'secondary-hover': '#E7EAED',
+              'text-primary': '#0F1419',
+              'text-secondary': '#536471',
+              'border-color': '#CFD9DE',
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
               display: ['Lexend', 'sans-serif'],
             },
             borderRadius: {
-              'xl': '12px', // Softer radius
+              'xl': '12px',
               '2xl': '16px',
             },
             boxShadow: {
@@ -51,14 +50,10 @@
         -moz-osx-font-smoothing: grayscale;
         background-color: #F7F9FA;
       }
-
-      /* Custom Scrollbar */
       ::-webkit-scrollbar { width: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #CFD9DE; border-radius: 4px; }
       ::-webkit-scrollbar-thumb:hover { background: #AAB8C2; }
-
-      /* Global styles for smoother, springier transitions */
       * {
         transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
                     border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
@@ -66,7 +61,6 @@
                     box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                     transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      
       @keyframes modal-fade-in {
         from { opacity: 0; transform: translateY(10px) scale(0.98); }
         to { opacity: 1; transform: translateY(0) scale(1); }
@@ -74,18 +68,13 @@
       .modal-content-animation {
         animation: modal-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       }
-
-      /* --- VERIFIED BADGE POPOVER FIX --- */
-      .verified-badge-container {
-        position: relative;
-      }
-
+      .verified-badge-container { position: relative; }
       .verification-popover {
         position: absolute;
         bottom: 120%;
         left: 50%;
         transform: translateX(-50%) translateY(10px) scale(0.95);
-        z-index: 50; /* Increased z-index */
+        z-index: 50;
         width: 280px;
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -95,14 +84,12 @@
         transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
       }
-
       .verification-popover.open {
         opacity: 1;
         visibility: visible;
         transform: translateX(-50%) translateY(0) scale(1);
         pointer-events: auto;
       }
-
       .verification-popover::after {
         content: '';
         position: absolute;
@@ -115,7 +102,7 @@
       }
     </style>
 
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@18.3.1",
@@ -131,8 +118,8 @@
   }
 }
 </script>
-  <script type="module" src="/index.tsx"></script>
-</head>
+    <script type="module" src="/index.tsx"></script>
+  </head>
   <body class="bg-page-bg text-text-secondary font-sans">
     <div id="root"></div>
   </body>
