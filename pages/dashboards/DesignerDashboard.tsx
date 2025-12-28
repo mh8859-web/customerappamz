@@ -1,16 +1,14 @@
-
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import Card from '../../components/ui/Card';
+import { useAuth } from '../../context/AuthContext.tsx';
+import Card from '../../components/ui/Card.tsx';
 import { Link, useNavigate } from 'react-router-dom';
-import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, MegaphoneIcon } from '../../components/icons';
-import Button from '../../components/ui/Button';
-import { useUsers } from '../../context/UserContext';
-import { useData } from '../../context/DataContext';
-// import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget'; // Hidden
+import { BriefcaseIcon, CheckCircleIcon, MessageSquareIcon, CalendarIcon, MegaphoneIcon } from '../../components/icons.tsx';
+import Button from '../../components/ui/Button.tsx';
+import { useUsers } from '../../context/UserContext.tsx';
+import { useData } from '../../context/DataContext.tsx';
 
 const SkeletonStatCard = () => (
-    <Card className="animate-pulse-fast">
+    <Card className="animate-pulse">
         <div className="h-5 bg-secondary rounded w-3/4 mb-2"></div>
         <div className="h-10 bg-secondary rounded w-1/2"></div>
     </Card>
@@ -95,57 +93,35 @@ const DesignerDashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Assigned Projects</h2>
-          {isLoading ? (
-              <div className="space-y-4">
-                  <div className="h-16 bg-secondary rounded-xl animate-pulse-fast"></div>
-                  <div className="h-16 bg-secondary rounded-xl animate-pulse-fast"></div>
-              </div>
-          ) : (
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {assignedProjects.map(project => (
-                  <Link to={`/projects/${project.id}`} key={project.id} className="block bg-page-bg p-4 rounded-xl hover:bg-secondary transition-colors">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="font-semibold text-text-primary">{project.title}</p>
-                      <p className="text-sm text-text-secondary capitalize">{project.stage.replace(/_/g, ' ')}</p>
-                    </div>
-                    <div className="w-full bg-border-color rounded-full h-2.5">
-                      <div className="bg-brand-blue h-2.5 rounded-full" style={{ width: `${project.progress}%` }}></div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-          )}
+          <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+            {assignedProjects.map(project => (
+              <Link to={`/projects/${project.id}`} key={project.id} className="block bg-page-bg p-4 rounded-xl hover:bg-secondary transition-colors">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-semibold text-text-primary">{project.title}</p>
+                  <p className="text-sm text-text-secondary capitalize">{project.stage.replace(/_/g, ' ')}</p>
+                </div>
+                <div className="w-full bg-border-color rounded-full h-2.5">
+                  <div className="bg-brand-blue h-2.5 rounded-full" style={{ width: `${project.progress}%` }}></div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </Card>
         
         <div className="space-y-6">
             <Card>
                 <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Today's Tasks</h2>
-                {isLoading ? <div className="h-20 bg-secondary rounded-xl animate-pulse-fast"></div> : (
-                    <ul className="space-y-3">
-                      {tasksDueToday.slice(0, 3).map(task => (
-                        <li key={task.id} className="flex justify-between items-center bg-page-bg p-3 rounded-xl">
-                          <div>
-                            <p className="text-text-primary text-sm">{task.title}</p>
-                            <p className="text-xs text-text-secondary">{projects.find(p=>p.id === task.projectId)?.title}</p>
-                          </div>
-                        </li>
-                      ))}
-                      {tasksDueToday.length === 0 && <p className="text-sm text-text-secondary">No tasks due today.</p>}
-                    </ul>
-                )}
-            </Card>
-            <Card>
-              <h2 className="text-xl font-semibold font-display text-text-primary mb-4">Awaiting Customer Approval</h2>
-               {isLoading ? <div className="h-16 bg-secondary rounded-xl animate-pulse-fast"></div> : (
-                  <ul className="space-y-3">
-                    {awaitingApproval.slice(0, 2).map(design => (
-                       <li key={design.id} className="text-text-primary text-sm bg-page-bg p-3 rounded-xl">
-                         v{design.version} for {projects.find(p => p.id === design.projectId)?.title}
-                       </li>
-                    ))}
-                    {awaitingApproval.length === 0 && <p className="text-sm text-text-secondary">All clear!</p>}
-                  </ul>
-               )}
+                <ul className="space-y-3">
+                  {tasksDueToday.slice(0, 3).map(task => (
+                    <li key={task.id} className="flex justify-between items-center bg-page-bg p-3 rounded-xl">
+                      <div>
+                        <p className="text-text-primary text-sm">{task.title}</p>
+                        <p className="text-xs text-text-secondary">{projects.find(p=>p.id === task.projectId)?.title}</p>
+                      </div>
+                    </li>
+                  ))}
+                  {tasksDueToday.length === 0 && <p className="text-sm text-text-secondary">No tasks due today.</p>}
+                </ul>
             </Card>
         </div>
       </div>
