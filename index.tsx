@@ -26,6 +26,7 @@ if (!rootEl) {
       <div style="padding: 20px; text-align: center; font-family: sans-serif;">
         <h1 style="color: #0F1419;">Application Loading Error</h1>
         <p style="color: #536471;">Something went wrong while starting the app. Please check the console for details.</p>
+        <pre style="text-align: left; background: #eee; padding: 10px; border-radius: 8px; margin-top: 20px; overflow: auto;">${error instanceof Error ? error.stack : String(error)}</pre>
       </div>
     `;
   }
