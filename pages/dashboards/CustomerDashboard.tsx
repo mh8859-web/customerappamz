@@ -1,17 +1,15 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { Project, Milestone } from '../../types';
-import Card from '../../components/ui/Card';
-import PaymentModal from '../../components/customer/PaymentReminderModal';
-import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
-import { DownloadIcon, MegaphoneIcon } from '../../components/icons';
-import Button from '../../components/ui/Button';
+import { useAuth } from '../../context/AuthContext.tsx';
+import { Project, Milestone } from '../../types.ts';
+import Card from '../../components/ui/Card.tsx';
+import PaymentModal from '../../components/customer/PaymentReminderModal.tsx';
+import TestimonialFlow from '../../components/dashboard/TestimonialFlow.tsx';
+import { DownloadIcon, MegaphoneIcon } from '../../components/icons.tsx';
+import Button from '../../components/ui/Button.tsx';
 import { Link } from 'react-router-dom';
-import { useUsers } from '../../context/UserContext';
-import UserNameDisplay from '../../components/ui/UserNameDisplay';
-import { useData } from '../../context/DataContext';
-// import CommunityFeedWidget from '../../components/dashboard/CommunityFeedWidget'; // Hidden
+import { useUsers } from '../../context/UserContext.tsx';
+import UserNameDisplay from '../../components/ui/UserNameDisplay.tsx';
+import { useData } from '../../context/DataContext.tsx';
 
 const CustomerDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -54,28 +52,26 @@ const CustomerDashboard: React.FC = () => {
     };
 
     const handlePaymentComplete = async (milestoneId: string) => {
-        // In a real app, this would be an API call
-        // For now, we simulate and refetch
         const milestone = projectMilestones.find(m => m.id === milestoneId);
         if (milestone) {
             milestone.statusDisplay = 'Paid';
             milestone.paidDateDisplay = new Date().toISOString().split('T')[0];
-            await refetchData(); // refetch to simulate update
+            await refetchData(); 
         }
     };
     
     if (isLoading) {
         return (
-            <div className="space-y-8 animate-pulse-fast">
-                <div className="h-8 bg-secondary rounded w-1/2"></div>
+            <div className="space-y-8">
+                <div className="h-8 bg-secondary rounded w-1/2 animate-pulse"></div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
-                        <div className="h-40 bg-secondary rounded-2xl"></div>
-                        <div className="h-32 bg-secondary rounded-2xl"></div>
+                        <div className="h-40 bg-secondary rounded-2xl animate-pulse"></div>
+                        <div className="h-32 bg-secondary rounded-2xl animate-pulse"></div>
                     </div>
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="h-32 bg-secondary rounded-2xl"></div>
-                        <div className="h-24 bg-secondary rounded-2xl"></div>
+                        <div className="h-32 bg-secondary rounded-2xl animate-pulse"></div>
+                        <div className="h-24 bg-secondary rounded-2xl animate-pulse"></div>
                     </div>
                 </div>
             </div>

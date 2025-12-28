@@ -1,6 +1,4 @@
-
-
-import { ProjectStage } from './types';
+import { ProjectStage } from './types.ts';
 
 export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts', 'Project Head', 'Production Head', 'Site Head'];
 

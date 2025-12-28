@@ -1,18 +1,17 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import Card from '../components/ui/Card';
-import { Project, Quote } from '../types';
-import { useUsers } from '../context/UserContext';
-import UserNameDisplay from '../components/ui/UserNameDisplay';
-import Button from '../components/ui/Button';
-import CreateProjectModal from '../components/admin/CreateProjectModal';
-import SyncQuotesModal from '../components/admin/SyncQuotesModal'; // Import Sync Modal
-import { useData } from '../context/DataContext';
-import { createRecord, uploadProjectFile } from '../services/api';
-import { AMAZ_SUPPORT_USER_ID } from '../constants';
-import { RefreshIcon } from '../components/icons';
+import { useAuth } from '../context/AuthContext.tsx';
+import Card from '../components/ui/Card.tsx';
+import { Project, Quote } from '../types.ts';
+import { useUsers } from '../context/UserContext.tsx';
+import UserNameDisplay from '../components/ui/UserNameDisplay.tsx';
+import Button from '../components/ui/Button.tsx';
+import CreateProjectModal from '../components/admin/CreateProjectModal.tsx';
+import SyncQuotesModal from '../components/admin/SyncQuotesModal.tsx';
+import { useData } from '../context/DataContext.tsx';
+import { createRecord, uploadProjectFile } from '../services/api.ts';
+import { AMAZ_SUPPORT_USER_ID } from '../constants.ts';
+import { RefreshIcon } from '../components/icons.tsx';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -23,25 +22,25 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
         <Card className="hover:border-brand-blue transition-colors duration-300">
             <Link to={`/projects/${project.id}`} className="block">
                 <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-bold text-text-headline mb-2">{project.title}</h3>
+                    <h3 className="text-lg font-bold text-text-primary mb-2">{project.title}</h3>
                     <span className={`px-3 py-1 text-xs rounded-full ${
                         project.status === 'Active' ? 'bg-green-500/20 text-green-400' : 
                         project.status === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
                         'bg-gray-500/20 text-gray-300'}`}>{project.status}</span>
                 </div>
-                <p className="text-sm text-text-muted mb-4">{project.address}</p>
+                <p className="text-sm text-text-secondary mb-4">{project.address}</p>
                 <div className="text-sm space-y-2 mb-4">
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold text-text-headline">Customer:</span>
+                        <span className="font-semibold text-text-primary">Customer:</span>
                         <UserNameDisplay user={customer} textClassName="text-sm" />
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold text-text-headline">Designer:</span>
+                        <span className="font-semibold text-text-primary">Designer:</span>
                         {designer ? <UserNameDisplay user={designer} textClassName="text-sm" /> : 'Not Assigned'}
                     </div>
                 </div>
                 <div>
-                    <div className="flex justify-between text-xs text-text-muted mb-1">
+                    <div className="flex justify-between text-xs text-text-secondary mb-1">
                         <span>Progress</span>
                         <span>{project.progress}%</span>
                     </div>
@@ -60,13 +59,12 @@ const ProjectsList: React.FC = () => {
   const { users } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [isSyncModalOpen, setSyncModalOpen] = useState(false); // State for Sync Modal
+  const [isSyncModalOpen, setSyncModalOpen] = useState(false); 
   const navigate = useNavigate();
   
   if (!user) return null;
   
   const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
-    // 1. Map frontend camelCase to backend snake_case and create project record
     const projectToCreate = {
         title: newProjectData.title,
         description: newProjectData.description,
@@ -90,12 +88,10 @@ const ProjectsList: React.FC = () => {
         return;
     }
 
-    // 2. Upload the quote file
     const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
     if (!quoteUrl) {
         alert('Project created, but failed to upload quote. Please upload it manually.');
     } else {
-        // 3. Create the quote record with the file URL
         const initialQuote = {
             project_id: newProject.id,
             version: 'initial',
@@ -105,7 +101,6 @@ const ProjectsList: React.FC = () => {
         await createRecord('quotes', initialQuote);
     }
     
-    // 4. Send personalized welcome message to all parties from the official support user
     const customer = users.find(u => u.id === newProjectData.customerId);
     const designer = users.find(u => u.id === newProjectData.designerId);
     const admin = users.find(u => u.id === newProjectData.adminId);
@@ -120,12 +115,11 @@ Everyone has been added to this chat. Let's create something amazing!`;
     
     await createRecord('messages', {
         chat_id: newProject.id,
-        sender_id: newProjectData.adminId, // Explicitly set sender to satisfy RLS
+        sender_id: newProjectData.adminId,
         body: supportMessage,
         is_system_message: true,
     });
     
-    // 5. Refresh data and navigate
     await refetchData();
     setCreateModalOpen(false);
     navigate(`/projects/${newProject.id}`);
@@ -147,13 +141,13 @@ Everyone has been added to this chat. Let's create something amazing!`;
         <nav className="-mb-px flex space-x-6">
             <button onClick={() => setActiveTab('Active')}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Active' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
+                    ${activeTab === 'Active' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
             >
                 Active Projects ({activeProjects.length})
             </button>
              <button onClick={() => setActiveTab('Archived')}
                 className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Archived' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
+                    ${activeTab === 'Archived' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
             >
                 Archived Projects ({archivedProjects.length})
             </button>
@@ -177,7 +171,7 @@ Everyone has been added to this chat. Let's create something amazing!`;
 
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <h1 className="text-3xl font-bold text-text-headline">
+            <h1 className="text-3xl font-bold font-display text-text-primary">
                 {user.role === 'Customer' ? 'Project Archive' : 'Projects'}
             </h1>
             {user.role === 'Admin' && (
@@ -200,7 +194,7 @@ Everyone has been added to this chat. Let's create something amazing!`;
             </div>
         ) : (
             <Card className="text-center py-12">
-                <p className="text-text-muted">No {user.role === 'Customer' && activeTab.toLowerCase()} projects found.</p>
+                <p className="text-text-secondary">No {user.role === 'Customer' && activeTab.toLowerCase()} projects found.</p>
             </Card>
         )}
       </div>
