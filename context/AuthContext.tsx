@@ -64,23 +64,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     let mounted = true;
 
-    // A single source of truth for the auth listener. 
-    // supabase.auth.onAuthStateChange fires immediately with the initial session.
+    // Explicit check on mount to prevent "stuck" state on refresh
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && mounted) {
+          const profile = await fetchAndMapProfile(session.user);
+          if (mounted) setUser(profile);
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listener for subsequent auth events (sign-in, sign-out, etc.)
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!mounted) return;
         
-        if (session) {
-          const profile = await fetchAndMapProfile(session.user);
-          if (mounted) {
-            setUser(profile);
-            setLoading(false);
-          }
-        } else {
-          if (mounted) {
-            setUser(null);
-            setLoading(false);
-          }
+        // We only trigger loading true if it's a significant change event after initial load
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+           if (session) {
+             const profile = await fetchAndMapProfile(session.user);
+             if (mounted) setUser(profile);
+           } else {
+             if (mounted) setUser(null);
+           }
         }
       }
     );
@@ -131,7 +144,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
   
   const startImpersonation = useCallback((targetUser: User) => {
-    if (user && user.role === 'Admin') {
+    if (user && (user.role === 'Admin' || user.role === 'Sub-Admin')) {
       setImpersonatedUser(targetUser);
       setUser(targetUser);
     }
