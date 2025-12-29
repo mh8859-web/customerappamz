@@ -1,7 +1,7 @@
+
 import React from 'react';
 import { Message, User } from '../../types';
 import { DownloadIcon, FileTextIcon } from '../icons';
-import UserNameDisplay from '../ui/UserNameDisplay';
 import { AMAZ_SUPPORT_USER_ID } from '../../constants';
 
 interface MessageBubbleProps {
@@ -10,71 +10,68 @@ interface MessageBubbleProps {
   sender?: User;
 }
 
-const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0] }> = ({ attachment }) => {
+const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0]; isOwn: boolean }> = ({ attachment, isOwn }) => {
     if (attachment.type === 'image') {
-        return <img src={attachment.url} alt={attachment.name} className="mt-2 rounded-lg max-w-xs cursor-pointer" onClick={() => window.open(attachment.url, '_blank')} />;
+        return <img src={attachment.url} alt={attachment.name} className="mt-2 rounded-2xl max-w-xs cursor-pointer shadow-sm hover:opacity-90 transition-opacity" onClick={() => window.open(attachment.url, '_blank')} />;
     }
     if (attachment.type === 'video') {
-        return <video src={attachment.url} controls className="mt-2 rounded-lg max-w-xs" />;
+        return <video src={attachment.url} controls className="mt-2 rounded-2xl max-w-xs shadow-sm" />;
     }
     return (
-        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-3 bg-surface p-3 rounded-lg hover:bg-border-color">
-            <FileTextIcon className="w-6 h-6 text-text-muted flex-shrink-0" />
-            <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium text-text-headline truncate">{attachment.name}</p>
-                <p className="text-xs text-text-muted">Click to download</p>
+        <a href={attachment.url} target="_blank" rel="noopener noreferrer" className={`mt-2 flex items-center gap-3 p-3 rounded-2xl border transition-colors ${isOwn ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-slate-100 hover:bg-slate-50'}`}>
+            <FileTextIcon className={`w-6 h-6 ${isOwn ? 'text-white' : 'text-slate-400'}`} />
+            <div className="flex-1 overflow-hidden text-left">
+                <p className={`text-sm font-bold truncate ${isOwn ? 'text-white' : 'text-slate-800'}`}>{attachment.name}</p>
+                <p className={`text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Tap to view</p>
             </div>
-            <DownloadIcon className="w-5 h-5 text-text-muted" />
+            <DownloadIcon className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-slate-400'}`} />
         </a>
     );
 };
 
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: isOwnMessageProp, sender }) => {
-  // A system message is displayed as the official support user, regardless of the actual sender.
   const isSupportMessage = !!message.isSystemMessage;
-
-  // An "own" message is one sent by the current user AND is not a system message.
-  // This makes system messages (like the welcome message) appear on the left for everyone.
   const isOwnMessage = !isSupportMessage && isOwnMessageProp;
 
+  // --- FIX: Updated the support user object literal to include all required User interface properties ---
   const senderToDisplay = isSupportMessage 
     ? { 
         id: AMAZ_SUPPORT_USER_ID,
-        fullName: 'AMAZ INTERIOR SUPPORT', 
+        fullName: 'AMAZ Support', 
         avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-        role: 'Admin', // Base role for styling consistency
-        verified: true, // Mark as verified to show a badge
+        role: 'Admin',
+        email: 'support@amaz.com',
+        verified: true,
+        verificationRequested: false,
+        userId: 'SUPPORT',
       } as User
     : sender;
 
   const bubbleClasses = isOwnMessage
-    ? 'bg-brand-blue text-white'
-    : 'bg-secondary';
+    ? 'bg-brand-blue text-white rounded-tr-[4px]'
+    : 'bg-[#F0F2F5] text-slate-800 rounded-tl-[4px]';
 
   const alignmentClasses = isOwnMessage ? 'items-end' : 'items-start';
 
-  const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   return (
-    <div className={`flex flex-col ${alignmentClasses}`}>
-        <div className="flex items-start gap-3 max-w-md">
+    <div className={`flex flex-col ${alignmentClasses} animate-in`}>
+        <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-[70%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
             {!isOwnMessage && (
-                <img src={senderToDisplay?.avatarUrl} alt={senderToDisplay?.fullName} className="w-8 h-8 rounded-full" />
+                <img src={senderToDisplay?.avatarUrl} className="w-7 h-7 rounded-full object-cover mb-1 ring-1 ring-slate-100" alt="" />
             )}
-            <div className={`rounded-xl p-3 ${bubbleClasses}`}>
-                 {!isOwnMessage && (
-                    <div className="mb-1">
-                      <UserNameDisplay user={senderToDisplay} className="text-xs font-bold text-brand-blue" />
-                    </div>
-                )}
-                {message.body && <p className="text-sm whitespace-pre-wrap">{message.body}</p>}
-                {message.attachments?.map((att, index) => (
-                    <AttachmentPreview key={index} attachment={att} />
-                ))}
+            <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                <div className={`px-4 py-2.5 rounded-[22px] shadow-sm ${bubbleClasses}`}>
+                    {message.body && <p className="text-[14px] leading-[1.4] font-medium whitespace-pre-wrap">{message.body}</p>}
+                    {message.attachments?.map((att, index) => (
+                        <AttachmentPreview key={index} attachment={att} isOwn={isOwnMessage} />
+                    ))}
+                </div>
             </div>
         </div>
-        <p className={`text-xs mt-1 px-2 ${isOwnMessage ? 'mr-3' : 'ml-11'}`}>{time}</p>
+        <p className={`text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 ${isOwnMessage ? 'mr-1' : 'ml-10'}`}>
+            {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
     </div>
   );
 };

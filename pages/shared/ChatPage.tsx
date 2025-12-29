@@ -5,13 +5,13 @@ import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import ChatComponent from '../../components/chat/ChatComponent';
 import { Project } from '../../types';
-import { MessageSquareIcon, SearchIcon } from '../../components/icons';
+import { MessageSquareIcon, SearchIcon, ChevronDownIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 
 const ChatPage: React.FC = () => {
   const { projectId: activeProjectId } = useParams();
   const { user } = useAuth();
-  const { projects, loading: dataLoading, unreadCounts, markChatAsRead } = useData();
+  const { projects, loading: dataLoading, unreadCounts, markChatAsRead, messages } = useData();
   const { findUserById, loading: usersLoading } = useUsers();
 
   useEffect(() => {
@@ -41,102 +41,104 @@ const ChatPage: React.FC = () => {
 
   if (isLoading || !user) {
       return (
-          <div className="flex h-[calc(100vh-8rem)] bg-surface rounded-3xl shadow-premium overflow-hidden animate-pulse">
-            <div className="w-full md:w-80 border-r border-secondary p-6 space-y-4">
-              <div className="h-8 bg-secondary rounded-xl w-3/4 mb-6"></div>
-              <div className="h-20 bg-secondary rounded-2xl"></div>
-              <div className="h-20 bg-secondary rounded-2xl"></div>
-              <div className="h-20 bg-secondary rounded-2xl"></div>
+          <div className="flex h-[calc(100vh-6rem)] bg-white rounded-3xl shadow-soft overflow-hidden animate-pulse">
+            <div className="w-full md:w-80 border-r border-slate-100 p-6 space-y-4">
+              <div className="h-10 bg-slate-50 rounded-full w-1/2 mb-6"></div>
+              <div className="h-16 bg-slate-50 rounded-2xl"></div>
+              <div className="h-16 bg-slate-50 rounded-2xl"></div>
             </div>
-            <div className="flex-1 hidden md:block bg-secondary/20"></div>
+            <div className="flex-1 hidden md:block bg-slate-50/30"></div>
           </div>
       );
   }
 
-  const getChatPartner = (project: Project) => {
-      if (user?.role === 'Designer') return findUserById(project.customerId);
-      if (user?.role === 'Customer') return findUserById(project.designerId);
-      const customer = findUserById(project.customerId);
-      const designer = findUserById(project.designerId);
-      return { customer, designer };
+  const getChatDetails = (project: Project) => {
+      const lastMsg = messages
+        .filter(m => m.chatId === project.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      
+      let partnerName = 'Project Team';
+      let avatarUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp';
+      
+      if (user?.role === 'Customer') {
+          const designer = findUserById(project.designerId);
+          partnerName = designer?.fullName || 'Designer';
+          avatarUrl = designer?.avatarUrl || avatarUrl;
+      } else {
+          const customer = findUserById(project.customerId);
+          partnerName = customer?.fullName || 'Client';
+          avatarUrl = customer?.avatarUrl || avatarUrl;
+      }
+
+      return { partnerName, avatarUrl, lastMsg: lastMsg?.body || 'Start a conversation...' };
   };
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] bg-white rounded-3xl shadow-premium overflow-hidden border border-secondary animate-fade-up">
+    <div className="flex h-[calc(100vh-8rem)] bg-white rounded-[32px] shadow-premium overflow-hidden border border-slate-100 animate-in">
       {/* Sidebar: Conversation List */}
-      <div className={`w-full md:w-80 lg:w-96 border-r border-secondary flex flex-col ${activeProjectId ? 'hidden md:flex' : 'flex'}`}>
-        <div className="p-6 border-b border-secondary/50">
-          <h1 className="text-2xl font-display font-bold text-brand-dark">Concierge</h1>
-          <p className="text-[11px] uppercase tracking-widest text-brand-gold font-bold mt-1">Direct Team Communication</p>
+      <div className={`w-full md:w-80 lg:w-96 border-r border-slate-50 flex flex-col ${activeProjectId ? 'hidden md:flex' : 'flex'}`}>
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Messages</h1>
+            <button className="p-2 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
+                <MessageSquareIcon className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
           
-          <div className="relative mt-4">
-             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary/50" />
-             <input placeholder="Search conversations..." className="w-full bg-secondary/50 border-none rounded-xl py-2.5 pl-10 text-xs focus:ring-1 focus:ring-brand-gold transition-all" />
+          <div className="relative">
+             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+             <input 
+                placeholder="Search messages..." 
+                className="w-full bg-slate-100/50 border-none rounded-2xl py-3 pl-11 pr-4 text-sm focus:ring-2 focus:ring-brand-blue/10 focus:bg-white transition-all outline-none" 
+             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-4">
           {conversations.map(project => {
-            const partner = getChatPartner(project);
-            let partnerName = 'Project Chat';
-            let avatarUrl = '';
-            
-            if (partner) {
-              if ('customer' in partner) {
-                partnerName = `${partner.customer?.fullName.split(' ')[0]} & ${partner.designer?.fullName.split(' ')[0]}`;
-                avatarUrl = partner.customer?.avatarUrl || '';
-              } else {
-                partnerName = partner.fullName;
-                avatarUrl = partner.avatarUrl;
-              }
-            }
-            
+            const { partnerName, avatarUrl, lastMsg } = getChatDetails(project);
             const unreadCount = unreadCounts[project.id] || 0;
+            const isActive = activeProjectId === project.id;
 
             return (
               <NavLink
                 key={project.id}
                 to={`/chat/${project.id}`}
-                className={({ isActive }) => `flex items-center gap-4 p-4 rounded-2xl mb-1 transition-all duration-300 ${isActive ? 'bg-brand-dark text-white shadow-lg shadow-brand-dark/20' : 'hover:bg-secondary/60 text-text-primary'}`}
+                className={`flex items-center gap-3 p-3 rounded-[20px] mb-1 transition-all duration-200 group ${isActive ? 'bg-brand-blue/5' : 'hover:bg-slate-50'}`}
               >
                 <div className="relative flex-shrink-0">
-                  <img src={avatarUrl} alt={partnerName} className={`w-12 h-12 rounded-xl object-cover border-2 ${activeProjectId === project.id ? 'border-brand-gold' : 'border-secondary'}`}/>
+                  <img src={avatarUrl} alt={partnerName} className={`w-14 h-14 rounded-full object-cover ring-2 ${isActive ? 'ring-brand-blue/20' : 'ring-transparent'}`}/>
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 block h-5 w-5 rounded-full bg-brand-gold text-brand-dark text-[10px] font-bold flex items-center justify-center border-2 border-white">
-                      {unreadCount}
-                    </span>
+                    <span className="absolute bottom-0 right-0 h-4 w-4 rounded-full bg-brand-blue border-2 border-white"></span>
                   )}
                 </div>
                 <div className="flex-1 overflow-hidden">
-                  <h2 className={`font-bold truncate text-[14px] ${activeProjectId === project.id ? 'text-white' : 'text-brand-dark'}`}>{project.title}</h2>
-                  <p className={`text-[11px] truncate mt-0.5 ${activeProjectId === project.id ? 'text-white/60' : 'text-text-secondary font-medium'}`}>{partnerName}</p>
+                  <div className="flex justify-between items-baseline mb-0.5">
+                    <h2 className={`text-[15px] font-bold truncate ${isActive ? 'text-brand-blue' : 'text-slate-900'}`}>{partnerName}</h2>
+                    <span className="text-[10px] text-slate-400 font-medium">12:30 PM</span>
+                  </div>
+                  <p className={`text-xs truncate leading-snug ${unreadCount > 0 ? 'font-bold text-slate-900' : 'text-slate-500 font-medium'}`}>
+                    {lastMsg}
+                  </p>
                 </div>
               </NavLink>
             );
           })}
-           {conversations.length === 0 && (
-            <div className="p-8 text-center">
-                <div className="bg-secondary/40 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageSquareIcon className="w-6 h-6 text-text-secondary/40" />
-                </div>
-                <p className="text-xs text-text-secondary font-medium">No active threads.</p>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Main Content: Chat Interface */}
-      <div className={`flex-1 flex-col bg-secondary/10 ${activeProjectId ? 'flex' : 'hidden md:flex'}`}>
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col bg-white ${activeProjectId ? 'flex' : 'hidden md:flex'}`}>
         {activeProjectId ? (
           <ChatComponent projectId={activeProjectId} currentUser={user} />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
-            <div className="w-20 h-20 bg-white rounded-3xl shadow-premium flex items-center justify-center mb-6">
-                <MessageSquareIcon className="w-10 h-10 text-brand-gold" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50/30">
+            <div className="w-20 h-20 bg-white rounded-full shadow-soft flex items-center justify-center mb-6">
+                <MessageSquareIcon className="w-8 h-8 text-brand-blue/40" />
             </div>
-            <h2 className="text-2xl font-display font-bold text-brand-dark">Engagement Portal</h2>
-            <p className="text-text-secondary mt-3 max-w-xs font-light leading-relaxed">
-              Select a project from the left menu to begin your direct consultation with the AMAZ creative team.
+            <h2 className="text-xl font-bold text-slate-800">Your Inbox</h2>
+            <p className="text-slate-400 mt-2 max-w-xs text-sm leading-relaxed">
+              Select a conversation to view project updates and chat with your team.
             </p>
           </div>
         )}
