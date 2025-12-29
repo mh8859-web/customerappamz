@@ -60,13 +60,13 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   const content = (
     <>
       {showAvatar && (
-          <img src={user.avatarUrl} alt="" className={`${imageSize} rounded-lg mr-2.5 object-cover ring-1 ring-slate-100 shadow-sm`} />
+          <img src={user.avatarUrl} alt="" className={`${imageSize} rounded-lg mr-2 object-cover ring-1 ring-slate-100 shadow-sm`} />
       )}
       <span className={`${textClassName} tracking-tight`}>{isSupportUser ? 'AMAZ CONCIERGE' : user.fullName}</span>
       {badgeUrl && (
         <div className="relative inline-flex items-center ml-1.5 h-3.5">
           <button 
-            className="flex items-center focus:outline-none opacity-80 hover:opacity-100" 
+            className="flex items-center focus:outline-none opacity-80 hover:opacity-100 transition-opacity" 
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}
           >
             <img src={badgeUrl} alt="Verified" className="w-3 h-3" />
@@ -76,7 +76,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
                 <div className="flex flex-col items-center text-center">
                     <img src={badgeUrl} alt="" className="w-5 h-5 mb-2"/>
                     <h4 className="font-bold text-slate-900 text-xs">{details.title}</h4>
-                    <p className="text-[10px] text-slate-500 font-medium">{details.text}</p>
+                    <p className="text-[10px] text-slate-500 font-medium leading-tight">{details.text}</p>
                 </div>
             </div>
           )}
