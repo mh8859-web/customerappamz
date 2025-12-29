@@ -9,18 +9,19 @@ import AppShell from "../ui/AppShell";
 const ProtectedRoute: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
 
-  // Show a high-fidelity app skeleton ONLY when checking authentication state for protected routes.
-  // This provides a smooth experience for logged-in users on refresh.
-  if (authLoading) {
+  // Show the high-fidelity skeleton only while we have NO user data 
+  // and we are actively checking the initial session.
+  if (authLoading && !user) {
     return <AppShell />;
   }
 
-  // If authentication is resolved and there is no user, redirect to login.
-  if (!user) {
+  // If loading finished and still no user, they need to log in.
+  if (!authLoading && !user) {
     return <Navigate to="/login" replace />;
   }
 
-  // If a user exists, wrap the authenticated app in the necessary data providers.
+  // If we have a user (even if some profile data is still syncing), 
+  // let them into the dashboard layout.
   return (
     <UserProvider>
       <DataProvider>

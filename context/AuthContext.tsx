@@ -31,7 +31,7 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    // Adding a timeout to the database fetch to prevent infinite hanging
+    // 3-second timeout for the database fetch to prevent UI hanging
     const fetchPromise = supabase
       .from("users")
       .select("*")
@@ -39,12 +39,13 @@ const fetchAndMapProfile = async (
       .single();
     
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Profile fetch timeout")), 4000)
+      setTimeout(() => reject(new Error("Timeout")), 3000)
     );
 
-    const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
+    const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+    const data = result.data;
 
-    if (error || !data) return null;
+    if (!data) return null;
 
     return {
       id: data.id,
@@ -57,7 +58,7 @@ const fetchAndMapProfile = async (
       userId: data.user_id || '',
     };
   } catch (err) {
-    console.error("Profile map error:", err);
+    console.error("Profile retrieval failed:", err);
     return null;
   }
 };
@@ -69,48 +70,63 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
+  const syncAuth = useCallback(async (session: any, mounted: boolean) => {
+    if (session?.user) {
+      const profile = await fetchAndMapProfile(session.user);
+      if (mounted) {
+        setUser(profile);
+        setLoading(false);
+      }
+    } else {
+      if (mounted) {
+        setUser(null);
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
-    // Safety-net timeout: Force resolve loading if auth takes more than 5s
-    const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("Auth initialization timed out. Forcing UI resolve.");
-        setLoading(false);
+    // 1. IMMEDIATE CHECK: Don't wait for events, check localStorage now.
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await syncAuth(session, mounted);
+        } else {
+          if (mounted) setLoading(false);
+        }
+      } catch (e) {
+        if (mounted) setLoading(false);
       }
-    }, 5000);
+    };
 
-    // Streamlined initialization using the unified listener
-    // onAuthStateChange handles INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, etc.
+    init();
+
+    // 2. LISTENER: Handle subsequent login/logout events.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        console.log(`Auth Event: ${event}`);
-
-        if (session) {
-          const profile = await fetchAndMapProfile(session.user);
-          if (mounted) {
-            setUser(profile);
-            setLoading(false);
-            clearTimeout(safetyTimeout);
-          }
-        } else {
-          if (mounted) {
-            setUser(null);
-            setLoading(false);
-            clearTimeout(safetyTimeout);
-          }
+        // Only trigger heavy profile fetches on actual state changes
+        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
+           await syncAuth(session, mounted);
         }
       }
     );
 
+    // 3. SAFETY ESCAPE: Never let the app stay in "loading" for more than 4s
+    const timer = setTimeout(() => {
+      if (mounted && loading) setLoading(false);
+    }, 4000);
+
     return () => {
       mounted = false;
-      clearTimeout(safetyTimeout);
+      clearTimeout(timer);
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [syncAuth]);
 
 
   const login = useCallback(async (
@@ -146,9 +162,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
     setUser(null);
     setImpersonatedUser(null);
+    await supabase.auth.signOut();
+    window.location.href = '/#/login';
   }, []);
   
   const startImpersonation = useCallback((targetUser: User) => {
