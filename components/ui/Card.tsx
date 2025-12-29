@@ -1,9 +1,10 @@
+
 import React, { ReactNode } from 'react';
 
 interface CardProps {
   children: ReactNode;
   className?: string;
-  // Added optional onClick prop to resolve assignment errors in components using Card as a clickable element
+  // Added onClick prop to support interactive cards
   onClick?: () => void;
 }
 
