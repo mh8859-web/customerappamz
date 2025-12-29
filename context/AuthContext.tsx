@@ -38,7 +38,6 @@ const fetchAndMapProfile = async (
       .single();
 
     if (error || !data) {
-      console.warn("User record missing in public.users. Falling back to metadata.");
       return {
         id: supabaseUser.id,
         fullName: supabaseUser.user_metadata?.full_name || "User",
@@ -62,7 +61,6 @@ const fetchAndMapProfile = async (
       userId: data.user_id || '',
     };
   } catch (e) {
-    console.error("Critical error mapping profile:", e);
     return null;
   }
 };
@@ -83,30 +81,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     setLoading(true);
-
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        try {
-          if (session) {
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-            console.error("Auth state change error:", error);
-            setUser(null);
-        } finally {
-            setLoading(false);
+        if (session) {
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+        } else {
+          setUser(null);
         }
+        setLoading(false);
       }
     );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    return () => authListener.subscription.unsubscribe();
   }, []);
-
 
   const login = useCallback(async (
     identifier: string,
@@ -124,28 +111,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           .ilike("user_id", trimmedId)
           .single();
 
-        if (profileError || !profile?.email) {
-          return { success: false, error: "USER_NOT_FOUND" };
-        }
+        if (profileError || !profile?.email) return { success: false, error: "USER_NOT_FOUND" };
         targetEmail = profile.email;
       }
 
-      const finalEmail = targetEmail.trim().toLowerCase();
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: finalEmail,
-        password: password,
+        email: targetEmail.trim().toLowerCase(),
+        password,
       });
       
-      if (signInError) {
-        return { success: false, error: "INVALID_CREDENTIALS" };
-      }
-      
-      return { success: true, error: null };
+      return signInError ? { success: false, error: "INVALID_CREDENTIALS" } : { success: true, error: null };
     } catch (e) {
       return { success: false, error: "UNKNOWN_ERROR" };
     }
   }, []);
-  
+
   const startImpersonation = useCallback((targetUser: User) => {
     if (user && user.role === 'Admin') {
       sessionStorage.setItem('impersonation_admin', JSON.stringify(user));
@@ -157,59 +137,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const stopImpersonation = useCallback(() => {
     const adminUserJson = sessionStorage.getItem('impersonation_admin');
     if (adminUserJson) {
-      const adminUser = JSON.parse(adminUserJson);
-      setUser(adminUser);
+      setUser(JSON.parse(adminUserJson));
       setImpersonatedUser(null);
       sessionStorage.removeItem('impersonation_admin');
-    } else {
-      setUser(null);
-      setImpersonatedUser(null);
     }
   }, []);
-  
-  useEffect(() => {
-    let inactivityTimer: number;
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer);
-      if (user && !impersonatedUser) {
-        inactivityTimer = window.setTimeout(() => {
-          logout();
-        }, 10 * 60 * 1000);
-      }
-    };
-    const activityEvents: (keyof WindowEventMap)[] = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
-    if (user) {
-      activityEvents.forEach(event => window.addEventListener(event, resetInactivityTimer));
-      resetInactivityTimer();
-    }
-    return () => {
-      clearTimeout(inactivityTimer);
-      activityEvents.forEach(event => window.removeEventListener(event, resetInactivityTimer));
-    };
-  }, [user, logout, impersonatedUser]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
 
-  const value = { 
-    user, 
-    loading, 
-    login, 
-    logout, 
-    updateUser, 
-    isImpersonating: !!impersonatedUser,
-    startImpersonation,
-    stopImpersonation,
-    impersonatedUser,
-  };
-
+  const value = { user, loading, login, logout, updateUser, isImpersonating: !!impersonatedUser, startImpersonation, stopImpersonation, impersonatedUser };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context)
-    throw new Error("useAuth must be used within AuthProvider");
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
