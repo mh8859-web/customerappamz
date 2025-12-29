@@ -3,13 +3,14 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { UserRole } from '../../types';
 import { USER_ROLES } from '../../constants';
-import { EyeIcon, EyeOffIcon } from '../icons';
+import { EyeIcon, EyeOffIcon, MailIcon, UserIcon, ShieldCheckIcon, PhoneIcon } from '../icons';
 
 interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (user: {
     fullName: string;
+    email: string;
     role: UserRole;
     userId: string;
     password: string;
@@ -17,198 +18,168 @@ interface CreateUserModalProps {
   }) => Promise<void>;
 }
 
-const FormField: React.FC<{label: string, children: React.ReactNode, description?: string}> = ({label, children, description}) => (
-  <div>
-      <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
+const FormField: React.FC<{label: string, icon?: React.ReactNode, children: React.ReactNode, description?: string}> = ({label, icon, children, description}) => (
+  <div className="space-y-1.5">
+      <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1.5">
+        {icon}
+        {label}
+      </label>
       {children}
-      {description && <p className="mt-1 text-xs text-text-secondary">{description}</p>}
+      {description && <p className="text-[10px] text-slate-400 font-medium italic ml-1">{description}</p>}
   </div>
 );
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCreate }) => {
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
     role: 'Designer' as UserRole,
     userId: '',
     password: '',
-    verified: false,
+    verified: true,
   });
   const [mobileNumber, setMobileNumber] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
 
-  // This effect resets the form's state whenever the modal is closed.
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         fullName: '',
+        email: '',
         role: 'Designer' as UserRole,
         userId: '',
         password: '',
-        verified: false,
+        verified: true,
       });
       setMobileNumber('');
       setShowPassword(false);
-      setPasswordError('');
       setIsSubmitting(false);
     }
   }, [isOpen]);
 
-  // Auto-generates User ID and Password for Customers based on mobile number
+  // Auto-logic for Customers
   useEffect(() => {
-    if (formData.role === 'Customer') {
-        const digits = mobileNumber.replace(/\D/g, '');
-        if (digits.length === 10) {
-            const newUserId = digits.substring(0, 5);
-            const newPassword = `@${digits.substring(digits.length - 5)}`;
-            setFormData(prev => ({
-                ...prev,
-                userId: newUserId,
-                password: newPassword,
-            }));
-        } else {
-            // Clear if mobile number is not 10 digits
-            setFormData(prev => ({
-                ...prev,
-                userId: '',
-                password: '',
-            }));
-        }
+    if (formData.role === 'Customer' && mobileNumber.length === 10) {
+        const id = mobileNumber.substring(0, 5);
+        setFormData(prev => ({
+            ...prev,
+            userId: id,
+            email: `${id}@amazmodular.com`, // Auto-gen private email
+            password: `@${mobileNumber.substring(5)}`,
+        }));
     }
   }, [mobileNumber, formData.role]);
 
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const target = e.target;
-    const { name, value } = target;
-
-    if (name === 'role') {
-        // If role changes, reset dependent fields
-        setFormData(prev => ({
-            ...prev,
-            role: value as UserRole,
-            userId: '',
-            password: ''
-        }));
-        setMobileNumber('');
-    } else if (target instanceof HTMLInputElement && target.type === 'checkbox') {
-        setFormData(prev => ({ ...prev, [target.name]: target.checked }));
-    } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
-    }
-  }, [setMobileNumber]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.role !== 'Customer' && formData.password.length < 6) {
-        setPasswordError('Password must be at least 6 characters.');
-        return;
-    }
-    setPasswordError('');
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
-    await onCreate({
-        ...formData,
-        fullName: formData.fullName.trim(),
-        userId: formData.userId.trim().toLowerCase(),
-        password: formData.password.trim(),
-    });
+    try {
+        await onCreate({
+            ...formData,
+            fullName: formData.fullName.trim(),
+            userId: formData.userId.trim().toLowerCase(),
+            email: formData.email.trim().toLowerCase(),
+            password: formData.password.trim(),
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
-  const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80";
+  const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/40 focus:bg-white placeholder:text-slate-300 transition-all duration-300";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New User">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Full Name">
-          <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={formInputClasses} required />
-        </FormField>
+    <Modal isOpen={isOpen} onClose={onClose} title="Provision New Identity">
+      <form onSubmit={handleSubmit} className="space-y-6">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Role">
-                <select name="role" value={formData.role} onChange={handleChange} className={formInputClasses} required>
-                    {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
-                </select>
+        {/* Core Identity Section */}
+        <div className="space-y-4">
+            <FormField label="Full Legal Name" icon={<UserIcon className="w-3 h-3"/>}>
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} placeholder="e.g. Alexander Pierce" required />
             </FormField>
-            
-            {formData.role === 'Customer' ? (
-                 <FormField label="Mobile Number">
-                    <input 
-                        type="tel" 
-                        name="mobileNumber" 
-                        value={mobileNumber} 
-                        onChange={(e) => {
-                            const digits = e.target.value.replace(/\D/g, '');
-                            if (digits.length <= 10) {
-                                setMobileNumber(digits);
-                            }
-                        }} 
-                        className={formInputClasses}
-                        placeholder="Enter 10-digit mobile"
-                        maxLength={10}
-                        required 
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField label="Assign System Role" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
+                    <select name="role" value={formData.role} onChange={handleChange} className={inputClasses} required>
+                        {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
+                    </select>
+                </FormField>
+
+                {formData.role === 'Customer' ? (
+                     <FormField label="Verification Mobile" icon={<PhoneIcon className="w-3 h-3"/>}>
+                        <input 
+                            type="tel" 
+                            value={mobileNumber} 
+                            onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').substring(0, 10))} 
+                            className={inputClasses}
+                            placeholder="10-digit number"
+                            required 
+                        />
+                    </FormField>
+                ) : (
+                    <FormField label="Unique Identity ID" icon={<UserIcon className="w-3 h-3"/>} description="Used for primary login identification.">
+                        <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required placeholder="e.g. DES-4402" />
+                    </FormField>
+                )}
+            </div>
+        </div>
+
+        {/* Credentials Section */}
+        <div className="p-5 bg-slate-50/50 rounded-[24px] border border-slate-100 space-y-4">
+            <FormField label="Account Email Address" icon={<MailIcon className="w-3 h-3"/>} description="Required for secure cloud authentication.">
+                <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleChange} 
+                    className={inputClasses} 
+                    placeholder="name@example.com" 
+                    required 
+                    readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
+                />
+            </FormField>
+
+            <FormField label="Access Security Key" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
+                <div className="relative">
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className={`${inputClasses} pr-12`}
+                        placeholder="••••••••"
+                        required
+                        readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
                     />
-                </FormField>
-            ) : (
-                <FormField label="User ID" description="This is the unique ID the user will use to log in.">
-                    <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={formInputClasses} required placeholder="Create a unique ID" />
-                </FormField>
-            )}
+                    {formData.role !== 'Customer' && (
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-blue">
+                            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                        </button>
+                    )}
+                </div>
+            </FormField>
         </div>
         
-        {formData.role === 'Customer' && (
-            <FormField 
-              label="User ID"
-              description="Auto-generated from first 5 digits of mobile."
-            >
-                <input type="text" name="userId" value={formData.userId} className={`${formInputClasses} bg-secondary cursor-not-allowed`} required readOnly />
-            </FormField>
-        )}
-
-        <FormField label="Password">
-            <div className="relative">
-              <input
-                type={showPassword || formData.role === 'Customer' ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={(e) => {
-                    handleChange(e);
-                    if (passwordError) setPasswordError('');
-                }}
-                className={`${formInputClasses} ${formData.role !== 'Customer' ? 'pr-10' : ''}`}
-                required
-                readOnly={formData.role === 'Customer'}
-              />
-              {formData.role !== 'Customer' && (
-                <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-text-secondary hover:text-text-primary"
-                >
-                    {showPassword ? <EyeOffIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
-                </button>
-              )}
-            </div>
-            {passwordError ? (
-                <p className="mt-1 text-xs text-red-400">{passwordError}</p>
-            ) : (
-                <p className="mt-1 text-xs text-text-secondary">
-                    {formData.role === 'Customer' ? 'Auto-generated: @ + last 5 digits of mobile.' : 'Must be at least 6 characters.'}
-                </p>
-            )}
-        </FormField>
-        
-        <div className="flex items-center">
-            <input type="checkbox" id="verified" name="verified" checked={formData.verified} onChange={handleChange} className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue" />
-            <label htmlFor="verified" className="ml-2 block text-sm text-text-primary">
-                Mark as Verified
+        <div className="flex items-center justify-between px-2 pt-2">
+            <label className="flex items-center gap-3 cursor-pointer group">
+                <input type="checkbox" name="verified" checked={formData.verified} onChange={handleChange} className="w-5 h-5 rounded-lg border-slate-200 text-brand-blue focus:ring-brand-blue/20 transition-all" />
+                <span className="text-xs font-bold text-slate-500 group-hover:text-slate-900 uppercase tracking-widest">Mark as Verified Entity</span>
             </label>
         </div>
         
-        <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating User...' : 'Create User'}
+        <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+          <button type="button" onClick={onClose} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
+          <Button type="submit" className="flex-[2] !py-4 !rounded-2xl !bg-slate-900 shadow-button" disabled={isSubmitting}>
+              {isSubmitting ? 'Provisioning...' : 'Confirm & Create User'}
           </Button>
         </div>
       </form>

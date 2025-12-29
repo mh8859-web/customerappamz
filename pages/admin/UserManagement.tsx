@@ -24,6 +24,36 @@ const UserManagement: React.FC = () => {
     return users;
   }, [users, currentUser]);
 
+  const handleCreateUser = async (u: any) => {
+    try {
+        // 1. Create the Auth Record
+        const { user: newUser, error: authError } = await signUpNewUser(u.email, u.password, {
+            fullName: u.fullName,
+            role: u.role,
+            userId: u.userId
+        });
+
+        if (authError) {
+            alert(`Provisioning Failed: ${authError.message}`);
+            return;
+        }
+
+        // 2. The database trigger usually creates the profile, 
+        // but we ensure the verification status is synced correctly.
+        if (newUser && u.verified) {
+             await updateRecord('users', newUser.id, { verified: true });
+        }
+
+        alert(`Success: ${u.fullName} has been added to the system.`);
+        await refetchUsers();
+        setCreateUserModalOpen(false);
+
+    } catch (err) {
+        alert('An unexpected system error occurred during user provisioning.');
+        console.error(err);
+    }
+  };
+
   const handleOpenEditModal = (user: User) => {
     setSelectedUser(user);
     setEditModalOpen(true);
@@ -56,7 +86,11 @@ const UserManagement: React.FC = () => {
 
   return (
     <>
-      <CreateUserModal isOpen={isCreateUserModalOpen} onClose={() => setCreateUserModalOpen(false)} onCreate={async (u) => { await refetchUsers(); setCreateUserModalOpen(false); }} />
+      <CreateUserModal 
+        isOpen={isCreateUserModalOpen} 
+        onClose={() => setCreateUserModalOpen(false)} 
+        onCreate={handleCreateUser} 
+      />
       <EditUserModal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} user={selectedUser} onUpdate={handleUpdateUser} />
       
       <div className="space-y-6 animate-in">
