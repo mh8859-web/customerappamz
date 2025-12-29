@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Card from '../components/ui/Card.tsx';
-import { STAGE_DISPLAY_NAMES } from '../constants.ts';
-import Button from '../components/ui/Button.tsx';
-import { useAuth } from '../context/AuthContext.tsx';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons.tsx';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types.ts';
-import Modal from '../components/ui/Modal.tsx';
-import ProjectStatusBar from '../components/ProjectStatusBar.tsx';
-import DesignAnnotationModal from '../components/design/DesignAnnotationModal.tsx';
-import AddProductModal from '../components/designer/AddProductModal.tsx';
-import ProjectGanttChart from '../components/customer/ProjectGanttChart.tsx';
-import GeneratePOModal from '../components/designer/GeneratePOModal.tsx';
-import { useUsers } from '../context/UserContext.tsx';
-import UserNameDisplay from '../components/ui/UserNameDisplay.tsx';
-import { useData } from '../context/DataContext.tsx';
-import { updateRecord, createRecord, uploadProjectFile, deleteProjectAndRelatedData } from '../services/api.ts';
-import UploadDesignModal from '../components/design/UploadDesignModal.tsx';
+import Card from '../components/ui/Card';
+import { STAGE_DISPLAY_NAMES } from '../constants';
+import Button from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
+import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types';
+import Modal from '../components/ui/Modal';
+import ProjectStatusBar from '../components/ProjectStatusBar';
+import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
+import AddProductModal from '../components/designer/AddProductModal';
+import ProjectGanttChart from '../components/customer/ProjectGanttChart';
+import GeneratePOModal from '../components/designer/GeneratePOModal';
+import { useUsers } from '../context/UserContext';
+import UserNameDisplay from '../components/ui/UserNameDisplay';
+import { useData } from '../context/DataContext';
+import { updateRecord, createRecord, uploadProjectFile, deleteProjectAndRelatedData } from '../services/api';
+import UploadDesignModal from '../components/design/UploadDesignModal';
 
 type UnifiedUpdate = {
     id: string;
@@ -38,6 +38,7 @@ const TABS: Record<UserRole, string[]> = {
     'Site Head': ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs'],
 };
 
+// Moved outside for performance: prevents re-declaration on every render.
 const UpdateIcon: React.FC<{ type: UnifiedUpdate['type'] }> = ({ type }) => {
     const iconMap = {
         update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
@@ -236,6 +237,8 @@ const ProjectDetails: React.FC = () => {
     };
 
     const handleSaveComments = async (designId: string, newComments: Comment[]) => {
+        // In real app, you'd probably batch update/insert comments.
+        // For simplicity, we just update the design with the new comment array.
         await updateRecord('designs', designId, { comments: newComments, submitted_for_review: false });
         await refetchData();
     };
@@ -305,7 +308,7 @@ const ProjectDetails: React.FC = () => {
         setDeleteModalOpen(false);
     };
 
-    const totalSourcedValue = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
+    const totalSourcedCost = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
 
 
     const renderTabContent = () => {
@@ -459,12 +462,12 @@ const ProjectDetails: React.FC = () => {
                                 <h2 className="text-xl font-bold font-display text-text-primary mb-4">Budget Overview</h2>
                                 <div className="space-y-3 text-sm">
                                     <div className="flex justify-between"><span>Total Budget:</span> <span className="font-semibold text-text-primary">₹{project.budgetDisplay.toLocaleString()}</span></div>
-                                    <div className="flex justify-between"><span>Sourced Items:</span> <span className="font-semibold text-text-primary">- ₹{totalSourcedValue.toLocaleString()}</span></div>
+                                    <div className="flex justify-between"><span>Sourced Items:</span> <span className="font-semibold text-text-primary">- ₹{totalSourcedCost.toLocaleString()}</span></div>
                                     <div className="border-t border-border-color my-2"></div>
                                     <div className="flex justify-between text-base">
                                         <span className="font-bold text-text-primary">Remaining:</span>
-                                        <span className={`font-bold ${project.budgetDisplay - totalSourcedValue < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                            ₹{(project.budgetDisplay - totalSourcedValue).toLocaleString()}
+                                        <span className={`font-bold ${project.budgetDisplay - totalSourcedCost < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                                            ₹{(project.budgetDisplay - totalSourcedCost).toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
@@ -533,6 +536,7 @@ const ProjectDetails: React.FC = () => {
                     <Card>
                         <h2 className="text-xl font-bold font-display text-text-primary mb-4">Project Milestones</h2>
 
+                        {/* Mobile View */}
                         <div className="md:hidden space-y-3">
                             {projectMilestones.map(milestone => (
                                 <div key={milestone.id} className="bg-page-bg p-4 rounded-xl text-sm">
@@ -555,6 +559,7 @@ const ProjectDetails: React.FC = () => {
                             ))}
                         </div>
 
+                        {/* Desktop View */}
                         <div className="hidden md:block overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead className="text-xs text-text-secondary uppercase bg-page-bg">

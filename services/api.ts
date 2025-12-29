@@ -65,16 +65,6 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
     return { data, error };
 };
 
-// Generic function to Update or Insert (Upsert) a record
-export const upsertRecord = async (tableName: string, recordData: Record<string, any>) => {
-    const { data, error } = await supabase
-        .from(tableName)
-        .upsert(recordData)
-        .select()
-        .single();
-    return { data, error };
-};
-
 // Generic function to delete a record by ID from any table
 export const deleteRecord = async (tableName: string, recordId: string) => {
     const { error } = await supabase
@@ -108,17 +98,37 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error } = await supabase.storage
         .from('project_files')
         .upload(filePath, file);
 
-    if (uploadError) {
-        console.error('Error uploading project file:', uploadError);
+    if (error) {
+        console.error('Error uploading project file:', error);
         return null;
     }
 
     const { data } = supabase.storage
         .from('project_files')
+        .getPublicUrl(filePath);
+
+    return data.publicUrl;
+};
+
+// Upload media for a community post
+export const uploadPostMedia = async (userId: string, file: File): Promise<string | null> => {
+    const filePath = `public/${userId}/posts/${Date.now()}_${file.name}`;
+
+    const { error } = await supabase.storage
+        .from('post_media') // This requires a 'post_media' bucket in Supabase
+        .upload(filePath, file, { upsert: true });
+
+    if (error) {
+        console.error('Error uploading post media:', error);
+        return null;
+    }
+
+    const { data } = supabase.storage
+        .from('post_media')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -194,29 +204,6 @@ export const uploadChatAttachment = async (projectId: string, userId: string, fi
         .getPublicUrl(filePath);
 
     return data.publicUrl;
-};
-
-// FIX: Added missing uploadPostMedia function which was imported in CommunityHub.tsx but not exported here.
-/**
- * Uploads media for a community post to Supabase Storage.
- */
-export const uploadPostMedia = async (userId: string, file: File): Promise<string | null> => {
-  const filePath = `community/${userId}/${Date.now()}_${file.name}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('project_files')
-    .upload(filePath, file);
-
-  if (uploadError) {
-    console.error('Error uploading post media:', uploadError);
-    return null;
-  }
-
-  const { data } = supabase.storage
-    .from('project_files')
-    .getPublicUrl(filePath);
-
-  return data.publicUrl;
 };
 
 export const deleteProjectAndRelatedData = async (projectId: string) => {

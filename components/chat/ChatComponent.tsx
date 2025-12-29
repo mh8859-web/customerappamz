@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Message } from '../../types.ts';
-import { PaperclipIcon, SendIcon } from '../icons.tsx';
-import MessageBubble from './MessageBubble.tsx';
-import Card from '../ui/Card.tsx';
-import { useUsers } from '../../context/UserContext.tsx';
-import { useData } from '../../context/DataContext.tsx';
-import { createRecord, uploadChatAttachment } from '../../services/api.ts';
+import { User, Message } from '../../types';
+import { PaperclipIcon, SendIcon } from '../icons';
+import MessageBubble from './MessageBubble';
+import Card from '../ui/Card';
+import { useUsers } from '../../context/UserContext';
+import { useData } from '../../context/DataContext';
+import { createRecord, uploadChatAttachment } from '../../services/api';
 
 interface ChatComponentProps {
   projectId: string;
@@ -32,6 +32,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
   const handleSendMessage = async (body: string, attachments?: Message['attachments']) => {
     if ((!body.trim() && !attachments) || isReadOnly) return;
 
+    // The core fix: remove sender_id and let the database handle it via RLS + default value.
     const messageToSend = {
       chat_id: projectId,
       body: body,
@@ -62,7 +63,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
     const publicUrl = await uploadChatAttachment(projectId, currentUser.id, file);
     setIsUploading(false);
 
-    if (fileInputRef.current) fileInputRef.current.value = ""; 
+    if (fileInputRef.current) fileInputRef.current.value = ""; // Reset file input
 
     if (!publicUrl) {
         alert('Failed to upload attachment. Please try again.');
@@ -76,6 +77,7 @@ const ChatComponent: React.FC<ChatComponentProps> = ({ projectId, currentUser, i
         name: file.name
     };
     
+    // Send message with attachment, the body can be empty.
     await handleSendMessage(newMessage, [newAttachment]);
   };
 

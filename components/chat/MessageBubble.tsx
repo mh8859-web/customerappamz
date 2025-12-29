@@ -1,8 +1,8 @@
 import React from 'react';
-import { Message, User } from '../../types.ts';
-import { DownloadIcon, FileTextIcon } from '../icons.tsx';
-import UserNameDisplay from '../ui/UserNameDisplay.tsx';
-import { AMAZ_SUPPORT_USER_ID } from '../../constants.ts';
+import { Message, User } from '../../types';
+import { DownloadIcon, FileTextIcon } from '../icons';
+import UserNameDisplay from '../ui/UserNameDisplay';
+import { AMAZ_SUPPORT_USER_ID } from '../../constants';
 
 interface MessageBubbleProps {
   message: Message;
@@ -19,19 +19,23 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0] }> = (
     }
     return (
         <a href={attachment.url} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center gap-3 bg-surface p-3 rounded-lg hover:bg-border-color">
-            <FileTextIcon className="w-6 h-6 text-text-secondary flex-shrink-0" />
+            <FileTextIcon className="w-6 h-6 text-text-muted flex-shrink-0" />
             <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium text-text-primary truncate">{attachment.name}</p>
-                <p className="text-xs text-text-secondary">Click to download</p>
+                <p className="text-sm font-medium text-text-headline truncate">{attachment.name}</p>
+                <p className="text-xs text-text-muted">Click to download</p>
             </div>
-            <DownloadIcon className="w-5 h-5 text-text-secondary" />
+            <DownloadIcon className="w-5 h-5 text-text-muted" />
         </a>
     );
 };
 
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: isOwnMessageProp, sender }) => {
+  // A system message is displayed as the official support user, regardless of the actual sender.
   const isSupportMessage = !!message.isSystemMessage;
+
+  // An "own" message is one sent by the current user AND is not a system message.
+  // This makes system messages (like the welcome message) appear on the left for everyone.
   const isOwnMessage = !isSupportMessage && isOwnMessageProp;
 
   const senderToDisplay = isSupportMessage 
@@ -39,8 +43,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: is
         id: AMAZ_SUPPORT_USER_ID,
         fullName: 'AMAZ INTERIOR SUPPORT', 
         avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-        role: 'Admin', 
-        verified: true, 
+        role: 'Admin', // Base role for styling consistency
+        verified: true, // Mark as verified to show a badge
       } as User
     : sender;
 

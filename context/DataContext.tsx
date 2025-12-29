@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import { supabase } from '../services/supabaseClient.ts';
+import { supabase } from '../services/supabaseClient';
 import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
     SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate,
     Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, FinalGalleryImage
-} from '../types.ts';
-import { useAuth } from './AuthContext.tsx';
+} from '../types';
+import { useAuth } from './AuthContext';
 
 interface DataContextType {
     projects: Project[];
@@ -30,6 +30,7 @@ interface DataContextType {
     feedComments: FeedComment[];
     refetchData: () => Promise<void>;
     loading: boolean;
+    // For notifications
     unreadCounts: Record<string, number>;
     markChatAsRead: (projectId: string) => void;
 }
@@ -46,6 +47,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
+    // ... (all other state declarations)
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [designs, setDesigns] = useState<Design[]>([]);
@@ -142,7 +144,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const dataMap: { [key: string]: any[] } = {};
             results.forEach((result, index) => {
                 const tableName = tables[index];
-                dataMap[tableName] = result.data || [];
+                if (result.error) {
+                    console.warn(`Could not fetch from table "${tableName}":`, result.error.message);
+                    dataMap[tableName] = [];
+                } else {
+                    dataMap[tableName] = result.data || [];
+                }
             });
             
             setProjects(mapToCamelCase(dataMap.projects, p => ({ ...p, customerId: p.customer_id, designerId: p.designer_id, adminId: p.admin_id, budgetDisplay: p.budget_display, areaSqft: p.area_sqft, startDate: p.start_date, createdAt: p.created_at, updatedAt: p.updated_at, revenueDisplay: p.revenue_display })));
@@ -182,7 +189,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
 
         } catch (error) {
-            console.error("Critical error fetching system data:", error);
+            console.error("Error fetching data:", error);
         } finally {
             setLoading(false);
         }
@@ -194,9 +201,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [authLoading, fetchData]);
 
+    // --- REAL-TIME UPDATES IMPLEMENTATION ---
     useEffect(() => {
         if (!user) return;
+
+        // Create a single channel for all relevant table subscriptions
         const channel = supabase.channel('realtime_data_changes');
+
+        // 1. MESSAGES: Listen for new chats
         channel.on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'messages' },
@@ -213,6 +225,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setMessages((prev) => [...prev, mappedMessage]);
             }
         );
+
+        // 2. PROJECTS: Listen for new projects (e.g. from Quote App)
         channel.on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'projects' },
@@ -239,7 +253,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setProjects((prev) => [mappedProject, ...prev]);
             }
         );
+
         channel.subscribe();
+        
         return () => {
             supabase.removeChannel(channel);
         };

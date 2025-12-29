@@ -1,10 +1,10 @@
 import React, { useState, ReactNode } from 'react';
-import Sidebar from './Sidebar.tsx';
-import Header from './Header.tsx';
+import Sidebar from './Sidebar';
+import Header from './Header';
 
 const DashboardLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // For mobile
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false); // For desktop
 
   const toggleSidebarCollapse = () => {
     setSidebarCollapsed(prevState => !prevState);
