@@ -30,27 +30,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("id", supabaseUser.id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", supabaseUser.id)
+      .single();
 
-  if (error || !data) {
-    console.error("Failed to fetch user profile:", error?.message);
+    if (error || !data) {
+      console.error("Failed to fetch user profile:", error?.message);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      fullName: data.full_name || "User",
+      email: data.email,
+      role: data.role,
+      avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+      verified: !!data.verified,
+      verificationRequested: !!data.verification_requested,
+      userId: data.user_id || '',
+    };
+  } catch (err) {
+    console.error("Profile mapping exception:", err);
     return null;
   }
-
-  return {
-    id: data.id,
-    fullName: data.full_name || "User",
-    email: data.email,
-    role: data.role,
-    avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-    verified: !!data.verified,
-    verificationRequested: !!data.verification_requested,
-    userId: data.user_id || '',
-  };
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
@@ -60,34 +65,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
-  // --- RE-ARCHITECTED AUTH FLOW (THE DEFINITIVE FIX) ---
-  // This useEffect relies on onAuthStateChange as the single source of truth.
-  // It fires immediately upon subscription with the initial session state,
-  // which eliminates race conditions. A try/finally block guarantees that
-  // the loading state is resolved, preventing the app from getting stuck.
+  // Definitive auth state management
   useEffect(() => {
-    setLoading(true);
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && mounted) {
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+        }
+      } catch (error) {
+        console.error("Initial auth check failed:", error);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    initializeAuth();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        try {
-          if (session) {
-            const profile = await fetchAndMapProfile(session.user);
-            setUser(profile);
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-            console.error("Error during auth state change processing:", error);
-            setUser(null); // Ensure user is logged out on error
-        } finally {
-            // This guarantees the app doesn't get stuck on the loading shell
-            setLoading(false);
+        if (!mounted) return;
+        
+        if (session) {
+          setLoading(true);
+          const profile = await fetchAndMapProfile(session.user);
+          setUser(profile);
+          setLoading(false);
+        } else {
+          setUser(null);
+          setLoading(false);
         }
       }
     );
 
     return () => {
+      mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
@@ -118,7 +133,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
       
-      // The onAuthStateChange listener will handle setting the user state.
       return { success: true, error: null };
 
     } catch (e) {

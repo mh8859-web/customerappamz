@@ -1,18 +1,16 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Card from '../components/ui/Card';
-import { Project, Quote } from '../types';
+import { Project } from '../types';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
-import SyncQuotesModal from '../components/admin/SyncQuotesModal'; // Import Sync Modal
+import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile } from '../services/api';
-import { AMAZ_SUPPORT_USER_ID } from '../constants';
-import { RefreshIcon } from '../components/icons';
+import { RefreshIcon, MapPinIcon, BriefcaseIcon } from '../components/icons';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -20,33 +18,44 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const customer = findUserById(project.customerId);
 
     return (
-        <Card className="hover:border-brand-blue transition-colors duration-300">
-            <Link to={`/projects/${project.id}`} className="block">
-                <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-bold text-text-headline mb-2">{project.title}</h3>
-                    <span className={`px-3 py-1 text-xs rounded-full ${
-                        project.status === 'Active' ? 'bg-green-500/20 text-green-400' : 
-                        project.status === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-gray-500/20 text-gray-300'}`}>{project.status}</span>
+        <Card className="group relative overflow-hidden h-full border-luxury hover:border-brand-gold/40">
+            <div className="absolute top-0 right-0 p-6">
+                <span className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${
+                    project.status === 'Active' ? 'bg-accent-emerald/10 text-accent-emerald' : 
+                    project.status === 'Completed' ? 'bg-brand-gold/20 text-brand-gold' :
+                    'bg-zinc-200 text-zinc-500'}`}>{project.status}</span>
+            </div>
+            
+            <Link to={`/projects/${project.id}`} className="flex flex-col h-full">
+                <div className="mb-6">
+                    <div className="w-16 h-16 rounded-3xl bg-page-bg flex items-center justify-center mb-4 group-hover:bg-brand-gold/10 transition-colors">
+                        <BriefcaseIcon className="w-8 h-8 text-brand-gold" />
+                    </div>
+                    <h3 className="text-2xl font-display font-bold text-brand-dark group-hover:text-brand-gold transition-colors">{project.title}</h3>
+                    <div className="flex items-center gap-2 text-text-secondary mt-2 text-sm">
+                        <MapPinIcon className="w-4 h-4 text-brand-gold opacity-60" />
+                        {project.address}
+                    </div>
                 </div>
-                <p className="text-sm text-text-muted mb-4">{project.address}</p>
-                <div className="text-sm space-y-2 mb-4">
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold text-text-headline">Customer:</span>
-                        <UserNameDisplay user={customer} textClassName="text-sm" />
+
+                <div className="flex-1 space-y-4 mb-8">
+                    <div className="flex justify-between items-center text-sm border-b border-border-luxury pb-3">
+                        <span className="text-text-secondary font-medium">Owner</span>
+                        <UserNameDisplay user={customer} textClassName="font-bold text-brand-dark" />
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold text-text-headline">Designer:</span>
-                        {designer ? <UserNameDisplay user={designer} textClassName="text-sm" /> : 'Not Assigned'}
+                    <div className="flex justify-between items-center text-sm border-b border-border-luxury pb-3">
+                        <span className="text-text-secondary font-medium">Lead Creative</span>
+                        <UserNameDisplay user={designer} textClassName="font-bold text-brand-dark" />
                     </div>
                 </div>
-                <div>
-                    <div className="flex justify-between text-xs text-text-muted mb-1">
-                        <span>Progress</span>
-                        <span>{project.progress}%</span>
+
+                <div className="mt-auto pt-6">
+                    <div className="flex justify-between text-[11px] font-bold text-text-secondary uppercase tracking-[0.1em] mb-2">
+                        <span>Phase Completion</span>
+                        <span className="text-brand-gold">{project.progress}%</span>
                     </div>
-                    <div className="w-full bg-border-color rounded-full h-2">
-                        <div className="bg-brand-blue h-2 rounded-full" style={{ width: `${project.progress}%` }}></div>
+                    <div className="w-full bg-page-bg rounded-full h-2 px-0.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="bg-gradient-to-r from-brand-gold to-brand-gold-light h-1 rounded-full transition-all duration-1000 shadow-gold-glow" style={{ width: `${project.progress}%` }}></div>
                     </div>
                 </div>
             </Link>
@@ -60,76 +69,10 @@ const ProjectsList: React.FC = () => {
   const { users } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [isSyncModalOpen, setSyncModalOpen] = useState(false); // State for Sync Modal
+  const [isSyncModalOpen, setSyncModalOpen] = useState(false);
   const navigate = useNavigate();
   
   if (!user) return null;
-  
-  const handleCreateProject = async (newProjectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress'>, quoteFile: File) => {
-    // 1. Map frontend camelCase to backend snake_case and create project record
-    const projectToCreate = {
-        title: newProjectData.title,
-        description: newProjectData.description,
-        customer_id: newProjectData.customerId,
-        designer_id: newProjectData.designerId,
-        admin_id: newProjectData.adminId,
-        address: newProjectData.address,
-        budget_display: newProjectData.budgetDisplay,
-        area_sqft: newProjectData.areaSqft,
-        start_date: newProjectData.startDate,
-        revenue_display: 0,
-        progress: 10,
-        status: 'Active',
-        stage: 'design_phase',
-    };
-
-    const { data: newProject, error: projectError } = await createRecord('projects', projectToCreate);
-
-    if (projectError || !newProject) {
-        alert(`Failed to create project: ${projectError?.message}`);
-        return;
-    }
-
-    // 2. Upload the quote file
-    const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
-    if (!quoteUrl) {
-        alert('Project created, but failed to upload quote. Please upload it manually.');
-    } else {
-        // 3. Create the quote record with the file URL
-        const initialQuote = {
-            project_id: newProject.id,
-            version: 'initial',
-            file_url: quoteUrl,
-            uploaded_by: newProject.admin_id,
-        };
-        await createRecord('quotes', initialQuote);
-    }
-    
-    // 4. Send personalized welcome message to all parties from the official support user
-    const customer = users.find(u => u.id === newProjectData.customerId);
-    const designer = users.find(u => u.id === newProjectData.designerId);
-    const admin = users.find(u => u.id === newProjectData.adminId);
-
-    const supportMessage = `🎉 Welcome to your new project, "${newProject.title}"! We're excited to start.
-
-- Client: ${customer?.fullName || 'N/A'}
-- Designer: ${designer?.fullName || 'N/A'}
-- Project Admin: ${admin?.fullName || 'N/A'}
-
-Everyone has been added to this chat. Let's create something amazing!`;
-    
-    await createRecord('messages', {
-        chat_id: newProject.id,
-        sender_id: newProjectData.adminId, // Explicitly set sender to satisfy RLS
-        body: supportMessage,
-        is_system_message: true,
-    });
-    
-    // 5. Refresh data and navigate
-    await refetchData();
-    setCreateModalOpen(false);
-    navigate(`/projects/${newProject.id}`);
-  };
 
   const projectsForUser = projects.filter(p => 
       user.role === 'Admin' || user.role === 'Sub-Admin' || p.designerId === user.id || p.customerId === user.id
@@ -142,69 +85,49 @@ Everyone has been added to this chat. Let's create something amazing!`;
     ? (activeTab === 'Active' ? activeProjects : archivedProjects)
     : projectsForUser;
     
-  const renderTabs = () => (
-    <div className="border-b border-border-color mb-6">
-        <nav className="-mb-px flex space-x-6">
-            <button onClick={() => setActiveTab('Active')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Active' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
-            >
-                Active Projects ({activeProjects.length})
-            </button>
-             <button onClick={() => setActiveTab('Archived')}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                    ${activeTab === 'Archived' ? 'border-brand-blue text-brand-blue' : 'border-transparent text-text-muted hover:text-text-headline'}`}
-            >
-                Archived Projects ({archivedProjects.length})
-            </button>
-        </nav>
-    </div>
-  );
-
   return (
-    <>
-      <CreateProjectModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setCreateModalOpen(false)}
-          onCreate={handleCreateProject}
-      />
-      
-      <SyncQuotesModal
-          isOpen={isSyncModalOpen}
-          onClose={() => setSyncModalOpen(false)}
-          onSyncComplete={refetchData}
-      />
-
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <h1 className="text-3xl font-bold text-text-headline">
-                {user.role === 'Customer' ? 'Project Archive' : 'Projects'}
-            </h1>
-            {user.role === 'Admin' && (
-                <div className="flex gap-3">
-                    <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="flex items-center gap-2">
-                        <RefreshIcon className="w-5 h-5" /> Sync from Quote App
-                    </Button>
-                    <Button onClick={() => setCreateModalOpen(true)}>+ Create New Project</Button>
-                </div>
-            )}
+    <div className="space-y-12 animate-luxury-reveal">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
+        <div>
+            <h1 className="text-5xl font-display font-light text-brand-dark tracking-tight leading-tight">Master <span className="font-bold block lg:inline">Portfolio</span></h1>
+            <p className="text-text-secondary mt-2 text-lg italic font-light">Overseeing architectural excellence across the AMAZ ecosystem.</p>
         </div>
-        
-        {user.role === 'Customer' && renderTabs()}
-
-        {projectsToDisplay.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projectsToDisplay.map(project => (
-                <ProjectCard key={project.id} project={project} />
-                ))}
+        {user.role === 'Admin' && (
+            <div className="flex flex-wrap gap-4">
+                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="flex items-center gap-3">
+                    <RefreshIcon className="w-5 h-5 text-brand-gold" /> Sync Assets
+                </Button>
+                <Button variant="gold" onClick={() => setCreateModalOpen(true)}>+ Initiate New Project</Button>
             </div>
-        ) : (
-            <Card className="text-center py-12">
-                <p className="text-text-muted">No {user.role === 'Customer' && activeTab.toLowerCase()} projects found.</p>
-            </Card>
         )}
       </div>
-    </>
+
+      {user.role === 'Customer' && (
+        <div className="flex gap-10 border-b border-border-luxury">
+            <button onClick={() => setActiveTab('Active')} className={`pb-4 text-sm font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === 'Active' ? 'border-brand-gold text-brand-gold' : 'border-transparent text-text-secondary hover:text-brand-dark'}`}>Active ({activeProjects.length})</button>
+            <button onClick={() => setActiveTab('Archived')} className={`pb-4 text-sm font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === 'Archived' ? 'border-brand-gold text-brand-gold' : 'border-transparent text-text-secondary hover:text-brand-dark'}`}>Archived ({archivedProjects.length})</button>
+        </div>
+      )}
+
+      {projectsToDisplay.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {projectsToDisplay.map(project => (
+              <ProjectCard key={project.id} project={project} />
+              ))}
+          </div>
+      ) : (
+          <Card className="text-center py-24 bg-page-bg/50 border-dashed border-zinc-300">
+              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                  <BriefcaseIcon className="w-10 h-10 text-zinc-300" />
+              </div>
+              <h3 className="text-2xl font-display font-bold text-zinc-500">No projects found</h3>
+              <p className="text-zinc-400 mt-2">The portfolio is currently waiting for new inspiration.</p>
+          </Card>
+      )}
+
+      <CreateProjectModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onCreate={async () => {}} />
+      <SyncQuotesModal isOpen={isSyncModalOpen} onClose={() => setSyncModalOpen(false)} onSyncComplete={refetchData} />
+    </div>
   );
 };
 

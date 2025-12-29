@@ -23,17 +23,17 @@ const badgeUrlMap: Record<UserRole, string> = {
 };
 
 const roleDetails: Record<UserRole, { title: string; text: string; }> = {
-    Admin: { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
-    'Sub-Admin': { title: 'Official Amaz Admin', text: 'This Account Is Verified And This Account Belong To Admin, C-Level Members' },
-    Designer: { title: 'Official Amaz Employee', text: 'This Account Is Verified And This Account Belong To Senior Level Designers, Other Team' },
-    Customer: { title: 'Official Amaz Client', text: 'This Account Is Verified And This Account Belong To Our Clients' },
-    Accounts: { title: 'Official Amaz Finance Team', text: 'This Account Is Verified And This Account Belongs To The Finance Department.' },
-    'Project Head': { title: 'Official Amaz Management', text: 'This Account Is Verified And This Account Belongs To The Project Head.' },
-    'Production Head': { title: 'Official Amaz Management', text: 'This Account Is Verified And This Account Belongs To The Production Head.' },
-    'Site Head': { title: 'Official Amaz Management', text: 'This Account Is Verified And This Account Belongs To The Site Head.' },
+    Admin: { title: 'Verified Executive', text: 'This identity belongs to AMAZ Management & C-Suite members.' },
+    'Sub-Admin': { title: 'Verified Admin', text: 'Administrative personnel with oversight privileges.' },
+    Designer: { title: 'Accredited Designer', text: 'Senior creative leads and interior architectural team.' },
+    Customer: { title: 'Privileged Client', text: 'Official client of AMAZ Interiors with active project status.' },
+    Accounts: { title: 'Financial Auditor', text: 'Verified personnel from the Finance and Audit department.' },
+    'Project Head': { title: 'Project Director', text: 'Management lead overseeing project lifecycles.' },
+    'Production Head': { title: 'Production Lead', text: 'Manufacturing and procurement oversight specialist.' },
+    'Site Head': { title: 'Site Supervisor', text: 'Execution lead for on-site interior works.' },
 };
 
-const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-8 h-8' }) => {
+const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-9 h-9' }) => {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const badgeRef = useRef<HTMLDivElement>(null);
@@ -49,47 +49,50 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   }, []);
 
   if (!user) {
-    return <span className={`${className} ${textClassName}`}>Unknown User</span>;
+    return <span className={`${className} ${textClassName}`}>Guest Identity</span>;
   }
 
   const isSupportUser = user.id === AMAZ_SUPPORT_USER_ID;
-
-  // Define specific properties for the support user
   const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
-  const supportDetails = { title: 'Official Amaz Support', text: 'This is official amaz support team' };
+  const supportDetails = { title: 'Concierge Support', text: 'Official AMAZ automated concierge and support team.' };
 
-  // Determine which user details, badge, and popover to use
-  const displayName = isSupportUser ? 'AMAZ INTERIOR SUPPORT' : user.fullName;
+  const displayName = isSupportUser ? 'AMAZ CONCIERGE' : user.fullName;
   const badgeUrl = isSupportUser ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
   const details = isSupportUser ? supportDetails : (user.verified ? roleDetails[user.role] : null);
 
-  // Team members get a clickable profile link. Customers and Support user do not.
   const isTeamMember = !isSupportUser && (user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer');
 
   const content = (
     <>
       {showAvatar && (
-          <img src={user.avatarUrl} alt={displayName} className={`${imageSize} rounded-full mr-1.5`} />
+          <img src={user.avatarUrl} alt={displayName} className={`${imageSize} rounded-xl mr-2 object-cover ring-2 ring-secondary shadow-sm`} />
       )}
-      <span className={textClassName}>{displayName}</span>
+      <span className={`${textClassName} tracking-tight`}>{displayName}</span>
       {badgeUrl && details && (
-        <div ref={badgeRef} className="verified-badge-container flex-shrink-0">
-          <div className="cursor-pointer" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}>
-            <img src={badgeUrl} alt="Verified Badge" className="w-4 h-4" />
-          </div>
+        <div ref={badgeRef} className="verified-badge-container flex-shrink-0 ml-1">
+          <button 
+            className="focus:outline-none transition-transform active:scale-90" 
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}
+          >
+            <img src={badgeUrl} alt="V" className="w-3.5 h-3.5" />
+          </button>
           <div 
             ref={popoverRef} 
             className={`verification-popover ${isPopoverOpen ? 'open' : ''}`}
           >
-            <div className="p-4">
-                <div className="border-b border-border-color pb-3 mb-3">
-                     <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ Interiors Logo" className="h-8"/>
+            <div className="p-6">
+                <div className="flex justify-center mb-5">
+                     <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ" className="h-6 opacity-30"/>
                 </div>
-                <div className="flex items-start gap-2">
-                     <img src={badgeUrl} alt="Verified Badge" className="w-5 h-5 flex-shrink-0 mt-0.5"/>
-                     <div>
-                        <p className="font-bold text-sm text-text-primary">{details.title}</p>
-                        <p className="text-sm text-text-secondary">{details.text}</p>
+                <div className="flex flex-col items-center text-center">
+                     <div className="bg-secondary p-3 rounded-full mb-4">
+                        <img src={badgeUrl} alt="Verified" className="w-8 h-8"/>
+                     </div>
+                     <h4 className="font-display font-bold text-brand-dark mb-1 text-base">{details.title}</h4>
+                     <p className="text-[13px] text-text-secondary font-light leading-relaxed">{details.text}</p>
+                     
+                     <div className="mt-5 pt-5 border-t border-secondary w-full text-[11px] font-bold text-brand-gold uppercase tracking-[2px]">
+                        Identity Authenticated
                      </div>
                 </div>
             </div>
@@ -100,11 +103,11 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
   );
 
   if (isTeamMember) {
-      return <Link to={`/profile/${user.id}`} className={`inline-flex items-center gap-1.5 ${className} hover:underline`}>{content}</Link>
+      return <Link to={`/profile/${user.id}`} className={`inline-flex items-center ${className} hover:opacity-80 transition-opacity`}>{content}</Link>
   }
 
   return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+    <div className={`inline-flex items-center ${className}`}>
       {content}
     </div>
   );

@@ -2,44 +2,54 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <title>AMAZ Interiors PM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>AMAZ | Interior Management</title>
 
-    <!-- Scripts & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" href="https://res.cloudinary.com/dzvmyhpff/image/upload/w_192,h_192,c_pad/v1759808706/highqualiamaz_etnjtt.png" type="image/png" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'page-bg': '#F7F9FA',      // Lighter, cleaner background
-              'surface': '#FFFFFF',      // White (for cards, headers)
-              'brand-blue': '#1D9BF0',   // Vibrant Blue (X.com inspired)
-              'brand-blue-hover': '#1A8CD8', // Darker Blue for hover
-              'secondary': '#EFF3F4',     // Very light gray for subtle backgrounds
-              'secondary-hover': '#E7EAED',// Darker subtle gray
-              'text-primary': '#0F1419',    // Primary Text (almost black)
-              'text-secondary': '#536471',  // Secondary Text (gray)
-              'border-color': '#CFD9DE',    // Subtle border color
+              'brand-blue': '#2563EB',
+              'brand-blue-light': '#F8FAFF', 
+              'brand-blue-dark': '#1D4ED8',
+              'brand-gold': '#D4AF37',
+              'brand-gold-light': '#F4E7B1',
+              'brand-gold-dark': '#B69121',
+              'brand-dark': '#334155', // Professional slate instead of heavy navy
+              'page-bg': '#F8FAFC', // Crisp, airy background
+              'surface': '#FFFFFF',
+              'secondary': '#F1F5F9',
+              'secondary-hover': '#E2E8F0',
+              'border-color': '#F1F5F9',
+              'border-luxury': 'rgba(212, 175, 55, 0.1)',
+              'text-primary': '#1E293B', // Deep slate for readability
+              'text-secondary': '#64748B', // Muted slate for metadata
+              'accent-success': '#10B981',
+              'accent-warning': '#F59E0B',
+              'accent-danger': '#EF4444',
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Plus Jakarta Sans', 'sans-serif'],
               display: ['Lexend', 'sans-serif'],
             },
             borderRadius: {
-              'xl': '12px', // Softer radius
-              '2xl': '16px',
+              'xl': '12px',
+              '2xl': '20px',
+              '3xl': '28px',
             },
             boxShadow: {
-              'card': '0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.05)',
-              'modal': '0 10px 30px rgba(0, 0, 0, 0.1)',
+              'soft': '0 2px 10px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02)',
+              'card': '0 10px 25px -12px rgba(30, 41, 59, 0.08)',
+              'button': '0 8px 20px -6px rgba(37, 99, 235, 0.25)',
+              'premium': '0 20px 40px -15px rgba(30, 41, 59, 0.08)',
+              'gold-glow': '0 0 20px -5px rgba(212, 175, 55, 0.2)',
+              'modal': '0 25px 60px -12px rgba(30, 41, 59, 0.2)',
             }
           }
         }
@@ -47,89 +57,89 @@
     </script>
     <style>
       body {
+        background-color: #F8FAFC;
+        color: #1E293B;
         -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        background-color: #F7F9FA;
+        overflow-x: hidden;
       }
 
-      /* Custom Scrollbar */
-      ::-webkit-scrollbar { width: 8px; }
-      ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #CFD9DE; border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: #AAB8C2; }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: #F8FAFC; }
+      ::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+      ::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
 
-      /* Global styles for smoother, springier transitions */
-      * {
-        transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-                    border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-                    color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-                    box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-                    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      
-      @keyframes modal-fade-in {
-        from { opacity: 0; transform: translateY(10px) scale(0.98); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      .modal-content-animation {
-        animation: modal-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      .active-nav-link {
+        background-color: #F8FAFF;
+        color: #2563EB !important;
+        font-weight: 700 !important;
+        box-shadow: inset 4px 0 0 0 #2563EB;
       }
 
-      /* --- VERIFIED BADGE POPOVER FIX --- */
-      .verified-badge-container {
-        position: relative;
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
+      .animate-in { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+      .mobile-dock {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        height: 64px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        z-index: 50;
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+      }
+
+      .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #F1F5F9; border-radius: 10px; }
 
       .verification-popover {
         position: absolute;
-        bottom: 120%;
+        bottom: 100%;
         left: 50%;
-        transform: translateX(-50%) translateY(10px) scale(0.95);
-        z-index: 50; /* Increased z-index */
+        transform: translateX(-50%) translateY(10px);
         width: 280px;
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        border: 1px solid #F1F5F9;
+        z-index: 100;
         opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
       }
-
       .verification-popover.open {
         opacity: 1;
-        visibility: visible;
-        transform: translateX(-50%) translateY(0) scale(1);
         pointer-events: auto;
-      }
-
-      .verification-popover::after {
-        content: '';
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        transform: translateX(-50%);
-        border-width: 8px;
-        border-style: solid;
-        border-color: #FFFFFF transparent transparent transparent;
+        transform: translateX(-50%) translateY(-15px);
       }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "react": "https://esm.sh/react@18.3.1",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.3.1",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.8",
+    "recharts": "https://esm.sh/recharts@2.12.3?deps=react@18.3.1",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
-  <body class="bg-page-bg text-text-secondary font-sans">
+  <body class="font-sans selection:bg-brand-blue/10 selection:text-brand-blue">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
