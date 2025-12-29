@@ -31,11 +31,18 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    const { data, error } = await supabase
+    // Adding a timeout to the database fetch to prevent infinite hanging
+    const fetchPromise = supabase
       .from("users")
       .select("*")
       .eq("id", supabaseUser.id)
       .single();
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("Profile fetch timeout")), 4000)
+    );
+
+    const { data, error } = (await Promise.race([fetchPromise, timeoutPromise])) as any;
 
     if (error || !data) return null;
 
@@ -50,6 +57,7 @@ const fetchAndMapProfile = async (
       userId: data.user_id || '',
     };
   } catch (err) {
+    console.error("Profile map error:", err);
     return null;
   }
 };
@@ -64,42 +72,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     let mounted = true;
 
-    // Explicit check on mount to prevent "stuck" state on refresh
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && mounted) {
-          const profile = await fetchAndMapProfile(session.user);
-          if (mounted) setUser(profile);
-        }
-      } catch (err) {
-        console.error("Auth initialization failed:", err);
-      } finally {
-        if (mounted) setLoading(false);
+    // Safety-net timeout: Force resolve loading if auth takes more than 5s
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth initialization timed out. Forcing UI resolve.");
+        setLoading(false);
       }
-    };
+    }, 5000);
 
-    initializeAuth();
-
-    // Listener for subsequent auth events (sign-in, sign-out, etc.)
+    // Streamlined initialization using the unified listener
+    // onAuthStateChange handles INITIAL_SESSION, SIGNED_IN, SIGNED_OUT, etc.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
         
-        // We only trigger loading true if it's a significant change event after initial load
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-           if (session) {
-             const profile = await fetchAndMapProfile(session.user);
-             if (mounted) setUser(profile);
-           } else {
-             if (mounted) setUser(null);
-           }
+        console.log(`Auth Event: ${event}`);
+
+        if (session) {
+          const profile = await fetchAndMapProfile(session.user);
+          if (mounted) {
+            setUser(profile);
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+          }
+        } else {
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+          }
         }
       }
     );
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       authListener.subscription.unsubscribe();
     };
   }, []);
