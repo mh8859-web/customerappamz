@@ -26,9 +26,9 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
     [unreadCounts]
   );
   
-  const baseLinkClasses = "flex items-center px-4 py-3 my-0.5 rounded-xl font-semibold text-[13px] transition-all duration-300 group relative";
-  const inactiveLinkClasses = "text-text-secondary hover:bg-slate-50 hover:text-brand-blue";
-  const activeLinkClasses = "active-nav-link";
+  const baseLinkClasses = "flex items-center px-4 py-3.5 my-1 rounded-xl font-bold text-[13px] transition-all duration-300 group relative";
+  const inactiveLinkClasses = "text-slate-500 hover:bg-white hover:text-brand-blue hover:shadow-sm";
+  const activeLinkClasses = "bg-white text-brand-blue shadow-sm ring-1 ring-slate-200/50";
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) => 
     `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses} ${isCollapsed ? 'justify-center' : ''}`;
@@ -106,39 +106,38 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       }
     };
 
-    // Use Admin as fallback for Heads if not explicitly defined to ensure they always see menus
     return items[user.role] || items['Admin'];
   }, [user]);
 
   return (
     <>
       <div 
-        className={`fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-500 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-500 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setSidebarOpen(false)}
       />
       <aside 
-        className={`fixed md:relative z-50 md:z-auto inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-slate-100 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col shadow-soft`}
+        className={`fixed md:relative z-50 md:z-auto inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${isCollapsed ? 'w-24' : 'w-72'} bg-slate-50 border-r border-slate-200 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}
       >
         {/* Logo Section */}
-        <div className={`flex items-center h-20 px-6 border-b border-slate-50 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <div className={`flex items-center h-24 px-8 border-b border-slate-200/60 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && (
             <div className="flex flex-col">
               <img 
                 src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
                 alt="AMAZ" 
-                className="h-5" 
+                className="h-6" 
               />
-              <span className="text-[9px] font-bold text-brand-gold uppercase tracking-[3px] mt-1">Modular</span>
+              <span className="text-[10px] font-extrabold text-brand-gold uppercase tracking-[4px] mt-1.5 opacity-80">Modular Studio</span>
             </div>
           )}
-          <button onClick={toggleCollapsed} className="hidden md:flex p-1.5 rounded-lg hover:bg-slate-50 text-slate-300 hover:text-brand-blue transition-colors">
+          <button onClick={toggleCollapsed} className="hidden md:flex p-2 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-brand-blue hover:border-brand-blue/30 transition-all shadow-sm">
              <ChevronDoubleLeftIcon className={`w-4 h-4 transition-transform duration-500 ${isCollapsed ? 'rotate-180' : ''}`} />
           </button>
         </div>
         
         {/* Navigation Items */}
-        <nav className="flex-1 px-3 overflow-y-auto pt-6 custom-scrollbar pb-6">
-          <div className="space-y-0.5">
+        <nav className="flex-1 px-4 overflow-y-auto pt-8 custom-scrollbar pb-8">
+          <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
                 end 
@@ -147,20 +146,29 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
                 className={getNavLinkClass} 
                 onClick={() => setSidebarOpen(false)}
               >
-                <div className="flex-shrink-0 opacity-70 group-[.active-nav-link]:opacity-100">{item.icon}</div>
-                {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
-                {(item.label === 'Messages' || item.label === 'Chat') && totalUnreadCount > 0 && !isCollapsed && (
-                    <span className="ml-auto bg-brand-blue text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                        {totalUnreadCount}
-                    </span>
+                {({ isActive }) => (
+                  <>
+                    <div className={`flex-shrink-0 transition-colors duration-300 ${isActive ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`}>
+                      {item.icon}
+                    </div>
+                    {!isCollapsed && <span className="ml-3.5 truncate">{item.label}</span>}
+                    {isActive && !isCollapsed && (
+                      <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 w-1.5 h-6 bg-brand-gold rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.4)]"></div>
+                    )}
+                    {(item.label === 'Messages' || item.label === 'Chat') && totalUnreadCount > 0 && !isCollapsed && (
+                        <span className="ml-auto bg-brand-blue text-white text-[10px] px-2 py-0.5 rounded-full font-black shadow-lg">
+                            {totalUnreadCount}
+                        </span>
+                    )}
+                  </>
                 )}
               </NavLink>
             ))}
           </div>
 
-          {!isCollapsed && <div className="my-4 border-t border-slate-50 mx-2" />}
+          {!isCollapsed && <div className="my-6 border-t border-slate-200/60 mx-4" />}
 
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {navItems.secondary.map(item => (
               <NavLink 
                 end 
@@ -169,18 +177,24 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
                 className={getNavLinkClass} 
                 onClick={() => setSidebarOpen(false)}
               >
-                <div className="flex-shrink-0 opacity-60 group-[.active-nav-link]:opacity-100">{item.icon}</div>
-                {!isCollapsed && <span className="ml-3 truncate">{item.label}</span>}
+                {({ isActive }) => (
+                  <>
+                    <div className={`flex-shrink-0 transition-colors duration-300 ${isActive ? 'text-brand-blue' : 'text-slate-400 group-hover:text-brand-blue'}`}>
+                      {item.icon}
+                    </div>
+                    {!isCollapsed && <span className="ml-3.5 truncate">{item.label}</span>}
+                  </>
+                )}
               </NavLink>
             ))}
           </div>
         </nav>
 
         {/* Footer Actions */}
-        <div className={`p-4 mt-auto border-t border-slate-50 ${isCollapsed ? 'flex justify-center' : ''}`}>
-           <button onClick={logout} className={`${baseLinkClasses} text-slate-400 hover:bg-red-50 hover:text-accent-danger w-full`}>
+        <div className={`p-6 mt-auto border-t border-slate-200/60 bg-slate-100/50 ${isCollapsed ? 'flex justify-center' : ''}`}>
+           <button onClick={logout} className={`${baseLinkClasses} !bg-white/80 border border-slate-200/50 text-slate-500 hover:!bg-red-50 hover:!text-accent-danger hover:!border-red-100 w-full shadow-sm`}>
               <LogOutIcon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && <span className="ml-3 font-bold">Logout</span>}
+              {!isCollapsed && <span className="ml-3.5 font-black uppercase tracking-widest text-[11px]">Logout</span>}
           </button>
         </div>
       </aside>

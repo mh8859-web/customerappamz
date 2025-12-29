@@ -13,20 +13,20 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 z-50 flex justify-center items-center p-4 transition-opacity duration-300"
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex justify-center items-center p-4 transition-all duration-300"
       onClick={onClose}
     >
       <div 
-        className="bg-surface rounded-2xl shadow-modal w-full max-w-lg transform modal-content-animation flex flex-col max-h-[90vh]"
+        className="bg-surface rounded-[28px] shadow-modal w-full max-w-2xl transform modal-content-animation flex flex-col max-h-[92vh] border border-slate-200/50"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center border-b border-border-color p-5 flex-shrink-0">
-          <h2 className="text-xl font-display font-semibold text-text-primary">{title}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary rounded-full p-1.5 bg-secondary hover:bg-secondary-hover">
+        <div className="flex justify-between items-center border-b border-slate-100 p-6 flex-shrink-0">
+          <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">{title}</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 rounded-full p-2 bg-slate-50 hover:bg-slate-100 transition-colors">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto">
+        <div className="p-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
           {children}
         </div>
       </div>

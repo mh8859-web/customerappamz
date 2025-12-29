@@ -11,9 +11,9 @@ interface CreateProjectModalProps {
   onCreate: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'revenueDisplay' | 'progress' | 'status' | 'stage'>, quoteFile: File) => Promise<void>;
 }
 
-const FormField: React.FC<{label: string, children: React.ReactNode}> = ({label, children}) => (
-  <div>
-      <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>
+const FormField: React.FC<{label: string, children: React.ReactNode, fullWidth?: boolean}> = ({label, children, fullWidth = false}) => (
+  <div className={fullWidth ? 'col-span-full' : 'col-span-1'}>
+      <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">{label}</label>
       {children}
   </div>
 );
@@ -36,7 +36,6 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    // Reset form data when the modal is closed to prevent stale input
     if (!isOpen) {
       setFormData(initialFormData);
       setQuoteFile(null);
@@ -74,52 +73,129 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     }, quoteFile);
   };
 
-  const formInputClasses = "w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-surface placeholder:text-text-secondary/80";
+  const formInputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[14px] text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/40 focus:bg-white placeholder:text-slate-400 transition-all duration-300";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Project">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Project Name">
-          <input type="text" name="title" value={formData.title} onChange={handleChange} className={formInputClasses} required />
+    <Modal isOpen={isOpen} onClose={onClose} title="Initiate New Project">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+        <FormField label="Project Identity" fullWidth>
+          <input 
+            type="text" 
+            name="title" 
+            value={formData.title} 
+            onChange={handleChange} 
+            className={formInputClasses} 
+            placeholder="e.g. Skyline Penthouse Renovation" 
+            required 
+          />
         </FormField>
-        <FormField label="Description">
-          <textarea name="description" value={formData.description} onChange={handleChange} className={formInputClasses} rows={3} required />
+        
+        <FormField label="Project Brief" fullWidth>
+          <textarea 
+            name="description" 
+            value={formData.description} 
+            onChange={handleChange} 
+            className={`${formInputClasses} resize-none`} 
+            rows={2} 
+            placeholder="High-level project scope and vision..." 
+            required 
+          />
         </FormField>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Client">
-                <select name="customerId" value={formData.customerId} onChange={handleChange} className={formInputClasses} required>
-                    <option value="">Select a client</option>
-                    {clients.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
-                </select>
-            </FormField>
-            <FormField label="Designer">
-                <select name="designerId" value={formData.designerId} onChange={handleChange} className={formInputClasses} required>
-                    <option value="">Assign a designer</option>
-                    {designers.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
-                </select>
-            </FormField>
-        </div>
-        <FormField label="Site Location / Address">
-          <input type="text" name="address" value={formData.address} onChange={handleChange} className={formInputClasses} required />
+
+        <FormField label="Assigned Client">
+            <select name="customerId" value={formData.customerId} onChange={handleChange} className={formInputClasses} required>
+                <option value="">Select identity...</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+            </select>
         </FormField>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Total Budget (₹)">
-              <input type="number" name="budgetDisplay" value={formData.budgetDisplay} onChange={handleChange} className={formInputClasses} required />
-            </FormField>
-            <FormField label="Area (sqft)">
-              <input type="number" name="areaSqft" value={formData.areaSqft} onChange={handleChange} className={formInputClasses} required />
-            </FormField>
-        </div>
-        <FormField label="Start Date">
-          <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className={formInputClasses} required />
+
+        <FormField label="Lead Designer">
+            <select name="designerId" value={formData.designerId} onChange={handleChange} className={formInputClasses} required>
+                <option value="">Assign creative lead...</option>
+                {designers.map(d => <option key={d.id} value={d.id}>{d.fullName}</option>)}
+            </select>
         </FormField>
-        <FormField label="Initial Quote (PDF)">
-            <input type="file" onChange={handleFileChange} accept=".pdf" className={`${formInputClasses} file:mr-4 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-blue/10 file:text-brand-blue hover:file:bg-brand-blue/20`} required/>
+
+        <FormField label="Site Physical Address" fullWidth>
+          <input 
+            type="text" 
+            name="address" 
+            value={formData.address} 
+            onChange={handleChange} 
+            className={formInputClasses} 
+            placeholder="Full site location details" 
+            required 
+          />
         </FormField>
-        <div className="flex justify-end pt-4 gap-3">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancel</Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Project'}
+
+        <FormField label="Estimated Budget (₹)">
+          <input 
+            type="number" 
+            name="budgetDisplay" 
+            value={formData.budgetDisplay} 
+            onChange={handleChange} 
+            className={formInputClasses} 
+            placeholder="0.00" 
+            required 
+          />
+        </FormField>
+
+        <FormField label="Floor Area (SQFT)">
+          <input 
+            type="number" 
+            name="areaSqft" 
+            value={formData.areaSqft} 
+            onChange={handleChange} 
+            className={formInputClasses} 
+            placeholder="e.g. 2400" 
+            required 
+          />
+        </FormField>
+
+        <FormField label="Target Commencement">
+          <input 
+            type="date" 
+            name="startDate" 
+            value={formData.startDate} 
+            onChange={handleChange} 
+            className={formInputClasses} 
+            required 
+          />
+        </FormField>
+
+        <FormField label="Initial Proposal (PDF)">
+            <div className="relative">
+                <input 
+                    type="file" 
+                    onChange={handleFileChange} 
+                    accept=".pdf" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                    required
+                />
+                <div className={`${formInputClasses} flex items-center justify-between pointer-events-none`}>
+                    <span className={quoteFile ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                        {quoteFile ? quoteFile.name : 'Upload document...'}
+                    </span>
+                    <div className="bg-brand-blue/10 text-brand-blue text-[10px] font-black uppercase px-2 py-1 rounded-md">Browse</div>
+                </div>
+            </div>
+        </FormField>
+
+        <div className="col-span-full flex justify-end items-center pt-8 mt-4 border-t border-slate-100 gap-4">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="text-slate-400 hover:text-slate-600 font-bold text-sm uppercase tracking-widest px-4 py-2 transition-colors"
+            disabled={isSubmitting}
+          >
+            Discard
+          </button>
+          <Button 
+            type="submit" 
+            className="!px-10 !py-4 !rounded-2xl !bg-slate-900 hover:!bg-brand-dark !shadow-button transition-all duration-300"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Processing...' : 'Confirm & Initiate'}
           </Button>
         </div>
       </form>
