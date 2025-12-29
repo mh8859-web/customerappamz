@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { UserRole } from '../../types';
@@ -18,14 +18,13 @@ interface CreateUserModalProps {
   }) => Promise<void>;
 }
 
-const FormField: React.FC<{label: string, icon?: React.ReactNode, children: React.ReactNode, description?: string}> = ({label, icon, children, description}) => (
-  <div className="space-y-1.5">
-      <label className="text-[11px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1.5">
+const FormField: React.FC<{label: string, icon?: React.ReactNode, children: React.ReactNode}> = ({label, icon, children}) => (
+  <div className="space-y-1">
+      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1.5">
         {icon}
         {label}
       </label>
       {children}
-      {description && <p className="text-[10px] text-slate-400 font-medium italic ml-1">{description}</p>}
   </div>
 );
 
@@ -58,14 +57,14 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     }
   }, [isOpen]);
 
-  // Auto-logic for Customers
+  // Logic to auto-fill for customers based on mobile
   useEffect(() => {
     if (formData.role === 'Customer' && mobileNumber.length === 10) {
         const id = mobileNumber.substring(0, 5);
         setFormData(prev => ({
             ...prev,
             userId: id,
-            email: `${id}@amazmodular.com`, // Auto-gen private email
+            email: `${id}@amazmodular.com`,
             password: `@${mobileNumber.substring(5)}`,
         }));
     }
@@ -95,47 +94,47 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     }
   };
   
-  const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/40 focus:bg-white placeholder:text-slate-300 transition-all duration-300";
+  const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-sm text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/40 focus:bg-white placeholder:text-slate-300 transition-all duration-200";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Provision New Identity">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title="Identity Provisioning">
+      <form onSubmit={handleSubmit} className="space-y-4">
         
-        {/* Core Identity Section */}
-        <div className="space-y-4">
-            <FormField label="Full Legal Name" icon={<UserIcon className="w-3 h-3"/>}>
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} placeholder="e.g. Alexander Pierce" required />
+        {/* Entity Details */}
+        <div className="space-y-3">
+            <FormField label="Full Name" icon={<UserIcon className="w-3 h-3"/>}>
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} placeholder="Alexander Pierce" required />
             </FormField>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField label="Assign System Role" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
+            <div className="grid grid-cols-2 gap-3">
+                <FormField label="System Role" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
                     <select name="role" value={formData.role} onChange={handleChange} className={inputClasses} required>
                         {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                     </select>
                 </FormField>
 
                 {formData.role === 'Customer' ? (
-                     <FormField label="Verification Mobile" icon={<PhoneIcon className="w-3 h-3"/>}>
+                     <FormField label="Mobile ID" icon={<PhoneIcon className="w-3 h-3"/>}>
                         <input 
                             type="tel" 
                             value={mobileNumber} 
                             onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').substring(0, 10))} 
                             className={inputClasses}
-                            placeholder="10-digit number"
+                            placeholder="10 Digits"
                             required 
                         />
                     </FormField>
                 ) : (
-                    <FormField label="Unique Identity ID" icon={<UserIcon className="w-3 h-3"/>} description="Used for primary login identification.">
+                    <FormField label="Identity Key" icon={<UserIcon className="w-3 h-3"/>}>
                         <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required placeholder="e.g. DES-4402" />
                     </FormField>
                 )}
             </div>
         </div>
 
-        {/* Credentials Section */}
-        <div className="p-5 bg-slate-50/50 rounded-[24px] border border-slate-100 space-y-4">
-            <FormField label="Account Email Address" icon={<MailIcon className="w-3 h-3"/>} description="Required for secure cloud authentication.">
+        {/* Auth Credentials */}
+        <div className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3">
+            <FormField label="Cloud Account Email" icon={<MailIcon className="w-3 h-3"/>}>
                 <input 
                     type="email" 
                     name="email" 
@@ -148,7 +147,7 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
                 />
             </FormField>
 
-            <FormField label="Access Security Key" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
+            <FormField label="Secure Access Key" icon={<ShieldCheckIcon className="w-3 h-3"/>}>
                 <div className="relative">
                     <input
                         type={showPassword ? 'text' : 'password'}
@@ -161,25 +160,23 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
                         readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
                     />
                     {formData.role !== 'Customer' && (
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-blue">
-                            {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-blue">
+                            {showPassword ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                         </button>
                     )}
                 </div>
             </FormField>
         </div>
         
-        <div className="flex items-center justify-between px-2 pt-2">
-            <label className="flex items-center gap-3 cursor-pointer group">
-                <input type="checkbox" name="verified" checked={formData.verified} onChange={handleChange} className="w-5 h-5 rounded-lg border-slate-200 text-brand-blue focus:ring-brand-blue/20 transition-all" />
-                <span className="text-xs font-bold text-slate-500 group-hover:text-slate-900 uppercase tracking-widest">Mark as Verified Entity</span>
-            </label>
+        <div className="flex items-center gap-3 px-1">
+            <input type="checkbox" name="verified" checked={formData.verified} onChange={handleChange} className="w-4 h-4 rounded border-slate-200 text-brand-blue focus:ring-brand-blue/20" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Authorize & Verify Entity</span>
         </div>
         
-        <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
-          <Button type="submit" className="flex-[2] !py-4 !rounded-2xl !bg-slate-900 shadow-button" disabled={isSubmitting}>
-              {isSubmitting ? 'Provisioning...' : 'Confirm & Create User'}
+        <div className="flex items-center gap-3 pt-4">
+          <button type="button" onClick={onClose} className="flex-1 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
+          <Button type="submit" className="flex-[2] !py-3 !rounded-xl !bg-slate-900 !text-xs !font-bold !tracking-widest uppercase shadow-button" disabled={isSubmitting}>
+              {isSubmitting ? 'Processing...' : 'Confirm & Provision'}
           </Button>
         </div>
       </form>

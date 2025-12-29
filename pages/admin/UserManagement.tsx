@@ -26,7 +26,7 @@ const UserManagement: React.FC = () => {
 
   const handleCreateUser = async (u: any) => {
     try {
-        // 1. Create the Auth Record
+        // Step 1: Attempt to create Auth Identity
         const { user: newUser, error: authError } = await signUpNewUser(u.email, u.password, {
             fullName: u.fullName,
             role: u.role,
@@ -38,18 +38,19 @@ const UserManagement: React.FC = () => {
             return;
         }
 
-        // 2. The database trigger usually creates the profile, 
-        // but we ensure the verification status is synced correctly.
+        // Step 2: Ensure the profile is verified if requested
+        // The DB trigger usually handles profile creation, so we just update the specific verification flag
         if (newUser && u.verified) {
              await updateRecord('users', newUser.id, { verified: true });
         }
 
-        alert(`Success: ${u.fullName} has been added to the system.`);
+        // Step 3: Refresh the list and close
         await refetchUsers();
         setCreateUserModalOpen(false);
+        alert(`Success: Identity for ${u.fullName} has been provisioned.`);
 
     } catch (err) {
-        alert('An unexpected system error occurred during user provisioning.');
+        alert('An unexpected system error occurred during provisioning.');
         console.error(err);
     }
   };
@@ -66,13 +67,13 @@ const UserManagement: React.FC = () => {
     if (updates.verified !== undefined) updatesForDb.verified = updates.verified;
 
     const { error } = await updateRecord('users', userId, updatesForDb);
-    if (error) alert(`Failed: ${error.message}`);
+    if (error) alert(`Update Failed: ${error.message}`);
     else await refetchUsers();
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
-    if (currentUser?.id === userToDelete.id) return alert("Security: Cannot delete self.");
-    if (window.confirm(`Permanently delete "${userToDelete.fullName}"?`)) {
+    if (currentUser?.id === userToDelete.id) return alert("Security: Cannot void your own identity.");
+    if (window.confirm(`Permanently void identity "${userToDelete.fullName}"? This is irreversible.`)) {
       const { error } = await deleteUser(userToDelete.id);
       if (error) alert(`Error: ${error.message}`);
       else await refetchUsers();
@@ -81,7 +82,7 @@ const UserManagement: React.FC = () => {
   
   const handleImpersonate = (user: User) => {
       if (currentUser?.id === user.id) return;
-      if (window.confirm(`View workspace as ${user.fullName}?`)) startImpersonation(user);
+      if (window.confirm(`Switch context to view workspace as ${user.fullName}?`)) startImpersonation(user);
   }
 
   return (
@@ -97,9 +98,9 @@ const UserManagement: React.FC = () => {
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">Identity Management</h1>
-            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mt-1">Directory Oversight</p>
+            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mt-1">Global Directory Control</p>
           </div>
-          <Button onClick={() => setCreateUserModalOpen(true)} className="!px-6 !py-3 !rounded-xl !bg-slate-900 !text-xs !font-bold !tracking-widest uppercase">
+          <Button onClick={() => setCreateUserModalOpen(true)} className="!px-6 !py-3 !rounded-xl !bg-slate-900 !text-[11px] !font-black !tracking-widest uppercase shadow-button">
             + Provision ID
           </Button>
         </div>
@@ -109,33 +110,33 @@ const UserManagement: React.FC = () => {
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50/80 border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Entity</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Identity Key</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Level</th>
-                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400 text-right">Commands</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Entity</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Identity Key</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Permission Level</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase tracking-[2px] text-slate-400 text-right">Commands</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-2.5">
+                    <td className="px-6 py-3">
                         <UserNameDisplay user={user} showAvatar={true} textClassName="font-bold text-slate-800 text-sm" imageSize="w-8 h-8"/>
                     </td>
-                    <td className="px-6 py-2.5 font-mono text-[11px] text-slate-400">{user.userId}</td>
-                    <td className="px-6 py-2.5">
+                    <td className="px-6 py-3 font-mono text-[11px] text-slate-400">{user.userId}</td>
+                    <td className="px-6 py-3">
                       <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
                         user.role === 'Admin' ? 'bg-brand-blue/10 text-brand-blue' :
                         user.role === 'Designer' ? 'bg-orange-100 text-orange-600' :
                         'bg-slate-100 text-slate-600'
                       }`}>{user.role}</span>
                     </td>
-                    <td className="px-6 py-2.5 text-right">
-                      <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-6 py-3 text-right">
+                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleImpersonate(user)} className="p-2 text-slate-400 hover:text-brand-blue rounded-lg transition-colors" title="Impersonate">
                             <EyeIcon className="w-4 h-4" />
                           </button>
-                          <button onClick={() => handleOpenEditModal(user)} className="px-3 py-1.5 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Edit</button>
-                          <button onClick={() => handleDeleteUser(user)} className="px-3 py-1.5 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
+                          <button onClick={() => handleOpenEditModal(user)} className="px-3 py-2 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Edit</button>
+                          <button onClick={() => handleDeleteUser(user)} className="px-3 py-2 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
                       </div>
                     </td>
                   </tr>

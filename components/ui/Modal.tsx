@@ -17,16 +17,16 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       onClick={onClose}
     >
       <div 
-        className="bg-surface rounded-[28px] shadow-modal w-full max-w-2xl transform modal-content-animation flex flex-col max-h-[92vh] border border-slate-200/50"
+        className="bg-surface rounded-[28px] shadow-modal w-full max-w-xl transform modal-content-animation flex flex-col max-h-[90vh] border border-slate-200/50"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center border-b border-slate-100 p-6 flex-shrink-0">
-          <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">{title}</h2>
+        <div className="flex justify-between items-center border-b border-slate-100 p-5 flex-shrink-0">
+          <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight">{title}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 rounded-full p-2 bg-slate-50 hover:bg-slate-100 transition-colors">
             <XMarkIcon className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
+        <div className="p-6 overflow-y-auto custom-scrollbar overflow-x-hidden">
           {children}
         </div>
       </div>
