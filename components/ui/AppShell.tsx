@@ -1,40 +1,64 @@
 import React from 'react';
 
-// Renders an instant, static skeleton of the app UI while authentication is checked for protected routes.
-// This eliminates jarring layout shifts and makes the app feel incredibly fast for returning users.
 const AppShell = () => (
-    <div className="flex h-screen bg-page-bg text-text-secondary">
-        {/* Skeleton Sidebar */}
-        <aside className="hidden md:block w-72 bg-surface border-r border-border-color/50 p-6 pt-8 space-y-8 animate-pulse">
-            <div className="h-10 bg-secondary rounded-lg w-3/4"></div>
-            <div className="space-y-2">
-                {[...Array(9)].map((_, i) => (
-                    <div key={i} className="h-12 bg-secondary rounded-full"></div>
+    <div className="flex h-screen bg-slate-50 text-slate-300 overflow-hidden">
+        {/* Skeleton Sidebar - High Fidelity */}
+        <aside className="hidden md:flex w-72 bg-slate-50 border-r border-slate-200 flex-col animate-pulse">
+            <div className="h-24 px-8 border-b border-slate-200/60 flex items-center mb-8">
+                <div className="h-6 bg-slate-200 rounded-lg w-32"></div>
+            </div>
+            <div className="px-4 space-y-2">
+                {[...Array(8)].map((_, i) => (
+                    <div key={i} className="h-11 bg-slate-200/40 rounded-xl w-full"></div>
                 ))}
             </div>
+            <div className="mt-auto p-6 bg-slate-100/50 h-24 border-t border-slate-200/60 flex items-center justify-center">
+                 <div className="h-10 bg-slate-200 rounded-xl w-full"></div>
+            </div>
         </aside>
-        {/* Skeleton Header & Main Content */}
-        <div className="flex flex-col flex-1 animate-pulse">
+
+        {/* Skeleton Main Container */}
+        <div className="flex flex-col flex-1 relative animate-pulse">
             {/* Skeleton Header */}
-            <header className="h-20 px-8 bg-surface/80 border-b border-border-color/50 flex items-center justify-between">
-                <div className="w-80 h-11 bg-secondary rounded-full"></div>
+            <header className="h-20 px-8 bg-white/80 border-b border-slate-100 flex items-center justify-between">
+                <div className="w-48 h-8 bg-slate-100 rounded-xl"></div>
                 <div className="flex items-center gap-4">
-                    <div className="hidden sm:block w-32 h-9 bg-secondary rounded-lg"></div>
-                    <div className="w-11 h-11 bg-secondary rounded-full"></div>
-                    <div className="w-11 h-11 bg-secondary rounded-full"></div>
+                    <div className="w-10 h-10 bg-slate-100 rounded-xl"></div>
+                    <div className="h-10 w-32 bg-slate-100 rounded-xl"></div>
                 </div>
             </header>
-            {/* Skeleton Main */}
-            <main className="p-4 md:p-8 flex-1">
-                <div className="h-10 w-1/3 bg-secondary rounded-lg mb-8"></div>
-                <div className="grid grid-cols-3 gap-6">
-                    <div className="h-28 bg-secondary rounded-2xl"></div>
-                    <div className="h-28 bg-secondary rounded-2xl"></div>
-                    <div className="h-28 bg-secondary rounded-2xl"></div>
+
+            {/* Skeleton Main Content */}
+            <main className="p-8 flex-1 overflow-hidden bg-white/40">
+                <div className="max-w-6xl mx-auto w-full space-y-10">
+                    {/* Page Title */}
+                    <div className="space-y-3">
+                        <div className="h-10 w-64 bg-slate-200 rounded-2xl"></div>
+                        <div className="h-4 w-96 bg-slate-100 rounded-full"></div>
+                    </div>
+
+                    {/* Dashboard Style Stats */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="h-32 bg-white border border-slate-100 shadow-sm rounded-3xl"></div>
+                        ))}
+                    </div>
+
+                    {/* Table/Content Mockup */}
+                    <div className="bg-white border border-slate-100 shadow-premium rounded-[32px] overflow-hidden">
+                        <div className="h-16 bg-slate-50 border-b border-slate-100 w-full"></div>
+                        <div className="p-6 space-y-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="h-12 bg-slate-50/50 rounded-2xl w-full"></div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
-                <div className="mt-6 h-80 bg-secondary rounded-2xl"></div>
             </main>
         </div>
+
+        {/* Gold Accent Indicator */}
+        <div className="fixed bottom-8 right-8 w-1 h-16 bg-brand-gold/20 rounded-full"></div>
     </div>
 );
 

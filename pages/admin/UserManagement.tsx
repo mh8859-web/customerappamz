@@ -17,54 +17,12 @@ const UserManagement: React.FC = () => {
   const { users, loading, refetchUsers } = useUsers();
   const { user: currentUser, startImpersonation } = useAuth();
 
-  // Filter users based on role. Sub-Admins cannot see Admins.
   const filteredUsers = useMemo(() => {
     if (currentUser?.role === 'Sub-Admin') {
       return users.filter(user => user.role !== 'Admin');
     }
     return users;
   }, [users, currentUser]);
-
-  const handleCreateUser = async (newUser: {
-    fullName: string;
-    role: UserRole;
-    userId: string;
-    password: string;
-    verified: boolean;
-  }) => {
-    try {
-      const proxyEmail = `user-${newUser.userId}@amaz-interiors.app`;
-      const metadata = {
-          fullName: newUser.fullName,
-          role: newUser.role,
-          userId: newUser.userId,
-      };
-
-      const { user, error: signUpError } = await signUpNewUser(proxyEmail, newUser.password, metadata);
-
-      if (signUpError) throw signUpError;
-      
-      if (user) {
-          const { error: updateError } = await updateRecord('users', user.id, {
-              full_name: newUser.fullName,
-              role: newUser.role,
-              user_id: newUser.userId,
-              verified: newUser.verified,
-          });
-          
-          if (updateError) {
-              alert(`User account was created, but setting the profile failed: ${updateError.message}. Please edit the user manually.`);
-          }
-      }
-      
-      await refetchUsers(); 
-      setCreateUserModalOpen(false);
-    } catch (error) {
-        alert(`Failed to create user: ${(error as Error).message}`);
-        console.error(error);
-        setCreateUserModalOpen(false);
-    }
-  };
 
   const handleOpenEditModal = (user: User) => {
     setSelectedUser(user);
@@ -75,103 +33,75 @@ const UserManagement: React.FC = () => {
     const updatesForDb: Record<string, any> = {};
     if (updates.fullName !== undefined) updatesForDb.full_name = updates.fullName;
     if (updates.role !== undefined) updatesForDb.role = updates.role;
-    if (updates.userId !== undefined) updatesForDb.user_id = updates.userId;
     if (updates.verified !== undefined) updatesForDb.verified = updates.verified;
 
     const { error } = await updateRecord('users', userId, updatesForDb);
-    if (error) {
-        alert(`Failed to update user: ${error.message}`);
-    } else {
-        await refetchUsers();
-    }
+    if (error) alert(`Failed: ${error.message}`);
+    else await refetchUsers();
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
-    if (currentUser && currentUser.id === userToDelete.id) {
-      alert("For security reasons, you cannot delete your own account from this panel.");
-      return;
-    }
-
-    if (window.confirm(`Are you sure you want to permanently delete the user "${userToDelete.fullName}"? This action is irreversible.`)) {
+    if (currentUser?.id === userToDelete.id) return alert("Security: Cannot delete self.");
+    if (window.confirm(`Permanently delete "${userToDelete.fullName}"?`)) {
       const { error } = await deleteUser(userToDelete.id);
-
-      if (error) {
-        alert(`Failed to delete user. Please ensure backend functions are correctly configured or contact support.`);
-        console.error("Delete user RPC error:", error);
-      } else {
-        alert('User deleted successfully.');
-        await refetchUsers();
-      }
+      if (error) alert(`Error: ${error.message}`);
+      else await refetchUsers();
     }
   };
   
-  const handleImpersonate = (userToImpersonate: User) => {
-      if (currentUser && currentUser.id === userToImpersonate.id) {
-          alert("You cannot impersonate yourself.");
-          return;
-      }
-      if (window.confirm(`You are about to view the application as ${userToImpersonate.fullName}. You will see exactly what they see. Do you want to continue?`)) {
-          startImpersonation(userToImpersonate);
-      }
+  const handleImpersonate = (user: User) => {
+      if (currentUser?.id === user.id) return;
+      if (window.confirm(`View workspace as ${user.fullName}?`)) startImpersonation(user);
   }
 
   return (
     <>
-      <CreateUserModal
-        isOpen={isCreateUserModalOpen}
-        onClose={() => setCreateUserModalOpen(false)}
-        onCreate={handleCreateUser}
-      />
-      <EditUserModal
-        isOpen={isEditModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        user={selectedUser}
-        onUpdate={handleUpdateUser}
-      />
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <h1 className="text-3xl font-bold font-display text-text-primary">User Management</h1>
-          <Button onClick={() => setCreateUserModalOpen(true)}>+ Add User</Button>
+      <CreateUserModal isOpen={isCreateUserModalOpen} onClose={() => setCreateUserModalOpen(false)} onCreate={async (u) => { await refetchUsers(); setCreateUserModalOpen(false); }} />
+      <EditUserModal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} user={selectedUser} onUpdate={handleUpdateUser} />
+      
+      <div className="space-y-6 animate-in">
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-display font-extrabold text-slate-900 tracking-tight">Identity Management</h1>
+            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest mt-1">Directory Oversight</p>
+          </div>
+          <Button onClick={() => setCreateUserModalOpen(true)} className="!px-6 !py-3 !rounded-xl !bg-slate-900 !text-xs !font-bold !tracking-widest uppercase">
+            + Provision ID
+          </Button>
         </div>
         
-        <Card className="!p-0">
+        <Card className="!p-0 !rounded-3xl border-slate-200 shadow-premium overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-text-secondary uppercase">
+              <thead className="bg-slate-50/80 border-b border-slate-100">
                 <tr>
-                  <th scope="col" className="px-6 py-4 font-semibold">Name</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Email (System)</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">User ID</th>
-                  <th scope="col" className="px-6 py-4 font-semibold">Role</th>
-                  <th scope="col" className="px-6 py-4 font-semibold text-right">Actions</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Entity</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Identity Key</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400">Level</th>
+                  <th className="px-6 py-3.5 text-[10px] font-black uppercase tracking-[2px] text-slate-400 text-right">Commands</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredUsers.map((user: User, index: number) => (
-                  <tr key={user.id} className={`border-t border-border-color ${index === 0 ? 'border-t-0' : ''}`}>
-                    <td className="px-6 py-4 font-medium text-text-primary">
-                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-semibold"/>
+              <tbody className="divide-y divide-slate-50">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                    <td className="px-6 py-2.5">
+                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-bold text-slate-800 text-sm" imageSize="w-8 h-8"/>
                     </td>
-                    <td className="px-6 py-4 text-text-secondary">{user.email}</td>
-                    <td className="px-6 py-4 font-mono text-text-secondary">{user.userId}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        user.role === 'Admin' ? 'bg-brand-blue/20 text-brand-blue' :
-                        user.role === 'Sub-Admin' ? 'bg-purple-500/20 text-purple-500' :
-                        user.role === 'Designer' ? 'bg-orange-500/20 text-orange-500' :
-                        user.role === 'Accounts' ? 'bg-teal-500/20 text-teal-500' :
-                        'bg-green-500/20 text-green-500'
-                      }`}>
-                        {user.role}
-                      </span>
+                    <td className="px-6 py-2.5 font-mono text-[11px] text-slate-400">{user.userId}</td>
+                    <td className="px-6 py-2.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                        user.role === 'Admin' ? 'bg-brand-blue/10 text-brand-blue' :
+                        user.role === 'Designer' ? 'bg-orange-100 text-orange-600' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>{user.role}</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex gap-2 justify-end">
-                          <Button variant="secondary" title="View as User" className="!px-2 !py-1 text-xs" onClick={() => handleImpersonate(user)} disabled={currentUser?.id === user.id}>
+                    <td className="px-6 py-2.5 text-right">
+                      <div className="flex gap-0.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => handleImpersonate(user)} className="p-2 text-slate-400 hover:text-brand-blue rounded-lg transition-colors" title="Impersonate">
                             <EyeIcon className="w-4 h-4" />
-                          </Button>
-                          <Button variant="secondary" className="!px-3 !py-1 text-xs" onClick={() => handleOpenEditModal(user)}>Edit</Button>
-                          <Button variant="secondary" className="!px-3 !py-1 text-xs !border-red-500/50 hover:!bg-red-500/20 text-red-500" onClick={() => handleDeleteUser(user)} disabled={currentUser?.id === user.id}>Delete</Button>
+                          </button>
+                          <button onClick={() => handleOpenEditModal(user)} className="px-3 py-1.5 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Edit</button>
+                          <button onClick={() => handleDeleteUser(user)} className="px-3 py-1.5 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
                       </div>
                     </td>
                   </tr>
