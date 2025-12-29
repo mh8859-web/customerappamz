@@ -37,10 +37,7 @@ const fetchAndMapProfile = async (
       .eq("id", supabaseUser.id)
       .single();
 
-    if (error || !data) {
-      console.error("Failed to fetch user profile:", error?.message);
-      return null;
-    }
+    if (error || !data) return null;
 
     return {
       id: data.id,
@@ -53,7 +50,6 @@ const fetchAndMapProfile = async (
       userId: data.user_id || '',
     };
   } catch (err) {
-    console.error("Profile mapping exception:", err);
     return null;
   }
 };
@@ -65,38 +61,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
-  // Definitive auth state management
   useEffect(() => {
     let mounted = true;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session && mounted) {
-          const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-        }
-      } catch (error) {
-        console.error("Initial auth check failed:", error);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    initializeAuth();
-
+    // A single source of truth for the auth listener. 
+    // supabase.auth.onAuthStateChange fires immediately with the initial session.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         if (!mounted) return;
         
         if (session) {
-          setLoading(true);
           const profile = await fetchAndMapProfile(session.user);
-          setUser(profile);
-          setLoading(false);
+          if (mounted) {
+            setUser(profile);
+            setLoading(false);
+          }
         } else {
-          setUser(null);
-          setLoading(false);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
         }
       }
     );
@@ -136,56 +120,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return { success: true, error: null };
 
     } catch (e) {
-      console.error("Login error:", e);
       return { success: false, error: "UNKNOWN_ERROR" };
     }
   }, []);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
-    sessionStorage.removeItem('impersonation_admin');
-    setImpersonatedUser(null);
     setUser(null);
+    setImpersonatedUser(null);
   }, []);
   
   const startImpersonation = useCallback((targetUser: User) => {
     if (user && user.role === 'Admin') {
-      sessionStorage.setItem('impersonation_admin', JSON.stringify(user));
       setImpersonatedUser(targetUser);
       setUser(targetUser);
     }
   }, [user]);
 
   const stopImpersonation = useCallback(() => {
-    const adminUserJson = sessionStorage.getItem('impersonation_admin');
-    if (adminUserJson) {
-      const adminUser = JSON.parse(adminUserJson);
-      setUser(adminUser);
-      setImpersonatedUser(null);
-      sessionStorage.removeItem('impersonation_admin');
-    }
+    setImpersonatedUser(null);
+    window.location.reload(); 
   }, []);
-  
-  useEffect(() => {
-    let inactivityTimer: number;
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer);
-      if (user && !impersonatedUser) {
-        inactivityTimer = window.setTimeout(() => {
-          logout();
-        }, 10 * 60 * 1000);
-      }
-    };
-    const activityEvents: (keyof WindowEventMap)[] = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
-    if (user) {
-      activityEvents.forEach(event => window.addEventListener(event, resetInactivityTimer));
-      resetInactivityTimer();
-    }
-    return () => {
-      clearTimeout(inactivityTimer);
-      activityEvents.forEach(event => window.removeEventListener(event, resetInactivityTimer));
-    };
-  }, [user, logout, impersonatedUser]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
