@@ -3,7 +3,6 @@ import React from 'react';
 import { Message, User } from '../../types';
 import { DownloadIcon, FileTextIcon } from '../icons';
 import { AMAZ_SUPPORT_USER_ID } from '../../constants';
-import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface MessageBubbleProps {
   message: Message;
@@ -30,24 +29,20 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0]; isOwn
     );
 };
 
-
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: isOwnMessageProp, sender }) => {
+  // CRITICAL: If isSystemMessage is true, FORCE the System Admin identity
   const isSupportMessage = !!message.isSystemMessage || message.senderId === AMAZ_SUPPORT_USER_ID;
   const isOwnMessage = !isSupportMessage && isOwnMessageProp;
 
-  // Use the system admin identity if it's a support message
-  const senderToDisplay = isSupportMessage 
-    ? { 
-        id: AMAZ_SUPPORT_USER_ID,
-        fullName: '786786 SYSTEM ADMIN', 
-        avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-        role: 'Admin',
-        email: 'system@amazmodular.com',
-        verified: true,
-        verificationRequested: false,
-        userId: '786786',
-      } as User
-    : sender;
+  const systemAdminProfile = { 
+    id: AMAZ_SUPPORT_USER_ID,
+    fullName: '786786 SYSTEM ADMIN', 
+    avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+    role: 'Admin',
+    verified: true,
+  };
+
+  const senderToDisplay = isSupportMessage ? systemAdminProfile : sender;
 
   const bubbleClasses = isSupportMessage
     ? 'bg-slate-900 text-white rounded-tl-[4px] border border-brand-gold/30 shadow-gold-glow'
@@ -56,33 +51,38 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: is
     : 'bg-[#F0F2F5] text-slate-800 rounded-tl-[4px]';
 
   const alignmentClasses = isOwnMessage ? 'items-end' : 'items-start';
+  const verifiedBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
 
   return (
     <div className={`flex flex-col ${alignmentClasses} animate-in mb-4 w-full px-2`}>
-        <div className={`flex items-end gap-2 max-w-[90%] sm:max-w-[75%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-end gap-2 max-w-[90%] sm:max-w-[85%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
             {!isOwnMessage && (
                 <img 
-                  src={senderToDisplay?.avatarUrl} 
-                  className="w-8 h-8 rounded-full object-cover mb-1 ring-2 ring-white shadow-md border border-slate-100" 
-                  alt="" 
+                    src={senderToDisplay?.avatarUrl} 
+                    className={`w-9 h-9 rounded-full object-cover mb-1 ring-2 ${isSupportMessage ? 'ring-brand-gold/40 shadow-gold-glow' : 'ring-white shadow-md'} border border-slate-100`} 
+                    alt="" 
                 />
             )}
             <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
                 {!isOwnMessage && (
-                  <div className="mb-1 px-1 flex items-center">
-                    <UserNameDisplay 
-                      user={senderToDisplay} 
-                      showAvatar={false} 
-                      textClassName={isSupportMessage ? "text-[10px] font-black text-brand-gold uppercase tracking-[2px]" : "text-[10px] font-bold text-slate-400"} 
-                    />
+                  <div className="mb-1 px-1 flex items-center gap-1.5">
+                    <span className={`text-[10px] font-black uppercase tracking-[2px] ${isSupportMessage ? 'text-brand-gold' : 'text-slate-400'}`}>
+                        {senderToDisplay?.fullName}
+                    </span>
+                    {isSupportMessage && (
+                        <img src={verifiedBadgeUrl} alt="Verified" className="w-3.5 h-3.5" />
+                    )}
                   </div>
                 )}
-                <div className={`px-4 py-3 rounded-[22px] shadow-card ${bubbleClasses} relative overflow-hidden`}>
+                <div className={`px-5 py-4 rounded-[22px] shadow-card ${bubbleClasses} relative overflow-hidden`}>
                     {isSupportMessage && (
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/5 rounded-full -mr-12 -mt-12 blur-xl"></div>
+                      <>
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/5 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+                        <div className="absolute bottom-0 left-0 w-12 h-12 bg-white/5 rounded-full -ml-6 -mb-6 blur-xl"></div>
+                      </>
                     )}
                     {message.body && (
-                      <p className={`text-[14px] leading-[1.6] font-medium whitespace-pre-wrap ${isSupportMessage ? 'text-slate-100 italic' : ''}`}>
+                      <p className={`text-[14px] leading-[1.6] font-medium whitespace-pre-wrap ${isSupportMessage ? 'text-slate-100 tracking-wide' : ''}`}>
                         {message.body}
                       </p>
                     )}

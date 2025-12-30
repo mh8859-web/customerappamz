@@ -110,11 +110,10 @@ const ProjectsList: React.FC = () => {
 
     if (quoteError) throw quoteError;
 
-    // 4. AUTOMATED WELCOME MESSAGE - Broadcast to Designer + Customer + Admin
+    // 4. AUTOMATED WELCOME MESSAGE - BROADCAST
     const designerObj = findUserById(projectData.designerId);
     const customerObj = findUserById(projectData.customerId);
     
-    // Explicit high-tier welcome body
     const welcomeBody = `WELCOME PROJECT BEGIN: "${projectData.title.toUpperCase()}"\n\n` +
         `Initialization complete. This shared project environment is now live for:\n` +
         `• Client: ${customerObj?.fullName || 'Valued Customer'}\n` +
@@ -123,12 +122,18 @@ const ProjectsList: React.FC = () => {
         `This channel is the authorized bridge for all design revisions, site updates, and financial milestones. 786786 SYSTEM ADMIN will monitor this workspace to ensure quality standards and architectural integrity.\n\n` +
         `Let the transformation begin.`;
 
-    await createRecord('messages', {
+    // FAILSAFE: Use current Admin's UUID as sender_id to satisfy DB foreign key constraints,
+    // but flag as system message so the UI overrides it to the "786786 SYSTEM ADMIN" profile.
+    const { error: msgError } = await createRecord('messages', {
         chat_id: newProject.id,
         body: welcomeBody,
-        sender_id: AMAZ_SUPPORT_USER_ID,
-        is_system_message: true
+        sender_id: user.id, // Valid UUID to satisfy DB
+        is_system_message: true // Triggers the identity override in MessageBubble
     });
+
+    if (msgError) {
+        console.error("Welcome Message Error:", msgError);
+    }
 
     // 5. Global refresh to update all UIs
     await refetchData();
