@@ -31,11 +31,18 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    const { data, error } = await supabase
+    // Add a 4 second timeout to the specific database query
+    const profilePromise = supabase
       .from("users")
       .select("*")
       .eq("id", supabaseUser.id)
       .single();
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Database Timeout")), 4000)
+    );
+
+    const { data, error } = (await Promise.race([profilePromise, timeoutPromise])) as any;
     
     if (error || !data) return null;
 
@@ -71,30 +78,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
-    // CRITICAL FIX: If we already have a user, don't overwrite them with null while fetching updates.
-    // This prevents the "Permissionless Logout" when profile fetches are slow.
     const profile = await fetchAndMapProfile(session.user);
     
     if (mounted) {
       if (profile) {
         setUser(profile);
-      } else if (!user) {
-        // Only set to null if we don't even have a skeleton user yet
-        setUser(null);
+      } else {
+        // If we have a session but profile fetch failed, 
+        // we create a skeleton user object so the app can at least render
+        // instead of hanging in the skeleton screen.
+        setUser({
+            id: session.user.id,
+            fullName: session.user.email?.split('@')[0] || "User",
+            email: session.user.email || "",
+            role: "Customer", // Fallback role
+            avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+            verified: false,
+            verificationRequested: false,
+            userId: 'SYNCING'
+        });
       }
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
+      // GLOBAL FAIL-SAFE: If auth hasn't resolved in 6 seconds, force stop the loader
+      const globalTimeout = setTimeout(() => {
+        if (mounted && loading) {
+          console.error("Auth System: Global Timeout Triggered. Forcing state resolution.");
+          setLoading(false);
+        }
+      }, 6000);
+
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
         await syncAuth(session, mounted);
       } catch (e) {
-        if (mounted) setLoading(false);
+        console.error("Auth Initialization Error:", e);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      } finally {
+        clearTimeout(globalTimeout);
       }
     };
 
@@ -103,10 +134,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
             setUser(null);
             setLoading(false);
-        } else {
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
             await syncAuth(session, mounted);
         }
       }
@@ -148,10 +179,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const logout = useCallback(async () => {
-    setUser(null);
-    setImpersonatedUser(null);
-    await supabase.auth.signOut();
-    window.location.href = '/#/login';
+    setLoading(true);
+    try {
+        setUser(null);
+        setImpersonatedUser(null);
+        await supabase.auth.signOut();
+    } finally {
+        setLoading(false);
+        window.location.href = '/#/login';
+    }
   }, []);
   
   const startImpersonation = useCallback((targetUser: User) => {
