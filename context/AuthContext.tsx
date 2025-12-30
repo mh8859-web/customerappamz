@@ -31,7 +31,8 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    // 3-second timeout for the database fetch to prevent UI hanging
+    // 10-second timeout for the database fetch to prevent UI hanging 
+    // while allowing for slower mobile connections or cold starts.
     const fetchPromise = supabase
       .from("users")
       .select("*")
@@ -39,7 +40,7 @@ const fetchAndMapProfile = async (
       .single();
     
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Timeout")), 3000)
+      setTimeout(() => reject(new Error("Profile retrieval timed out. Please check your network connection.")), 10000)
     );
 
     const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
@@ -116,17 +117,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
     );
 
-    // 3. SAFETY ESCAPE: Never let the app stay in "loading" for more than 4s
+    // 3. SAFETY ESCAPE: Increased to 12s to accommodate longer profile fetch window
     const timer = setTimeout(() => {
       if (mounted && loading) setLoading(false);
-    }, 4000);
+    }, 12000);
 
     return () => {
       mounted = false;
       clearTimeout(timer);
       authListener.subscription.unsubscribe();
     };
-  }, [syncAuth]);
+  }, [syncAuth, loading]);
 
 
   const login = useCallback(async (

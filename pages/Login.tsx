@@ -60,11 +60,11 @@ const Login: React.FC = () => {
           
           <div className="relative z-10 p-20 flex flex-col justify-between h-full w-full">
             <div className="flex items-center gap-4 animate-in">
-               <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+               <div className="p-3 bg-white rounded-2xl border border-white/20 shadow-xl overflow-hidden">
                  <img 
                   src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
                   alt="AMAZ Logo" 
-                  className="h-8 brightness-0 invert" 
+                  className="h-8" 
                 />
                </div>
                <div className="h-8 w-px bg-white/20"></div>
@@ -105,18 +105,18 @@ const Login: React.FC = () => {
               {/* Gold Accent Corner */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.1),transparent_70%)] rounded-tr-[40px]"></div>
               
-              <div className="mb-12">
+              <div className="mb-10">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-gold/10 rounded-full mb-4 border border-brand-gold/20">
                   <ShieldCheckIcon className="w-3.5 h-3.5 text-brand-gold" />
-                  <span className="text-[10px] font-bold text-brand-gold uppercase tracking-widest">Secure Access Point</span>
+                  <span className="text-[10px] font-black text-brand-gold uppercase tracking-widest">Client Portal</span>
                 </div>
-                <h2 className="text-4xl font-display font-extrabold text-slate-900 tracking-tight">Executive Portal</h2>
-                <p className="text-slate-500 mt-4 text-base font-medium leading-relaxed">Authorized personnel only. Please present your digital credentials.</p>
+                <h2 className="text-4xl font-display font-extrabold text-slate-900 tracking-tight uppercase">MY ACCOUNT</h2>
+                <p className="text-slate-500 mt-4 text-xs font-black leading-relaxed uppercase tracking-[2px]">ACCESS YOUR PROJECTS LIVE UPDATES HERE AMAZ INTERIORS.</p>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-8">
-                <div className="space-y-3 group">
-                  <label className="text-[11px] font-extrabold uppercase tracking-[2px] text-slate-400 ml-1 group-focus-within:text-brand-gold transition-colors">Identification ID</label>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-extrabold uppercase tracking-[2px] text-slate-400 ml-1 group-focus-within:text-brand-gold transition-colors">Identification ID</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400 group-focus-within:text-brand-gold transition-all duration-500">
                       <UserCircleIcon className="w-5 h-5" />
@@ -132,8 +132,8 @@ const Login: React.FC = () => {
                   </div>
                 </div>
                 
-                <div className="space-y-3 group">
-                  <label className="text-[11px] font-extrabold uppercase tracking-[2px] text-slate-400 ml-1 group-focus-within:text-brand-gold transition-colors">Security Key</label>
+                <div className="space-y-2 group">
+                  <label className="text-[10px] font-extrabold uppercase tracking-[2px] text-slate-400 ml-1 group-focus-within:text-brand-gold transition-colors">Security Key</label>
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 flex items-center pl-5 text-slate-400 group-focus-within:text-brand-gold transition-all duration-500">
                       <LockIcon className="w-5 h-5" />
@@ -159,12 +159,12 @@ const Login: React.FC = () => {
                 <div className="flex items-center justify-between px-1">
                     <label className="flex items-center gap-2 cursor-pointer group">
                       <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-brand-gold focus:ring-brand-gold/30 transition-all" />
-                      <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wider">Keep Session</span>
+                      <span className="text-[10px] font-black text-slate-400 group-hover:text-slate-600 uppercase tracking-wider">Keep Session</span>
                     </label>
                     <button 
                         type="button" 
                         onClick={() => setForgotModalOpen(true)}
-                        className="text-[11px] font-bold text-brand-blue hover:text-brand-gold uppercase tracking-[1px] transition-colors underline underline-offset-4 decoration-slate-200"
+                        className="text-[10px] font-black text-brand-blue hover:text-brand-gold uppercase tracking-[1px] transition-colors underline underline-offset-4 decoration-slate-200"
                     >
                         Forgot Keys?
                     </button>
@@ -180,11 +180,20 @@ const Login: React.FC = () => {
                 <div className="pt-2">
                   <Button 
                     type="submit" 
-                    className="w-full !py-5 !text-xs !bg-slate-900 hover:!bg-brand-dark !rounded-2xl !shadow-button hover:animate-glow-pulse !font-bold tracking-[4px] uppercase transition-all duration-500 active:scale-[0.98]" 
+                    className="w-full !py-5 !text-[11px] !bg-slate-900 hover:!bg-brand-dark !rounded-2xl !shadow-button hover:animate-glow-pulse !font-black tracking-[3px] uppercase transition-all duration-500 active:scale-[0.98]" 
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Verifying Identity...' : 'Authorize Entry'}
+                    {isSubmitting ? 'AUTHORIZING...' : 'ACCESS MY ACCOUNT'}
                   </Button>
+                  
+                  {/* Brand Value Labels */}
+                  <div className="mt-6 flex items-center justify-between px-2">
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[2px]">QUALITY</span>
+                    <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[2px]">TRANSPARENCY</span>
+                    <div className="w-1 h-1 rounded-full bg-slate-200"></div>
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-[2px]">ONTIME</span>
+                  </div>
                 </div>
               </form>
             </div>
