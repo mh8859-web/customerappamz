@@ -12,6 +12,7 @@ import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile } from '../services/api';
 import { RefreshIcon, MapPinIcon, BriefcaseIcon } from '../components/icons';
+import { AMAZ_SUPPORT_USER_ID } from '../constants';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -67,7 +68,7 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 const ProjectsList: React.FC = () => {
   const { user } = useAuth();
   const { projects, refetchData } = useData();
-  const { users } = useUsers();
+  const { findUserById } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isSyncModalOpen, setSyncModalOpen] = useState(false);
@@ -109,7 +110,25 @@ const ProjectsList: React.FC = () => {
 
     if (quoteError) throw quoteError;
 
-    // 4. Global refresh
+    // 4. AUTOMATED WELCOME MESSAGE
+    // Get designer and customer names for a personalized touch
+    const designerObj = findUserById(projectData.designerId);
+    const customerObj = findUserById(projectData.customerId);
+    
+    const welcomeBody = `WELCOME PROJECT BEGIN: "${projectData.title}"\n\n` +
+        `Greetings to ${customerObj?.fullName || 'Client'} and Creative Lead ${designerObj?.fullName || 'Designer'}.\n\n` +
+        `This automated project environment is now initialized. This channel serves as your primary bridge for real-time collaboration, design reviews, and status updates.\n\n` +
+        `Our System Admin is monitoring the synchronization of this workspace to ensure architectural excellence from inception to completion.\n\n` +
+        `Let the creation begin.`;
+
+    await createRecord('messages', {
+        chat_id: newProject.id,
+        body: welcomeBody,
+        sender_id: AMAZ_SUPPORT_USER_ID,
+        is_system_message: true
+    });
+
+    // 5. Global refresh
     await refetchData();
   };
 

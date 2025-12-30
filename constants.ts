@@ -1,5 +1,4 @@
 
-
 import { ProjectStage } from './types';
 
 export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts', 'Project Head', 'Production Head', 'Site Head'];
@@ -25,4 +24,5 @@ export const STAGE_DISPLAY_NAMES: Record<ProjectStage, string> = {
 };
 
 // A constant ID for the system user that sends automated messages
-export const AMAZ_SUPPORT_USER_ID = '00000000-0000-0000-0000-000000000000';
+// Updated to 786786 per user requirement
+export const AMAZ_SUPPORT_USER_ID = '786786';
