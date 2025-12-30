@@ -31,20 +31,17 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    // Add a 4 second timeout to the specific database query
-    const profilePromise = supabase
+    // Standard profile lookup
+    const { data, error } = await supabase
       .from("users")
       .select("*")
       .eq("id", supabaseUser.id)
       .single();
-
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Database Timeout")), 4000)
-    );
-
-    const { data, error } = (await Promise.race([profilePromise, timeoutPromise])) as any;
     
-    if (error || !data) return null;
+    if (error || !data) {
+        console.warn("AuthContext: Profile record not found in public.users yet.");
+        return null;
+    }
 
     return {
       id: data.id,
@@ -84,18 +81,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       if (profile) {
         setUser(profile);
       } else {
-        // If we have a session but profile fetch failed, 
-        // we create a skeleton user object so the app can at least render
-        // instead of hanging in the skeleton screen.
-        setUser({
-            id: session.user.id,
-            fullName: session.user.email?.split('@')[0] || "User",
-            email: session.user.email || "",
-            role: "Customer", // Fallback role
-            avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-            verified: false,
-            verificationRequested: false,
-            userId: 'SYNCING'
+        // CRITICAL FIX: If profile fetch fails but session exists, 
+        // DO NOT overwrite with a "Customer" skeleton. 
+        // Check if we already have a user in state. If so, don't change it.
+        // This prevents the "Role Flip" bug during navigation.
+        setUser((currentUser) => {
+            if (currentUser && currentUser.id === session.user.id) {
+                return currentUser; // Keep existing validated role
+            }
+            return null; // Only clear if it's a completely new or broken session
         });
       }
       setLoading(false);
@@ -106,14 +100,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     let mounted = true;
 
     const init = async () => {
-      // GLOBAL FAIL-SAFE: If auth hasn't resolved in 6 seconds, force stop the loader
-      const globalTimeout = setTimeout(() => {
-        if (mounted && loading) {
-          console.error("Auth System: Global Timeout Triggered. Forcing state resolution.");
-          setLoading(false);
-        }
-      }, 6000);
-
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) throw error;
@@ -124,8 +110,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setUser(null);
           setLoading(false);
         }
-      } finally {
-        clearTimeout(globalTimeout);
       }
     };
 
