@@ -1,17 +1,16 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, PackageIcon, CalendarIcon } from '../components/icons';
+import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, CalendarIcon } from '../components/icons';
 import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
-import AddProductModal from '../components/designer/AddProductModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
-import GeneratePOModal from '../components/designer/GeneratePOModal';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
@@ -29,16 +28,15 @@ type UnifiedUpdate = {
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs', 'Milestones'],
-    Designer: ['Live Updates', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
-    Admin: ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
-    'Sub-Admin': ['Live Updates', 'Designs', 'Sourcing', 'Quotes & Docs', 'Milestones'],
+    Designer: ['Live Updates', 'Designs', 'Feedback', 'Quotes & Docs', 'Milestones'],
+    Admin: ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
+    'Sub-Admin': ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
     Accounts: ['Live Updates', 'Quotes & Docs', 'Milestones'],
-    'Project Head': ['Live Updates', 'Designs', 'Sourcing', 'Feedback', 'Quotes & Docs', 'Milestones'],
-    'Production Head': ['Live Updates', 'Sourcing', 'Quotes & Docs'],
+    'Project Head': ['Live Updates', 'Designs', 'Feedback', 'Quotes & Docs', 'Milestones'],
+    'Production Head': ['Live Updates', 'Quotes & Docs'],
     'Site Head': ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs'],
 };
 
-// Moved outside for performance: prevents re-declaration on every render.
 const UpdateIcon: React.FC<{ type: UnifiedUpdate['type'] }> = ({ type }) => {
     const iconMap = {
         update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
@@ -61,8 +59,6 @@ const ProjectDetails: React.FC = () => {
     const [newUpdateMessage, setNewUpdateMessage] = useState('');
     const [isAnnotationModalOpen, setAnnotationModalOpen] = useState(false);
     const [selectedDesignForAnnotation, setSelectedDesignForAnnotation] = useState<Design | null>(null);
-    const [isAddProductModalOpen, setAddProductModalOpen] = useState(false);
-    const [isPOModalOpen, setPOModalOpen] = useState(false);
     const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
     const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -132,11 +128,11 @@ const ProjectDetails: React.FC = () => {
     }, [user, project]);
 
     if (isLoading) {
-        return <div className="text-center text-text-primary">Loading project details...</div>;
+        return <div className="text-center text-text-primary p-12">Synchronizing Project Data...</div>;
     }
 
     if (!project || !user) {
-        return <div className="text-center text-red-500">Project not found or you do not have permission to view it.</div>;
+        return <div className="text-center text-red-500 p-12">Project not found or access restricted.</div>;
     }
 
     const designer = findUserById(project.designerId);
@@ -144,7 +140,6 @@ const ProjectDetails: React.FC = () => {
     const projectMilestones = milestones.filter(m => m.projectId === project.id);
     const projectDesigns = designs.filter(d => d.projectId === project.id);
     const projectQuotes = quotes.filter(q => q.projectId === project.id);
-    const projectProducts = products.filter(p => p.projectId === project.id);
 
     const updateProjectState = async (updates: Partial<Project>, actorId: string, actionDetails: string) => {
         const { error } = await updateRecord('projects', project.id, updates);
@@ -237,20 +232,8 @@ const ProjectDetails: React.FC = () => {
     };
 
     const handleSaveComments = async (designId: string, newComments: Comment[]) => {
-        // In real app, you'd probably batch update/insert comments.
-        // For simplicity, we just update the design with the new comment array.
         await updateRecord('designs', designId, { comments: newComments, submitted_for_review: false });
         await refetchData();
-    };
-
-    const handleCreateProduct = async (newProductData: Omit<Product, 'id' | 'projectId'>) => {
-        const productToCreate = {
-            ...newProductData,
-            project_id: project.id
-        };
-        await createRecord('products', productToCreate);
-        await refetchData();
-        setAddProductModalOpen(false);
     };
     
     const handleUploadDesign = async (file: File, notes: string, type: 'image' | 'gltf') => {
@@ -307,9 +290,6 @@ const ProjectDetails: React.FC = () => {
         }
         setDeleteModalOpen(false);
     };
-
-    const totalSourcedCost = projectProducts.reduce((sum, p) => sum + (p.cost * p.quantity), 0);
-
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -422,57 +402,6 @@ const ProjectDetails: React.FC = () => {
                                 )}
                              </Card>
                         ))}
-                    </div>
-                );
-            case 'Sourcing':
-                return (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2">
-                            <Card>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold font-display text-text-primary">Sourced Products</h2>
-                                    {!isProjectReadOnly && <Button onClick={() => setAddProductModalOpen(true)}>+ Add Product</Button>}
-                                </div>
-                                <div className="space-y-3">
-                                    {projectProducts.map(p => (
-                                        <div key={p.id} className="bg-page-bg p-3 rounded-xl flex items-center gap-4">
-                                            <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-lg object-cover" />
-                                            <div className="flex-1">
-                                                <p className="font-semibold text-text-primary">{p.name}</p>
-                                                <p className="text-xs text-text-secondary">{p.supplier}</p>
-                                                <p className="text-sm font-mono text-brand-blue mt-1">₹{p.cost.toLocaleString()} x {p.quantity}</p>
-                                            </div>
-                                            <div>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    p.status === 'Delivered' ? 'bg-green-500/20 text-green-400' :
-                                                    p.status === 'Ordered' ? 'bg-blue-500/20 text-blue-400' :
-                                                    'bg-yellow-500/20 text-yellow-400'
-                                                }`}>{p.status}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                {!isProjectReadOnly && (
-                                    <Button onClick={() => setPOModalOpen(true)} variant="secondary" className="w-full mt-4">Generate Purchase Order</Button>
-                                )}
-                            </Card>
-                        </div>
-                        <div className="lg:col-span-1">
-                            <Card>
-                                <h2 className="text-xl font-bold font-display text-text-primary mb-4">Budget Overview</h2>
-                                <div className="space-y-3 text-sm">
-                                    <div className="flex justify-between"><span>Total Budget:</span> <span className="font-semibold text-text-primary">₹{project.budgetDisplay.toLocaleString()}</span></div>
-                                    <div className="flex justify-between"><span>Sourced Items:</span> <span className="font-semibold text-text-primary">- ₹{totalSourcedCost.toLocaleString()}</span></div>
-                                    <div className="border-t border-border-color my-2"></div>
-                                    <div className="flex justify-between text-base">
-                                        <span className="font-bold text-text-primary">Remaining:</span>
-                                        <span className={`font-bold ${project.budgetDisplay - totalSourcedCost < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                                            ₹{(project.budgetDisplay - totalSourcedCost).toLocaleString()}
-                                        </span>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
                     </div>
                 );
              case 'Feedback':
@@ -661,19 +590,6 @@ const ProjectDetails: React.FC = () => {
                 />
             )}
             
-            <AddProductModal
-                isOpen={isAddProductModalOpen}
-                onClose={() => setAddProductModalOpen(false)}
-                onCreate={handleCreateProduct}
-            />
-            
-            <GeneratePOModal 
-                isOpen={isPOModalOpen}
-                onClose={() => setPOModalOpen(false)}
-                products={projectProducts}
-                project={project}
-            />
-
             <UploadDesignModal
                 isOpen={isUploadDesignModalOpen}
                 onClose={() => setUploadDesignModalOpen(false)}
@@ -754,7 +670,6 @@ const ProjectDetails: React.FC = () => {
                                         : 'border-transparent text-text-secondary hover:text-text-primary hover:border-text-secondary'}`}
                             >
                                 {tab === 'Timeline' && <CalendarIcon className="w-4 h-4" />}
-                                {tab === 'Sourcing' && <PackageIcon className="w-4 h-4" />}
                                 {tab === 'Feedback' && <AnnotationIcon className="w-4 h-4" />}
                                 {tab === 'Live Updates' && <ZapIcon className="w-4 h-4" />}
                                 {tab}
