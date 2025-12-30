@@ -9,34 +9,18 @@ const ProtectedRoute: React.FC = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // 1. Initial Cold Boot (only visible for a few ms)
+  // If we are actively checking the session for the first time and have no user info, 
+  // we wait silently for a few milliseconds.
   if (loading && !user) {
-    return (
-        <div className="h-screen w-screen bg-slate-900 flex flex-col items-center justify-center">
-             <img 
-                src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-                alt="AMAZ" 
-                className="h-10 mb-6 animate-pulse" 
-            />
-            <div className="w-48 h-0.5 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full bg-brand-gold animate-[loading_2s_ease-in-out_infinite]"></div>
-            </div>
-            <style>{`
-                @keyframes loading {
-                    0% { transform: translateX(-100%); }
-                    100% { transform: translateX(100%); }
-                }
-            `}</style>
-        </div>
-    );
+    return null; // Show nothing or a very tiny spinner, never a full screen block
   }
 
-  // 2. Auth checked and definitively no user found -> Force login
+  // Definitively no user -> Login
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. User authenticated (or cached) -> Render Dashboard immediately
+  // User exists (or shell exists) -> App
   return (
     <UserProvider>
       <DataProvider>

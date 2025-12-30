@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { supabase } from "../services/supabaseClient";
 import { User } from "../types";
-import { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
@@ -27,16 +26,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to safely map database row to User object
-const mapProfileData = (data: any): User => ({
-  id: data.id,
-  fullName: data.full_name || "User",
-  email: data.email,
-  role: data.role || "Customer", // Default role only for initialization
-  avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-  verified: !!data.verified,
-  verificationRequested: !!data.verification_requested,
-  userId: data.user_id || '',
+// Instant mapping helper
+const createShellUser = (sessionUser: any): User => ({
+    id: sessionUser.id,
+    fullName: sessionUser.user_metadata?.full_name || "Authorized User",
+    email: sessionUser.email || "",
+    role: (sessionUser.user_metadata?.role as any) || "Customer",
+    avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+    verified: true,
+    verificationRequested: false,
+    userId: sessionUser.user_metadata?.user_id || "",
 });
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
@@ -55,10 +54,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
       
       if (data && !error) {
-        setUser(mapProfileData(data));
+        const fullUser = {
+          id: data.id,
+          fullName: data.full_name,
+          email: data.email,
+          role: data.role,
+          avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+          verified: !!data.verified,
+          verificationRequested: !!data.verification_requested,
+          userId: data.user_id,
+        };
+        setUser(fullUser);
+        localStorage.setItem(`user_profile_${data.id}`, JSON.stringify(fullUser));
       }
     } catch (err) {
-      console.error("AuthContext: Profile fetch failed", err);
+      console.error("Auth: Background sync failed", err);
     }
   }, []);
 
@@ -66,18 +76,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     let mounted = true;
 
     const initAuth = async () => {
-      // 1. Get current session immediately
+      // 1. Instant check for session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Try to load cached profile if possible to avoid flicker
-        const cachedUser = localStorage.getItem(`user_profile_${session.user.id}`);
-        if (cachedUser && mounted) {
-           setUser(JSON.parse(cachedUser));
-        }
+        // Use cache or shell to let user in IMMEDIATELY
+        const cached = localStorage.getItem(`user_profile_${session.user.id}`);
+        setUser(cached ? JSON.parse(cached) : createShellUser(session.user));
         
-        // Always fetch fresh data in background
-        await fetchProfile(session.user.id);
+        // Refresh profile in background without blocking
+        fetchProfile(session.user.id);
       }
       
       if (mounted) setLoading(false);
@@ -85,21 +93,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     initAuth();
 
-    // 2. Listen for auth changes (Login/Logout)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
 
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (session?.user) {
-            await fetchProfile(session.user.id);
+            const shell = createShellUser(session.user);
+            setUser(shell);
+            fetchProfile(session.user.id);
           }
-        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+        } else if (event === 'SIGNED_OUT') {
           setUser(null);
-          localStorage.removeItem('sb-lkpgsdtriqqotovaxytx-auth-token'); // Clear Supabase cache manually if needed
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -109,13 +116,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, [fetchProfile]);
 
-  // Persist user to localStorage for instant boot on next refresh
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`user_profile_${user.id}`, JSON.stringify(user));
-    }
-  }, [user]);
-
 
   const login = useCallback(async (
     userId: string,
@@ -124,8 +124,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       setLoading(true);
       const trimmedUserId = userId.trim().toLowerCase();
-      
-      // Look up email by custom User ID
       const { data: profile, error: profileError } = await supabase
         .from("users")
         .select("email")
@@ -146,8 +144,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setLoading(false);
           return { success: false, error: "INVALID_CREDENTIALS" };
       }
-      
-      // user state will be updated by onAuthStateChange
       return { success: true, error: null };
     } catch (e) {
       setLoading(false);
