@@ -24,7 +24,9 @@ const AttachmentPreview: React.FC<{ attachment: Message['attachments'][0]; isOwn
                 <p className={`text-sm font-bold truncate ${isOwn ? 'text-white' : 'text-slate-800'}`}>{attachment.name}</p>
                 <p className={`text-[10px] font-bold uppercase tracking-wider ${isOwn ? 'text-white/60' : 'text-slate-400'}`}>Tap to view</p>
             </div>
-            <DownloadIcon className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-slate-400'}`} />
+            <div className="flex-shrink-0">
+                <DownloadIcon className={`w-5 h-5 ${isOwn ? 'text-white' : 'text-slate-400'}`} />
+            </div>
         </a>
     );
 };
@@ -51,7 +53,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: is
     : 'bg-[#F0F2F5] text-slate-800 rounded-tl-[4px]';
 
   const alignmentClasses = isOwnMessage ? 'items-end' : 'items-start';
-  const verifiedBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
+  // Use a confirmed working checkmark badge URL
+  const verifiedBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg';
 
   return (
     <div className={`flex flex-col ${alignmentClasses} animate-in mb-4 w-full px-2`}>

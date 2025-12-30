@@ -52,7 +52,8 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
 
   // SYSTEM ADMIN DETECTION (786786)
   const isSystemAdmin = user.userId === AMAZ_SUPPORT_USER_ID || user.id === AMAZ_SUPPORT_USER_ID;
-  const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
+  // Use a confirmed working checkmark badge URL
+  const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg';
   
   const badgeUrl = isSystemAdmin ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
   const details = isSystemAdmin 

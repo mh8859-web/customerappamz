@@ -110,25 +110,20 @@ const ProjectsList: React.FC = () => {
 
     if (quoteError) throw quoteError;
 
-    // 4. AUTOMATED WELCOME MESSAGE - BROADCAST
-    const designerObj = findUserById(projectData.designerId);
-    const customerObj = findUserById(projectData.customerId);
-    
-    const welcomeBody = `WELCOME PROJECT BEGIN: "${projectData.title.toUpperCase()}"\n\n` +
-        `Initialization complete. This shared project environment is now live for:\n` +
-        `• Client: ${customerObj?.fullName || 'Valued Customer'}\n` +
-        `• Creative Lead: ${designerObj?.fullName || 'Assigned Designer'}\n` +
-        `• Management: Administrator Oversight\n\n` +
-        `This channel is the authorized bridge for all design revisions, site updates, and financial milestones. 786786 SYSTEM ADMIN will monitor this workspace to ensure quality standards and architectural integrity.\n\n` +
-        `Let the transformation begin.`;
+    // 4. AUTOMATED WELCOME MESSAGE - Updated to requested version
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    });
 
-    // FAILSAFE: Use current Admin's UUID as sender_id to satisfy DB foreign key constraints,
-    // but flag as system message so the UI overrides it to the "786786 SYSTEM ADMIN" profile.
+    const welcomeBody = `This project is Officially Started ${currentDate} From Now You Can Access Your Amaz High Tech Account For Perfect Communication and Clear Updates. We Care About Your Experience So Enjoy Every Moments!!! This Is Your Life's Best Moment Congratulations!!!! Your Dream Home Process Is Started!! Uhh!!`;
+
     const { error: msgError } = await createRecord('messages', {
         chat_id: newProject.id,
         body: welcomeBody,
-        sender_id: user.id, // Valid UUID to satisfy DB
-        is_system_message: true // Triggers the identity override in MessageBubble
+        sender_id: user.id, 
+        is_system_message: true 
     });
 
     if (msgError) {
