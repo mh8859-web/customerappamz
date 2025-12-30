@@ -7,6 +7,7 @@ interface UserContextType {
   users: User[];
   findUserById: (id: string) => User | undefined;
   refetchUsers: () => Promise<void>;
+  addUser: (user: User) => void;
   loading: boolean;
 }
 
@@ -18,7 +19,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user: authUser, loading: authLoading } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
-    // If not authenticated, we don't have permission to fetch users
     if (!authUser) {
       setUsers([]);
       setLoading(false);
@@ -31,12 +31,19 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUsers(userList || []);
     } catch (error) {
         console.error("UserContext: Global directory sync failure.", error);
-        // Do not clear the list immediately to avoid UI flickering, 
-        // but log it extensively.
     } finally {
         setLoading(false);
     }
   }, [authUser]);
+
+  // Method to inject a user locally for instant UI feedback
+  const addUser = useCallback((newUser: User) => {
+    setUsers(prev => {
+        // Prevent duplicates if the refetch happened to catch it already
+        if (prev.some(u => u.id === newUser.id)) return prev;
+        return [newUser, ...prev];
+    });
+  }, []);
 
   useEffect(() => {
     if (!authLoading) {
@@ -52,6 +59,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     users,
     findUserById,
     refetchUsers: fetchAllUsers,
+    addUser,
     loading,
   };
 

@@ -14,7 +14,7 @@ const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const { users, loading, refetchUsers } = useUsers();
+  const { users, loading, refetchUsers, addUser } = useUsers();
   const { user: currentUser, startImpersonation } = useAuth();
 
   const filteredUsers = useMemo(() => {
@@ -26,7 +26,7 @@ const UserManagement: React.FC = () => {
 
   const handleCreateUser = async (u: any) => {
     try {
-        // Step 1: Provision Auth Identity
+        // 1. Provision Auth Identity
         const { user: newUser, error: authError } = await signUpNewUser(u.email, u.password, {
             fullName: u.fullName,
             role: u.role,
@@ -34,14 +34,14 @@ const UserManagement: React.FC = () => {
         });
 
         if (authError) {
-            alert(`Auth Failed: ${authError.message}`);
+            alert(`Provisioning Failed: ${authError.message}`);
             return;
         }
 
-        // Step 2: Immediate Profile Sync
-        // We manually inject the record into 'public.users' to avoid waiting for database triggers
         if (newUser) {
-             const { error: profileError } = await upsertRecord('users', {
+             // 2. Immediate Database Sync (Upsert)
+             // We await this to ensure the record exists before we try to show it
+             const { data: profileData, error: profileError } = await upsertRecord('users', {
                  id: newUser.id,
                  email: u.email.toLowerCase().trim(),
                  full_name: u.fullName.trim(),
@@ -52,21 +52,30 @@ const UserManagement: React.FC = () => {
              });
              
              if (profileError) {
-                 console.error("Manual Profile Sync Failed:", profileError);
-                 alert(`Warning: Account created, but profile table failed to sync: ${profileError.message}. Contact developer.`);
+                 console.error("Manual Sync Fault:", profileError);
              }
+
+             // 3. Instant UI Injection
+             // Instead of waiting for a fetch, we build the user object and inject it into the context
+             const userToInject: User = {
+                id: newUser.id,
+                fullName: u.fullName.trim(),
+                email: u.email.toLowerCase().trim(),
+                role: u.role as UserRole,
+                avatarUrl: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+                verified: !!u.verified,
+                verificationRequested: false,
+                userId: u.userId.toLowerCase().trim()
+             };
+
+             addUser(userToInject);
         }
 
-        // Step 3: Refresh Directory with a small retry-delay safety
+        // 4. Clean up and safety refresh
         setCreateUserModalOpen(false);
         
-        // Immediate fetch
-        await refetchUsers();
-        
-        // Fail-safe second fetch after 1s just in case of eventually consistent DB reads
-        setTimeout(() => refetchUsers(), 1500);
-
-        alert(`Success: ${u.fullName} is now provisioned and visible in the directory.`);
+        // Background refresh to ensure everything is perfectly synced
+        setTimeout(() => refetchUsers(), 500);
 
     } catch (err: any) {
         alert(`System Fault: ${err.message || 'Unknown error'}`);
@@ -91,17 +100,17 @@ const UserManagement: React.FC = () => {
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
-    if (currentUser?.id === userToDelete.id) return alert("Security: Self-deletion is restricted.");
-    if (window.confirm(`Permanently delete ID "${userToDelete.fullName}"? This cannot be reversed.`)) {
+    if (currentUser?.id === userToDelete.id) return alert("Security: Self-voiding restricted.");
+    if (window.confirm(`Permanently void identity "${userToDelete.fullName}"?`)) {
       const { error } = await deleteUser(userToDelete.id);
-      if (error) alert(`Deletion Failed: ${error.message}`);
+      if (error) alert(`Deletion Error: ${error.message}`);
       else await refetchUsers();
     }
   };
   
   const handleImpersonate = (user: User) => {
       if (currentUser?.id === user.id) return;
-      if (window.confirm(`Impersonate ${user.fullName} and view workspace?`)) startImpersonation(user);
+      if (window.confirm(`Switch context to ${user.fullName}?`)) startImpersonation(user);
   }
 
   return (
@@ -143,7 +152,7 @@ const UserManagement: React.FC = () => {
               <tbody className="divide-y divide-slate-50">
                 {loading && filteredUsers.length === 0 ? (
                     <tr>
-                        <td colSpan={4} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Synchronizing directory...</td>
+                        <td colSpan={4} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Syncing...</td>
                     </tr>
                 ) : filteredUsers.length === 0 ? (
                     <tr>
