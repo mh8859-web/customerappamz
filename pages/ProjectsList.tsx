@@ -110,16 +110,18 @@ const ProjectsList: React.FC = () => {
 
     if (quoteError) throw quoteError;
 
-    // 4. AUTOMATED WELCOME MESSAGE
-    // Get designer and customer names for a personalized touch
+    // 4. AUTOMATED WELCOME MESSAGE - Broadcast to Designer + Customer + Admin
     const designerObj = findUserById(projectData.designerId);
     const customerObj = findUserById(projectData.customerId);
     
-    const welcomeBody = `WELCOME PROJECT BEGIN: "${projectData.title}"\n\n` +
-        `Greetings to ${customerObj?.fullName || 'Client'} and Creative Lead ${designerObj?.fullName || 'Designer'}.\n\n` +
-        `This automated project environment is now initialized. This channel serves as your primary bridge for real-time collaboration, design reviews, and status updates.\n\n` +
-        `Our System Admin is monitoring the synchronization of this workspace to ensure architectural excellence from inception to completion.\n\n` +
-        `Let the creation begin.`;
+    // Explicit high-tier welcome body
+    const welcomeBody = `WELCOME PROJECT BEGIN: "${projectData.title.toUpperCase()}"\n\n` +
+        `Initialization complete. This shared project environment is now live for:\n` +
+        `• Client: ${customerObj?.fullName || 'Valued Customer'}\n` +
+        `• Creative Lead: ${designerObj?.fullName || 'Assigned Designer'}\n` +
+        `• Management: Administrator Oversight\n\n` +
+        `This channel is the authorized bridge for all design revisions, site updates, and financial milestones. 786786 SYSTEM ADMIN will monitor this workspace to ensure quality standards and architectural integrity.\n\n` +
+        `Let the transformation begin.`;
 
     await createRecord('messages', {
         chat_id: newProject.id,
@@ -128,7 +130,7 @@ const ProjectsList: React.FC = () => {
         is_system_message: true
     });
 
-    // 5. Global refresh
+    // 5. Global refresh to update all UIs
     await refetchData();
   };
 

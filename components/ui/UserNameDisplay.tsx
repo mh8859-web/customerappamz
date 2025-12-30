@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
@@ -49,34 +50,42 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
 
   if (!user) return <span className="text-xs text-slate-400">Guest</span>;
 
-  const isSupportUser = user.id === AMAZ_SUPPORT_USER_ID;
+  // SYSTEM ADMIN DETECTION (786786)
+  const isSystemAdmin = user.userId === AMAZ_SUPPORT_USER_ID || user.id === AMAZ_SUPPORT_USER_ID;
   const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
   
-  const badgeUrl = isSupportUser ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
-  const details = isSupportUser ? { title: 'Concierge', text: 'Automated support.' } : (user.verified ? roleDetails[user.role] : null);
+  const badgeUrl = isSystemAdmin ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
+  const details = isSystemAdmin 
+    ? { title: 'SYSTEM ADMIN', text: 'Highest authority automated oversight.' } 
+    : (user.verified ? roleDetails[user.role] : null);
 
-  const isTeamMember = !isSupportUser && (user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer');
+  const displayName = isSystemAdmin ? '786786 SYSTEM ADMIN' : user.fullName;
+  const isTeamMember = !isSystemAdmin && (user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer');
 
   const content = (
     <>
       {showAvatar && (
-          <img src={user.avatarUrl} alt="" className={`${imageSize} rounded-lg mr-2 object-cover ring-1 ring-slate-100 shadow-sm`} />
+          <img 
+            src={isSystemAdmin ? 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp' : user.avatarUrl} 
+            alt="" 
+            className={`${imageSize} rounded-lg mr-2 object-cover ring-1 ring-slate-100 shadow-sm`} 
+          />
       )}
-      <span className={`${textClassName} tracking-tight`}>{isSupportUser ? 'AMAZ CONCIERGE' : user.fullName}</span>
+      <span className={`${textClassName} tracking-tight font-bold`}>{displayName}</span>
       {badgeUrl && (
         <div className="relative inline-flex items-center ml-1.5 h-3.5">
           <button 
-            className="flex items-center focus:outline-none opacity-80 hover:opacity-100 transition-opacity" 
+            className="flex items-center focus:outline-none opacity-90 hover:opacity-100 transition-opacity" 
             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}
           >
-            <img src={badgeUrl} alt="Verified" className="w-3 h-3" />
+            <img src={badgeUrl} alt="Verified" className={isSystemAdmin ? "w-3.5 h-3.5" : "w-3 h-3"} />
           </button>
           {isPopoverOpen && details && (
-            <div ref={popoverRef} className="absolute left-0 bottom-full mb-2 w-48 luxury-glass rounded-xl shadow-premium z-[100] p-3 animate-in border border-brand-gold/10">
+            <div ref={popoverRef} className="absolute left-0 bottom-full mb-2 w-52 luxury-glass rounded-xl shadow-premium z-[100] p-4 animate-in border border-brand-gold/20">
                 <div className="flex flex-col items-center text-center">
-                    <img src={badgeUrl} alt="" className="w-5 h-5 mb-2"/>
-                    <h4 className="font-bold text-slate-900 text-xs">{details.title}</h4>
-                    <p className="text-[10px] text-slate-500 font-medium leading-tight">{details.text}</p>
+                    <img src={badgeUrl} alt="" className="w-6 h-6 mb-2"/>
+                    <h4 className={`font-black text-xs uppercase tracking-widest ${isSystemAdmin ? 'text-brand-gold' : 'text-slate-900'}`}>{details.title}</h4>
+                    <p className="text-[10px] text-slate-500 font-medium leading-tight mt-1">{details.text}</p>
                 </div>
             </div>
           )}

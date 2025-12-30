@@ -3,6 +3,7 @@ import React from 'react';
 import { Message, User } from '../../types';
 import { DownloadIcon, FileTextIcon } from '../icons';
 import { AMAZ_SUPPORT_USER_ID } from '../../constants';
+import UserNameDisplay from '../ui/UserNameDisplay';
 
 interface MessageBubbleProps {
   message: Message;
@@ -34,6 +35,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: is
   const isSupportMessage = !!message.isSystemMessage || message.senderId === AMAZ_SUPPORT_USER_ID;
   const isOwnMessage = !isSupportMessage && isOwnMessageProp;
 
+  // Use the system admin identity if it's a support message
   const senderToDisplay = isSupportMessage 
     ? { 
         id: AMAZ_SUPPORT_USER_ID,
@@ -48,30 +50,36 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isOwnMessage: is
     : sender;
 
   const bubbleClasses = isSupportMessage
-    ? 'bg-slate-900 text-white rounded-tl-[4px] border border-brand-gold/30'
+    ? 'bg-slate-900 text-white rounded-tl-[4px] border border-brand-gold/30 shadow-gold-glow'
     : isOwnMessage
     ? 'bg-brand-blue text-white rounded-tr-[4px]'
     : 'bg-[#F0F2F5] text-slate-800 rounded-tl-[4px]';
 
   const alignmentClasses = isOwnMessage ? 'items-end' : 'items-start';
-  const verifiedBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454359/gold_badge_k0b3zq.svg';
 
   return (
-    <div className={`flex flex-col ${alignmentClasses} animate-in mb-4`}>
+    <div className={`flex flex-col ${alignmentClasses} animate-in mb-4 w-full px-2`}>
         <div className={`flex items-end gap-2 max-w-[90%] sm:max-w-[75%] ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}>
             {!isOwnMessage && (
-                <img src={senderToDisplay?.avatarUrl} className="w-8 h-8 rounded-full object-cover mb-1 ring-2 ring-white shadow-md border border-slate-100" alt="" />
+                <img 
+                  src={senderToDisplay?.avatarUrl} 
+                  className="w-8 h-8 rounded-full object-cover mb-1 ring-2 ring-white shadow-md border border-slate-100" 
+                  alt="" 
+                />
             )}
             <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-                {isSupportMessage && (
-                  <div className="flex items-center gap-1.5 mb-1 px-1">
-                    <span className="text-[10px] font-black text-brand-gold uppercase tracking-[2px]">{senderToDisplay?.fullName}</span>
-                    <img src={verifiedBadgeUrl} alt="Verified" className="w-3 h-3" />
+                {!isOwnMessage && (
+                  <div className="mb-1 px-1 flex items-center">
+                    <UserNameDisplay 
+                      user={senderToDisplay} 
+                      showAvatar={false} 
+                      textClassName={isSupportMessage ? "text-[10px] font-black text-brand-gold uppercase tracking-[2px]" : "text-[10px] font-bold text-slate-400"} 
+                    />
                   </div>
                 )}
                 <div className={`px-4 py-3 rounded-[22px] shadow-card ${bubbleClasses} relative overflow-hidden`}>
                     {isSupportMessage && (
-                      <div className="absolute top-0 right-0 w-16 h-16 bg-brand-gold/5 rounded-full -mr-8 -mt-8"></div>
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-brand-gold/5 rounded-full -mr-12 -mt-12 blur-xl"></div>
                     )}
                     {message.body && (
                       <p className={`text-[14px] leading-[1.6] font-medium whitespace-pre-wrap ${isSupportMessage ? 'text-slate-100 italic' : ''}`}>
