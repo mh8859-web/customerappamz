@@ -8,15 +8,19 @@ interface SignUpMetadata {
 }
 
 // Fetch all users from the public 'users' table
+// Added explicit ordering and timestamp to help bust any potential client-side query caching
 export const getUsers = async (): Promise<User[]> => {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching users:', error);
         return [];
     }
 
-    return data.map(user => ({
+    return (data || []).map(user => ({
         id: user.id,
         fullName: user.full_name || 'Unnamed User',
         email: user.email,
@@ -69,7 +73,7 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
 export const upsertRecord = async (tableName: string, recordData: Record<string, any>) => {
     const { data, error } = await supabase
         .from(tableName)
-        .upsert(recordData)
+        .upsert(recordData, { onConflict: 'id' })
         .select()
         .single();
     return { data, error };

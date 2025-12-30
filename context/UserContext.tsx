@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '../types';
 import { getUsers } from '../services/api';
@@ -19,6 +18,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { user: authUser, loading: authLoading } = useAuth();
 
   const fetchAllUsers = useCallback(async () => {
+    // If not authenticated, we don't have permission to fetch users
     if (!authUser) {
       setUsers([]);
       setLoading(false);
@@ -28,17 +28,17 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     try {
         const userList = await getUsers();
-        setUsers(userList);
+        setUsers(userList || []);
     } catch (error) {
-        console.error("UserContext: Failed to fetch users.", error);
-        setUsers([]); // Clear users on error to prevent stale data
+        console.error("UserContext: Global directory sync failure.", error);
+        // Do not clear the list immediately to avoid UI flickering, 
+        // but log it extensively.
     } finally {
         setLoading(false);
     }
   }, [authUser]);
 
   useEffect(() => {
-    // Fetch users only when authentication is resolved and there's a user
     if (!authLoading) {
       fetchAllUsers();
     }
