@@ -19,9 +19,9 @@ interface CreateUserModalProps {
 }
 
 const FormField: React.FC<{label: string, icon?: React.ReactNode, children: React.ReactNode, className?: string}> = ({label, icon, children, className = ""}) => (
-  <div className={`flex flex-col gap-2.5 ${className}`}>
-      <label className="text-[11px] font-black uppercase tracking-[2.5px] text-slate-400 ml-1 flex items-center gap-2">
-        {icon && <span className="text-brand-blue/50">{icon}</span>}
+  <div className={`flex flex-col gap-3 ${className}`}>
+      <label className="text-[12px] font-black uppercase tracking-[3px] text-slate-400 ml-1 flex items-center gap-2">
+        {icon && <span className="text-brand-blue">{icon}</span>}
         {label}
       </label>
       {children}
@@ -85,106 +85,102 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onCr
     }
   };
   
-  const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-[22px] py-4.5 px-6 text-[15px] text-slate-800 font-bold focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/30 focus:bg-white transition-all duration-300 placeholder:text-slate-300 shadow-inner";
+  const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-[24px] py-5 px-8 text-lg text-slate-900 font-bold focus:outline-none focus:ring-4 focus:ring-brand-blue/10 focus:border-brand-blue focus:bg-white transition-all duration-300 placeholder:text-slate-300 shadow-sm";
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Identity Provisioning Hub">
-      <form onSubmit={handleSubmit} className="space-y-12">
+    <Modal isOpen={isOpen} onClose={onClose} title="Identity Provisioning Terminal">
+      <form onSubmit={handleSubmit} className="space-y-16">
         
-        {/* Section 1: Identity Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-            <FormField label="Full Legal Identity" icon={<UserIcon className="w-4 h-4"/>} className="md:col-span-2">
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} placeholder="Alex Pierce" required />
+        {/* ROW 1: CORE IDENTITY (3 Columns) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            <FormField label="Full Legal Identity" icon={<UserIcon className="w-5 h-5"/>} className="lg:col-span-1">
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className={inputClasses} placeholder="First Last" required />
             </FormField>
 
-            <FormField label="System Access Role" icon={<ShieldCheckIcon className="w-4 h-4"/>}>
-                <select name="role" value={formData.role} onChange={handleChange} className={inputClasses} required>
+            <FormField label="System Permission Role" icon={<ShieldCheckIcon className="w-5 h-5"/>}>
+                <select name="role" value={formData.role} onChange={handleChange} className={`${inputClasses} cursor-pointer`}>
                     {USER_ROLES.map(role => <option key={role} value={role}>{role}</option>)}
                 </select>
             </FormField>
 
             {formData.role === 'Customer' ? (
-                 <FormField label="Primary Contact (Mobile)" icon={<PhoneIcon className="w-4 h-4"/>}>
+                 <FormField label="Communication Mobile" icon={<PhoneIcon className="w-5 h-5"/>}>
                     <input 
                         type="tel" 
                         value={mobileNumber} 
                         onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, '').substring(0, 10))} 
                         className={inputClasses}
-                        placeholder="10 Digit Number"
+                        placeholder="10 Digits"
                         required 
                     />
                 </FormField>
             ) : (
-                <FormField label="Unique Identity Key" icon={<UserIcon className="w-4 h-4"/>}>
-                    <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required placeholder="e.g. DES-4402" />
+                <FormField label="Unique Access Key (ID)" icon={<UserIcon className="w-5 h-5"/>}>
+                    <input type="text" name="userId" value={formData.userId} onChange={handleChange} className={inputClasses} required placeholder="e.g. DES-101" />
                 </FormField>
             )}
         </div>
 
-        {/* Section 2: Security Credentials */}
-        <div className="p-8 sm:p-10 bg-slate-50 border border-slate-100 rounded-[32px] space-y-8">
-            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[3px] border-l-4 border-brand-blue pl-4">Authentication Config</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                <FormField label="Network Email" icon={<MailIcon className="w-4 h-4"/>}>
-                    <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleChange} 
-                        className={`${inputClasses} ${formData.role === 'Customer' && mobileNumber.length === 10 ? 'bg-slate-100/50 cursor-not-allowed opacity-70' : 'bg-white'}`} 
-                        placeholder="name@amaz.com" 
-                        required 
+        {/* ROW 2: SECURITY & AUTH (3 Columns) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-end">
+            <FormField label="Directory Auth Email" icon={<MailIcon className="w-5 h-5"/>}>
+                <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleChange} 
+                    className={`${inputClasses} ${formData.role === 'Customer' && mobileNumber.length === 10 ? 'opacity-50' : ''}`} 
+                    placeholder="id@amaz.com" 
+                    required 
+                    readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
+                />
+            </FormField>
+
+            <FormField label="Encrypted Security Key" icon={<ShieldCheckIcon className="w-5 h-5"/>}>
+                <div className="relative">
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        className={`${inputClasses} pr-16 ${formData.role === 'Customer' && mobileNumber.length === 10 ? 'opacity-50' : ''}`}
+                        placeholder="••••••••••••"
+                        required
                         readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
                     />
-                </FormField>
+                    {formData.role !== 'Customer' && (
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-blue transition-colors">
+                            {showPassword ? <EyeOffIcon className="w-6 h-6" /> : <EyeIcon className="w-6 h-6" />}
+                        </button>
+                    )}
+                </div>
+            </FormField>
 
-                <FormField label="Secure Access Key" icon={<ShieldCheckIcon className="w-4 h-4"/>}>
-                    <div className="relative">
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className={`${inputClasses} pr-16 ${formData.role === 'Customer' && mobileNumber.length === 10 ? 'bg-slate-100/50 cursor-not-allowed opacity-70' : 'bg-white'}`}
-                            placeholder="••••••••••••"
-                            required
-                            readOnly={formData.role === 'Customer' && mobileNumber.length === 10}
-                        />
-                        {formData.role !== 'Customer' && (
-                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 hover:text-brand-blue transition-colors">
-                                {showPassword ? <EyeOffIcon className="w-6 h-6" /> : <EyeIcon className="w-6 h-6" />}
-                            </button>
-                        )}
-                    </div>
-                </FormField>
+            <div className="flex items-center justify-between p-5 bg-brand-blue/5 border border-brand-blue/10 rounded-[24px] h-[72px] px-8">
+                <div className="flex items-center gap-4 cursor-pointer group">
+                    <input type="checkbox" id="verify-hub" name="verified" checked={formData.verified} onChange={handleChange} className="w-7 h-7 rounded-xl border-slate-300 text-brand-blue focus:ring-brand-blue/20" />
+                    <label htmlFor="verify-hub" className="text-[13px] font-black text-slate-600 uppercase tracking-widest cursor-pointer select-none">Authorize & Verify</label>
+                </div>
+                <div className="hidden xl:block text-[10px] font-bold text-brand-blue uppercase opacity-60">Verified Identity</div>
             </div>
         </div>
         
-        {/* Footer: Authorization & Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-8 pt-6 border-t border-slate-100">
-            <div className="flex items-center gap-4 cursor-pointer group">
-                <div className="relative flex items-center">
-                    <input type="checkbox" id="verify-check" name="verified" checked={formData.verified} onChange={handleChange} className="w-6 h-6 rounded-lg border-slate-300 text-brand-blue focus:ring-brand-blue/20 cursor-pointer" />
-                </div>
-                <label htmlFor="verify-check" className="text-xs font-black text-slate-500 uppercase tracking-widest cursor-pointer select-none group-hover:text-slate-900 transition-colors">Instantly Authorize & Verify Entity</label>
-            </div>
-
-            <div className="flex items-center gap-6 w-full sm:w-auto">
-              <button 
-                type="button" 
-                onClick={onClose} 
-                className="flex-1 sm:flex-none px-8 py-5 text-[13px] font-black uppercase tracking-[4px] text-slate-400 hover:text-slate-900 transition-all"
-              >
-                Discard
-              </button>
-              <Button 
-                type="submit" 
-                className="flex-1 sm:flex-none !py-5.5 !px-16 !rounded-[24px] !bg-slate-900 !text-[13px] !font-black !tracking-[5px] uppercase shadow-premium hover:scale-[1.02] active:scale-95" 
-                disabled={isSubmitting}
-              >
-                  {isSubmitting ? 'Provisioning...' : 'Provision Entity'}
-              </Button>
-            </div>
+        {/* ACTIONS: FULL WIDTH FOOTER */}
+        <div className="flex flex-col sm:flex-row items-center justify-end gap-8 pt-12 border-t border-slate-100">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="px-10 py-5 text-[14px] font-black uppercase tracking-[5px] text-slate-400 hover:text-slate-900 transition-all"
+          >
+            Cancel
+          </button>
+          <Button 
+            type="submit" 
+            className="w-full sm:w-auto !py-6 !px-24 !rounded-[28px] !bg-slate-900 !text-[14px] !font-black !tracking-[6px] uppercase shadow-premium hover:scale-[1.03] active:scale-95 transition-all" 
+            disabled={isSubmitting}
+          >
+              {isSubmitting ? 'Provisioning...' : 'Confirm Provision'}
+          </Button>
         </div>
       </form>
     </Modal>

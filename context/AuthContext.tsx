@@ -31,22 +31,13 @@ const fetchAndMapProfile = async (
   supabaseUser: SupabaseUser
 ): Promise<User | null> => {
   try {
-    // 10-second timeout for the database fetch to prevent UI hanging 
-    // while allowing for slower mobile connections or cold starts.
-    const fetchPromise = supabase
+    const { data, error } = await supabase
       .from("users")
       .select("*")
       .eq("id", supabaseUser.id)
       .single();
     
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error("Profile retrieval timed out. Please check your network connection.")), 10000)
-    );
-
-    const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
-    const data = result.data;
-
-    if (!data) return null;
+    if (error || !data) return null;
 
     return {
       id: data.id,
@@ -72,32 +63,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
   const syncAuth = useCallback(async (session: any, mounted: boolean) => {
-    if (session?.user) {
-      const profile = await fetchAndMapProfile(session.user);
-      if (mounted) {
-        setUser(profile);
-        setLoading(false);
-      }
-    } else {
+    if (!session?.user) {
       if (mounted) {
         setUser(null);
         setLoading(false);
       }
+      return;
     }
-  }, []);
+
+    // CRITICAL FIX: If we already have a user, don't overwrite them with null while fetching updates.
+    // This prevents the "Permissionless Logout" when profile fetches are slow.
+    const profile = await fetchAndMapProfile(session.user);
+    
+    if (mounted) {
+      if (profile) {
+        setUser(profile);
+      } else if (!user) {
+        // Only set to null if we don't even have a skeleton user yet
+        setUser(null);
+      }
+      setLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     let mounted = true;
 
-    // 1. IMMEDIATE CHECK: Don't wait for events, check localStorage now.
     const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          await syncAuth(session, mounted);
-        } else {
-          if (mounted) setLoading(false);
-        }
+        await syncAuth(session, mounted);
       } catch (e) {
         if (mounted) setLoading(false);
       }
@@ -105,29 +100,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     init();
 
-    // 2. LISTENER: Handle subsequent login/logout events.
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        
-        // Only trigger heavy profile fetches on actual state changes
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-           await syncAuth(session, mounted);
+        if (event === 'SIGNED_OUT') {
+            setUser(null);
+            setLoading(false);
+        } else {
+            await syncAuth(session, mounted);
         }
       }
     );
 
-    // 3. SAFETY ESCAPE: Increased to 12s to accommodate longer profile fetch window
-    const timer = setTimeout(() => {
-      if (mounted && loading) setLoading(false);
-    }, 12000);
-
     return () => {
       mounted = false;
-      clearTimeout(timer);
       authListener.subscription.unsubscribe();
     };
-  }, [syncAuth, loading]);
+  }, [syncAuth]);
 
 
   const login = useCallback(async (
@@ -151,12 +140,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         password: password.trim(),
       });
       
-      if (signInError) {
-        return { success: false, error: "INVALID_CREDENTIALS" };
-      }
-      
+      if (signInError) return { success: false, error: "INVALID_CREDENTIALS" };
       return { success: true, error: null };
-
     } catch (e) {
       return { success: false, error: "UNKNOWN_ERROR" };
     }
