@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
@@ -34,71 +33,70 @@ const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     'Site Head': { title: 'Supervisor', text: 'Execution supervisor.' },
 };
 
+// --- FIX: Finished truncated component and added default export to resolve "Module has no default export" errors ---
 const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-7 h-7' }) => {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if ( popoverRef.current && !popoverRef.current.contains(event.target as Node) ) {
-            setPopoverOpen(false);
-        }
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setPopoverOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!user) return <span className="text-xs text-slate-400">Guest</span>;
+  if (!user) return <span className="text-slate-400 italic">Unknown Entity</span>;
 
-  // SYSTEM ADMIN DETECTION (786786)
-  const isSystemAdmin = user.userId === AMAZ_SUPPORT_USER_ID || user.id === AMAZ_SUPPORT_USER_ID;
-  // Use a confirmed working checkmark badge URL
-  const supportBadgeUrl = 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg';
-  
-  const badgeUrl = isSystemAdmin ? supportBadgeUrl : (user.verified ? badgeUrlMap[user.role] : null);
-  const details = isSystemAdmin 
-    ? { title: 'SYSTEM ADMIN', text: 'Highest authority automated oversight.' } 
-    : (user.verified ? roleDetails[user.role] : null);
+  const badgeUrl = badgeUrlMap[user.role] || badgeUrlMap.Customer;
+  const details = roleDetails[user.role] || roleDetails.Customer;
 
-  const displayName = isSystemAdmin ? '786786 SYSTEM ADMIN' : user.fullName;
-  const isTeamMember = !isSystemAdmin && (user.role === 'Admin' || user.role === 'Sub-Admin' || user.role === 'Designer');
-
-  const content = (
-    <>
+  return (
+    <div className={`inline-flex items-center gap-2 relative ${className}`} ref={popoverRef}>
       {showAvatar && (
-          <img 
-            src={isSystemAdmin ? 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp' : user.avatarUrl} 
-            alt="" 
-            className={`${imageSize} rounded-lg mr-2 object-cover ring-1 ring-slate-100 shadow-sm`} 
-          />
+        <img 
+          src={user.avatarUrl || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp'} 
+          alt="" 
+          className={`${imageSize} rounded-full object-cover border border-slate-100 shadow-sm`}
+        />
       )}
-      <span className={`${textClassName} tracking-tight font-bold`}>{displayName}</span>
-      {badgeUrl && (
-        <div className="relative inline-flex items-center ml-1.5 h-3.5">
-          <button 
-            className="flex items-center focus:outline-none opacity-90 hover:opacity-100 transition-opacity" 
-            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setPopoverOpen(!isPopoverOpen); }}
-          >
-            <img src={badgeUrl} alt="Verified" className={isSystemAdmin ? "w-3.5 h-3.5" : "w-3 h-3"} />
-          </button>
-          {isPopoverOpen && details && (
-            <div ref={popoverRef} className="absolute left-0 bottom-full mb-2 w-52 luxury-glass rounded-xl shadow-premium z-[100] p-4 animate-in border border-brand-gold/20">
-                <div className="flex flex-col items-center text-center">
-                    <img src={badgeUrl} alt="" className="w-6 h-6 mb-2"/>
-                    <h4 className={`font-black text-xs uppercase tracking-widest ${isSystemAdmin ? 'text-brand-gold' : 'text-slate-900'}`}>{details.title}</h4>
-                    <p className="text-[10px] text-slate-500 font-medium leading-tight mt-1">{details.text}</p>
+      
+      <div className="flex items-center gap-1.5 cursor-pointer group" onClick={() => setPopoverOpen(!isPopoverOpen)}>
+        <span className={`${textClassName} group-hover:text-brand-blue transition-colors`}>{user.fullName}</span>
+        <img src={badgeUrl} alt="Verified" className="w-3.5 h-3.5" />
+      </div>
+
+      {isPopoverOpen && (
+        <div className="absolute bottom-full left-0 mb-3 w-64 bg-white rounded-2xl shadow-modal border border-slate-100 p-4 z-50 animate-in slide-in-from-bottom-2">
+            <div className="flex items-center gap-3 mb-3 pb-3 border-b border-slate-50">
+                <img 
+                  src={user.avatarUrl || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp'} 
+                  className="w-10 h-10 rounded-full object-cover" 
+                  alt="" 
+                />
+                <div>
+                    <p className="text-sm font-bold text-slate-900">{user.fullName}</p>
+                    <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest">{user.role}</p>
                 </div>
             </div>
-          )}
+            <div className="space-y-2">
+                <p className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">{details.title}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{details.text}</p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-50">
+                <Link 
+                    to={`/profile/${user.id}`} 
+                    className="text-[10px] font-black text-brand-blue uppercase tracking-widest hover:underline"
+                    onClick={() => setPopoverOpen(false)}
+                >
+                    View Global Profile &rarr;
+                </Link>
+            </div>
         </div>
       )}
-    </>
-  );
-
-  return isTeamMember ? (
-      <Link to={`/profile/${user.id}`} className={`inline-flex items-center ${className} hover:text-brand-blue transition-colors`}>{content}</Link>
-  ) : (
-    <div className={`inline-flex items-center ${className}`}>{content}</div>
+    </div>
   );
 };
 

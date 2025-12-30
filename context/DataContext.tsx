@@ -120,10 +120,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const fetchData = useCallback(async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
+        if (!user) return;
+        
         setLoading(true);
         try {
             const tables = [
@@ -132,14 +130,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 'project_updates', 'final_gallery_images', 'expenses', 'products', 'project_templates', 
                 'announcements', 'posts', 'feed_comments', 'designer_hourly_updates'
             ];
-            const promises = tables.map(table => supabase.from(table).select('*'));
-            const results = await Promise.all(promises);
+            
+            const results = await Promise.all(tables.map(table => supabase.from(table).select('*')));
             const dataMap: { [key: string]: any[] } = {};
             results.forEach((result, index) => {
-                const tableName = tables[index];
-                dataMap[tableName] = result.data || [];
+                dataMap[tables[index]] = result.data || [];
             });
             
+            // --- Atomic State Updates ---
             setProjects(mapToCamelCase(dataMap.projects, p => ({ ...p, customerId: p.customer_id, designerId: p.designer_id, adminId: p.admin_id, budgetDisplay: p.budget_display, areaSqft: p.area_sqft, startDate: p.start_date, createdAt: p.created_at, updatedAt: p.updated_at, revenueDisplay: p.revenue_display })));
             setTasks(mapToCamelCase(dataMap.tasks, t => ({ ...t, projectId: t.project_id, assigneeId: t.assignee_id, dueDate: t.due_date })));
             setDesigns(mapToCamelCase(dataMap.designs, d => ({ ...d, projectId: d.project_id, uploadedBy: d.uploaded_by, fileUrl: d.file_url, submittedForReview: d.submitted_for_review, comments: d.comments || [], approvedBy: d.approved_by, approvedAt: d.approved_at })));
@@ -177,15 +175,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             })));
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("Data Sync Fault:", error);
         } finally {
             setLoading(false);
         }
     }, [user]);
 
+    // Force fetch on user change or auth verify completion
     useEffect(() => {
-        if (!authLoading) fetchData();
-    }, [authLoading, fetchData]);
+        if (!authLoading && user) {
+            fetchData();
+        }
+    }, [authLoading, user?.id, fetchData]);
 
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,

@@ -15,6 +15,7 @@ const AttendanceWidget: React.FC = () => {
     const [activeLog, setActiveLog] = useState<any>(null);
     const [elapsed, setElapsed] = useState('00:00:00');
     const [isPromptOpen, setPromptOpen] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -22,12 +23,16 @@ const AttendanceWidget: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        // Find if user has a session without a clock-out time
         const log = attendanceLogs.find(l => l.designerId === user?.id && !l.clockOut);
         setActiveLog(log);
     }, [attendanceLogs, user]);
 
     useEffect(() => {
-        if (!activeLog) return;
+        if (!activeLog) {
+            setElapsed('00:00:00');
+            return;
+        }
         const timer = setInterval(() => {
             const start = new Date(activeLog.clockIn).getTime();
             const now = new Date().getTime();
@@ -41,28 +46,46 @@ const AttendanceWidget: React.FC = () => {
     }, [activeLog]);
 
     const handleClockIn = async () => {
-        if (!user) return;
+        if (!user || isProcessing) return;
+        setIsProcessing(true);
         navigator.geolocation.getCurrentPosition(async (pos) => {
             const loc = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-            await startClockIn(user.id, new Date().toISOString(), loc, '0.0.0.0');
-            await refetchData();
-        }, () => {
-            alert('Location access required for clock-in.');
-        });
+            const { error } = await startClockIn(user.id, new Date().toISOString(), loc, '0.0.0.0');
+            if (error) {
+                alert(`Authentication Error: ${error.message}`);
+            } else {
+                await refetchData();
+            }
+            setIsProcessing(false);
+        }, (err) => {
+            setIsProcessing(false);
+            alert(`Location Required: ${err.message || 'Please enable GPS to clock in.'}`);
+        }, { enableHighAccuracy: true });
     };
 
     const handleClockOut = async (summary: string) => {
-        if (!activeLog) return;
-        await endClockOut(activeLog.id, new Date().toISOString(), elapsed, summary);
-        await refetchData();
-        setPromptOpen(false);
+        if (!activeLog || isProcessing) return;
+        
+        setIsProcessing(true);
+        const { error } = await endClockOut(activeLog.id, new Date().toISOString(), elapsed, summary);
+        
+        if (error) {
+            alert(`Database Sync Error: ${error.message}`);
+            setIsProcessing(false);
+        } else {
+            // Success: Clean up UI state before refetching for better UX
+            setPromptOpen(false);
+            setActiveLog(null); // Optimistic clear
+            await refetchData();
+            setIsProcessing(false);
+        }
     };
 
     return (
         <>
             <WorkLogPromptModal 
                 isOpen={isPromptOpen} 
-                onClose={() => handleClockOut('No summary provided')} 
+                onClose={() => handleClockOut('Shift terminated without explicit summary.')} 
                 onSubmit={handleClockOut} 
             />
             <Card className="luxury-glass border-brand-gold/20 overflow-hidden relative group">
@@ -77,7 +100,7 @@ const AttendanceWidget: React.FC = () => {
                                 {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                             </p>
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${activeLog ? 'bg-accent-success/10 text-accent-success' : 'bg-slate-100 text-slate-400'}`}>
+                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors ${activeLog ? 'bg-accent-success/10 text-accent-success' : 'bg-slate-100 text-slate-400'}`}>
                             {activeLog ? 'ON DUTY' : 'OFF DUTY'}
                         </div>
                     </div>
@@ -92,15 +115,25 @@ const AttendanceWidget: React.FC = () => {
                                 <p className="text-slate-400 text-[10px] font-black uppercase tracking-[4px] mb-2">Duration Today</p>
                                 <p className="text-4xl font-display font-black text-white tracking-tighter">{elapsed}</p>
                             </div>
-                            <Button variant="danger" onClick={() => setPromptOpen(true)} className="w-full !py-4 uppercase tracking-[3px] !text-[11px] !font-black">
-                                Terminate Shift
+                            <Button 
+                                variant="danger" 
+                                onClick={() => setPromptOpen(true)} 
+                                className="w-full !py-4 uppercase tracking-[3px] !text-[11px] !font-black"
+                                disabled={isProcessing}
+                            >
+                                {isProcessing ? 'TERMINATING...' : 'Terminate Shift'}
                             </Button>
                         </div>
                     ) : (
                         <div className="space-y-6">
                             <p className="text-slate-500 text-xs font-medium leading-relaxed">System ready for authorization. Geolocation must be active to initiate the session.</p>
-                            <Button variant="gold" onClick={handleClockIn} className="w-full !py-4 uppercase tracking-[3px] !text-[11px] !font-black">
-                                Authenticate & Clock In
+                            <Button 
+                                variant="gold" 
+                                onClick={handleClockIn} 
+                                className="w-full !py-4 uppercase tracking-[3px] !text-[11px] !font-black"
+                                disabled={isProcessing}
+                            >
+                                {isProcessing ? 'AUTHENTICATING...' : 'Authenticate & Clock In'}
                             </Button>
                         </div>
                     )}

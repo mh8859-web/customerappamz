@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -9,21 +10,23 @@ const ProtectedRoute: React.FC = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // If we are actively checking the session for the first time and have no user info, 
-  // we wait silently for a few milliseconds.
-  if (loading && !user) {
-    return null; // Show nothing or a very tiny spinner, never a full screen block
+  // 1. SILENT TRANSITION: Wait for the session to be verified
+  if (loading) {
+    return null; 
   }
 
-  // Definitively no user -> Login
+  // 2. AUTH GUARD: Redirect to login if no identity exists
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // User exists (or shell exists) -> App
+  // 3. IDENTITY-KEYED MOUNT: 
+  // By using user.id as a KEY, React will destroy and recreate the Providers 
+  // every time the user changes (e.g. at Login). This guarantees an 
+  // immediate, fresh data fetch from the database.
   return (
-    <UserProvider>
-      <DataProvider>
+    <UserProvider key={`users-${user.id}`}>
+      <DataProvider key={`data-${user.id}`}>
         <DashboardLayout>
           <Outlet />
         </DashboardLayout>
