@@ -6,7 +6,7 @@ import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, Product, UserRole, WorkLog } from '../types';
+import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, UserRole, WorkLog } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
@@ -51,7 +51,7 @@ const ProjectDetails: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, products, finalGalleryImages, refetchData, loading: dataLoading } = useData();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, finalGalleryImages, refetchData, loading: dataLoading } = useData();
     
     const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
     const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
@@ -117,7 +117,7 @@ const ProjectDetails: React.FC = () => {
 
     const tabs = useMemo(() => {
         if (!user || !project) return [];
-        let baseTabs = TABS[user.role] || [];
+        let baseTabs = [...(TABS[user.role] || [])];
         if (project.stage === 'completed') {
             const galleryTab = 'Final Gallery';
             if (!baseTabs.includes(galleryTab)) {
@@ -292,261 +292,228 @@ const ProjectDetails: React.FC = () => {
     };
 
     const renderTabContent = () => {
-        switch (activeTab) {
-            case 'Live Updates':
-                return (
-                    <Card>
-                        {user?.role === 'Designer' && !isProjectReadOnly && (
-                            <div className="mb-6">
-                                <h2 className="text-lg font-bold text-text-primary mb-2">Post a New Update</h2>
-                                <div className="flex items-start gap-3">
-                                    <img src={user.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full" />
-                                    <div className="flex-1">
-                                        <textarea 
-                                            value={newUpdateMessage}
-                                            onChange={(e) => setNewUpdateMessage(e.target.value)}
-                                            placeholder={`Share an update on "${project.title}"...`}
-                                            className="w-full bg-page-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                                            rows={3}
-                                        />
-                                        <div className="text-right mt-2">
-                                            <Button onClick={handlePostUpdate} disabled={!newUpdateMessage.trim()}>Post Update</Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Update History</h2>
-                        <div className="space-y-6">
-                            {unifiedUpdateFeed.map(item => (
-                                <div key={item.id} className="flex gap-4">
-                                    <div className="flex-shrink-0">
-                                        <img src={item.author?.avatarUrl} alt={item.author?.fullName} className="w-10 h-10 rounded-full"/>
-                                    </div>
-                                    <div className="flex-1 border-l-2 border-border-color pl-8 relative">
-                                        <UpdateIcon type={item.type}/>
-                                        <div className="flex items-center justify-between">
-                                            <UserNameDisplay user={item.author} textClassName="font-bold text-text-primary" />
-                                            <p className="text-xs text-text-secondary">{new Date(item.timestamp).toLocaleString()}</p>
-                                        </div>
-                                        <p className="text-sm text-text-secondary mt-1">{item.content}</p>
-                                        {item.type === 'work_log' && (
-                                            <div className="mt-2 text-xs font-mono text-brand-blue bg-brand-blue/10 px-2 py-1 rounded inline-block">
-                                                Hours Logged: {item.hours}
+        return (
+            <div className="animate-slide-tab" key={activeTab}>
+                {(() => {
+                    switch (activeTab) {
+                        case 'Live Updates':
+                            return (
+                                <Card>
+                                    {user?.role === 'Designer' && !isProjectReadOnly && (
+                                        <div className="mb-6">
+                                            <h2 className="text-lg font-bold text-text-primary mb-2">Post a New Update</h2>
+                                            <div className="flex items-start gap-3">
+                                                <img src={user.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full" />
+                                                <div className="flex-1">
+                                                    <textarea 
+                                                        value={newUpdateMessage}
+                                                        onChange={(e) => setNewUpdateMessage(e.target.value)}
+                                                        placeholder={`Share an update on "${project.title}"...`}
+                                                        className="w-full bg-page-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+                                                        rows={3}
+                                                    />
+                                                    <div className="text-right mt-2">
+                                                        <Button onClick={handlePostUpdate} disabled={!newUpdateMessage.trim()}>Post Update</Button>
+                                                    </div>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-                );
-            case 'Timeline':
-                return <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />;
-            case 'Designs':
-                const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
-                return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {user?.role === 'Designer' && (
-                            <Card 
-                                onClick={() => setUploadDesignModalOpen(true)}
-                                className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg"
-                            >
-                                <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
-                                <p className="text-text-primary font-semibold">Upload New Design</p>
-                                <p className="text-xs text-center">Upload new or revised designs</p>
-                            </Card>
-                        )}
-                        {projectDesigns.map(d => (
-                             <Card key={d.id}>
-                                {d.type === 'image' ? (
-                                    <img src={d.fileUrl} alt={`Design v${d.version}`} className="rounded-xl mb-4 aspect-video object-cover" />
-                                ) : (
-                                    <div className="rounded-xl mb-4 aspect-video bg-page-bg flex items-center justify-center">
-                                        <p className="text-text-primary">3D Model</p>
-                                    </div>
-                                )}
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-bold text-text-primary">Version {d.version}</p>
-                                        <p className="text-sm text-text-secondary">{d.notes}</p>
-                                    </div>
-                                    <div className="text-xs text-right">
-                                        {d.approved 
-                                            ? <span className="text-green-400 font-semibold">Approved</span>
-                                            : !d.submittedForReview
-                                            ? <span className="text-purple-400">Changes Requested</span>
-                                            : <span className="text-yellow-400">Awaiting Review</span>
-                                        }
-                                    </div>
-                                </div>
-                                {user?.role === 'Customer' && d.type === 'image' && d.submittedForReview && !isProjectReadOnly && (
-                                     <Button variant="secondary" onClick={() => handleOpenAnnotationModal(d)} className="w-full mt-4 py-2 text-sm flex items-center justify-center gap-2">
-                                        <AnnotationIcon className="w-4 h-4" />
-                                        Annotate & Comment ({d.comments?.length || 0})
-                                    </Button>
-                                )}
-                                {user?.role === 'Customer' && d.type === 'gltf' && d.submittedForReview && !isProjectReadOnly && (
-                                    <Button variant="secondary" className="w-full mt-4 py-2 text-sm">View in 3D</Button>
-                                )}
+                                        </div>
+                                    )}
 
-                                {user?.role === 'Customer' && project.stage === 'design_phase' && d.submittedForReview && !d.approved && !isProjectReadOnly && (
-                                    <div className="mt-2 flex gap-2">
-                                        <Button onClick={() => handleApproveDesign(d.id)} className="w-full py-2 text-sm">Approve</Button>
-                                        <Button variant="secondary" className="w-full py-2 text-sm" onClick={() => handleOpenAnnotationModal(d)}>Request Changes</Button>
+                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Update History</h2>
+                                    <div className="space-y-6">
+                                        {unifiedUpdateFeed.map(item => (
+                                            <div key={item.id} className="flex gap-4">
+                                                <div className="flex-shrink-0">
+                                                    <img src={item.author?.avatarUrl} alt={item.author?.fullName} className="w-10 h-10 rounded-full"/>
+                                                </div>
+                                                <div className="flex-1 border-l-2 border-border-color pl-8 relative">
+                                                    <UpdateIcon type={item.type}/>
+                                                    <div className="flex items-center justify-between">
+                                                        <UserNameDisplay user={item.author} textClassName="font-bold text-text-primary" />
+                                                        <p className="text-xs text-text-secondary">{new Date(item.timestamp).toLocaleString()}</p>
+                                                    </div>
+                                                    <p className="text-sm text-text-secondary mt-1">{item.content}</p>
+                                                    {item.type === 'work_log' && (
+                                                        <div className="mt-2 text-xs font-mono text-brand-blue bg-brand-blue/10 px-2 py-1 rounded inline-block">
+                                                            Hours Logged: {item.hours}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
-                                {user?.role === 'Designer' && hasOpenFeedback(d) && !d.submittedForReview && !isProjectReadOnly && (
-                                    <Button onClick={() => handleSubmitForReapproval(d.id)} className="w-full mt-4 py-2 text-sm">Submit for Re-approval</Button>
-                                )}
-                             </Card>
-                        ))}
-                    </div>
-                );
-             case 'Feedback':
-                const allComments = projectDesigns.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
-                return (
-                    <Card>
-                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Client Feedback</h2>
-                        <div className="space-y-4">
-                            {allComments.map(comment => {
-                                const author = findUserById(comment.authorId);
-                                return (
-                                    <div key={comment.id} className="bg-page-bg p-4 rounded-xl flex gap-4">
-                                        <img src={comment.design.fileUrl} alt="design" className="w-24 h-24 rounded-lg object-cover" />
-                                        <div className="flex-1">
+                                </Card>
+                            );
+                        case 'Timeline':
+                            return <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />;
+                        case 'Designs':
+                            const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
+                            return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {user?.role === 'Designer' && (
+                                        <Card 
+                                            onClick={() => setUploadDesignModalOpen(true)}
+                                            className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg transition-colors"
+                                        >
+                                            <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
+                                            <p className="text-text-primary font-semibold">Upload New Design</p>
+                                            <p className="text-xs text-center">Upload new or revised designs</p>
+                                        </Card>
+                                    )}
+                                    {projectDesigns.map(d => (
+                                        <Card key={d.id} className="hover:shadow-lg transition-shadow">
+                                            {d.type === 'image' ? (
+                                                <img src={d.fileUrl} alt={`Design v${d.version}`} className="rounded-xl mb-4 aspect-video object-cover" />
+                                            ) : (
+                                                <div className="rounded-xl mb-4 aspect-video bg-page-bg flex items-center justify-center">
+                                                    <p className="text-text-primary">3D Model</p>
+                                                </div>
+                                            )}
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <UserNameDisplay user={author} textClassName="text-text-primary font-semibold" />
-                                                    <p className="text-xs text-text-secondary">on Design v{comment.design.version}</p>
+                                                    <p className="font-bold text-text-primary">Version {d.version}</p>
+                                                    <p className="text-sm text-text-secondary">{d.notes}</p>
                                                 </div>
-                                                <span className={`text-xs font-semibold ${comment.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}`}>{comment.status}</span>
+                                                <div className="text-xs text-right">
+                                                    {d.approved 
+                                                        ? <span className="text-green-400 font-semibold">Approved</span>
+                                                        : !d.submittedForReview
+                                                        ? <span className="text-purple-400">Changes Requested</span>
+                                                        : <span className="text-yellow-400">Awaiting Review</span>
+                                                    }
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-text-secondary mt-2">{comment.text}</p>
-                                            {comment.status === 'Open' && !isProjectReadOnly && (
-                                                 <Button variant="secondary" onClick={() => handleCommentStatusChange(comment.id, comment.design.id, 'Resolved')} className="!px-3 !py-1 text-xs mt-2">Mark as Resolved</Button>
+                                            {user?.role === 'Customer' && d.type === 'image' && d.submittedForReview && !isProjectReadOnly && (
+                                                <Button variant="secondary" onClick={() => handleOpenAnnotationModal(d)} className="w-full mt-4 py-2 text-sm flex items-center justify-center gap-2">
+                                                    <AnnotationIcon className="w-4 h-4" />
+                                                    Annotate & Comment ({d.comments?.length || 0})
+                                                </Button>
                                             )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {allComments.length === 0 && <p className="text-text-secondary">No feedback yet.</p>}
-                        </div>
-                    </Card>
-                );
-            case 'Quotes & Docs':
-                return (
-                     <Card>
-                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Quotes & Documents</h2>
-                        <div className="space-y-3">
-                            {projectQuotes.map(q => (
-                                <div key={q.id} className="bg-page-bg p-4 rounded-xl flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <FileTextIcon className="w-6 h-6 text-brand-blue" />
-                                        <div>
-                                            <p className="font-semibold text-text-primary capitalize">{q.version} Quote</p>
-                                            <p className="text-xs text-text-secondary">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
-                                        </div>
-                                    </div>
-                                    <Button variant="secondary" className="px-4 py-2 text-sm">Download</Button>
-                                </div>
-                            ))}
-                        </div>
-                        {user?.role === 'Designer' && project.stage === 'awaiting_updated_quote' && !isProjectReadOnly && (
-                            <div className="mt-6">
-                                 <Button onClick={handleUploadUpdatedQuote}>+ Upload Updated Quote</Button>
-                            </div>
-                        )}
-                    </Card>
-                );
-            case 'Milestones':
-                return (
-                    <Card>
-                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Project Milestones</h2>
-
-                        {/* Mobile View */}
-                        <div className="md:hidden space-y-3">
-                            {projectMilestones.map(milestone => (
-                                <div key={milestone.id} className="bg-page-bg p-4 rounded-xl text-sm">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="font-bold text-text-primary">{milestone.title}</p>
-                                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                            milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
-                                            milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                                            'bg-yellow-500/20 text-yellow-400'
-                                        }`}>
-                                            {milestone.statusDisplay}
-                                        </span>
-                                    </div>
-                                    <p className="text-text-secondary"><strong className="text-text-primary/80">Amount:</strong> ₹{milestone.amountDisplay.toLocaleString()}</p>
-                                    <p className="text-text-secondary"><strong className="text-text-primary/80">Due:</strong> {milestone.dueDate}</p>
-                                    {user?.role === 'Admin' && milestone.statusDisplay !== 'Paid' && !isProjectReadOnly && (
-                                        <Button variant="secondary" className="w-full mt-3 py-1 text-xs">Mark as Paid</Button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Desktop View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-xs text-text-secondary uppercase bg-page-bg">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3">Title</th>
-                                        <th scope="col" className="px-6 py-3">Due Date</th>
-                                        <th scope="col" className="px-6 py-3">Amount</th>
-                                        <th scope="col" className="px-6 py-3">Status</th>
-                                        {user?.role === 'Admin' && <th scope="col" className="px-6 py-3">Action</th>}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {projectMilestones.map(milestone => (
-                                        <tr key={milestone.id} className="border-b border-border-color">
-                                            <td className="px-6 py-4 font-medium text-text-primary">{milestone.title}</td>
-                                            <td className="px-6 py-4">{milestone.dueDate}</td>
-                                            <td className="px-6 py-4">₹{milestone.amountDisplay.toLocaleString()}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
-                                                    milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                                                    'bg-yellow-500/20 text-yellow-400'
-                                                }`}>
-                                                    {milestone.statusDisplay}
-                                                </span>
-                                            </td>
-                                            {user?.role === 'Admin' && (
-                                                <td className="px-6 py-4">
-                                                    {milestone.statusDisplay !== 'Paid' && !isProjectReadOnly && (
-                                                        <Button variant="secondary" className="px-3 py-1 text-xs">Mark as Paid</Button>
-                                                    )}
-                                                </td>
+                                            {user?.role === 'Customer' && project.stage === 'design_phase' && d.submittedForReview && !d.approved && !isProjectReadOnly && (
+                                                <div className="mt-2 flex gap-2">
+                                                    <Button onClick={() => handleApproveDesign(d.id)} className="w-full py-2 text-sm">Approve</Button>
+                                                    <Button variant="secondary" className="w-full py-2 text-sm" onClick={() => handleOpenAnnotationModal(d)}>Request Changes</Button>
+                                                </div>
                                             )}
-                                        </tr>
+                                            {user?.role === 'Designer' && hasOpenFeedback(d) && !d.submittedForReview && !isProjectReadOnly && (
+                                                <Button onClick={() => handleSubmitForReapproval(d.id)} className="w-full mt-4 py-2 text-sm">Submit for Re-approval</Button>
+                                            )}
+                                        </Card>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                );
-             case 'Final Gallery':
-                return (
-                    <Card>
-                        <h2 className="text-xl font-bold font-display text-text-primary mb-4">Final Project Gallery</h2>
-                        <p className="text-text-secondary mb-6">A showcase of the completed "{project.title}" project.</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {finalGalleryImages.filter(img => img.projectId === project.id).map(image => (
-                                <div key={image.id}>
-                                    <img src={image.url} alt={image.caption} className="rounded-lg aspect-square object-cover" />
-                                    <p className="text-sm text-center mt-2 text-text-secondary">{image.caption}</p>
                                 </div>
-                            ))}
-                        </div>
-                    </Card>
-                );
-            default:
-                return null;
-        }
+                            );
+                        case 'Feedback':
+                            const allComments = projectDesigns.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
+                            return (
+                                <Card>
+                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Client Feedback</h2>
+                                    <div className="space-y-4">
+                                        {allComments.map(comment => {
+                                            const author = findUserById(comment.authorId);
+                                            return (
+                                                <div key={comment.id} className="bg-page-bg p-4 rounded-xl flex gap-4">
+                                                    <img src={comment.design.fileUrl} alt="design" className="w-24 h-24 rounded-lg object-cover" />
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <UserNameDisplay user={author} textClassName="text-text-primary font-semibold" />
+                                                                <p className="text-xs text-text-secondary">on Design v{comment.design.version}</p>
+                                                            </div>
+                                                            <span className={`text-xs font-semibold ${comment.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}`}>{comment.status}</span>
+                                                        </div>
+                                                        <p className="text-sm text-text-secondary mt-2">{comment.text}</p>
+                                                        {comment.status === 'Open' && !isProjectReadOnly && (
+                                                            <Button variant="secondary" onClick={() => handleCommentStatusChange(comment.id, comment.design.id, 'Resolved')} className="!px-3 !py-1 text-xs mt-2">Mark as Resolved</Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {allComments.length === 0 && <p className="text-text-secondary">No feedback yet.</p>}
+                                    </div>
+                                </Card>
+                            );
+                        case 'Quotes & Docs':
+                            return (
+                                <Card>
+                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Quotes & Documents</h2>
+                                    <div className="space-y-3">
+                                        {projectQuotes.map(q => (
+                                            <div key={q.id} className="bg-page-bg p-4 rounded-xl flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <FileTextIcon className="w-6 h-6 text-brand-blue" />
+                                                    <div>
+                                                        <p className="font-semibold text-text-primary capitalize">{q.version} Quote</p>
+                                                        <p className="text-xs text-text-secondary">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
+                                                    </div>
+                                                </div>
+                                                <a href={q.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                    <Button variant="secondary" className="px-4 py-2 text-sm">Download</Button>
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {user?.role === 'Designer' && project.stage === 'awaiting_updated_quote' && !isProjectReadOnly && (
+                                        <div className="mt-6">
+                                            <Button onClick={handleUploadUpdatedQuote}>+ Upload Updated Quote</Button>
+                                        </div>
+                                    )}
+                                </Card>
+                            );
+                        case 'Milestones':
+                            return (
+                                <Card>
+                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Project Milestones</h2>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="text-xs text-text-secondary uppercase bg-page-bg">
+                                                <tr>
+                                                    <th className="px-6 py-3">Title</th>
+                                                    <th className="px-6 py-3">Due Date</th>
+                                                    <th className="px-6 py-3">Amount</th>
+                                                    <th className="px-6 py-3">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {projectMilestones.map(milestone => (
+                                                    <tr key={milestone.id} className="border-b border-border-color">
+                                                        <td className="px-6 py-4 font-medium text-text-primary">{milestone.title}</td>
+                                                        <td className="px-6 py-4">{milestone.dueDate}</td>
+                                                        <td className="px-6 py-4">₹{milestone.amountDisplay.toLocaleString()}</td>
+                                                        <td className="px-6 py-4">
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                                milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
+                                                                milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
+                                                                'bg-yellow-500/20 text-yellow-400'
+                                                            }`}>{milestone.statusDisplay}</span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Card>
+                            );
+                        case 'Final Gallery':
+                            return (
+                                <Card>
+                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Final Project Gallery</h2>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {finalGalleryImages.filter(img => img.projectId === project.id).map(image => (
+                                            <div key={image.id}>
+                                                <img src={image.url} alt={image.caption} className="rounded-lg aspect-square object-cover" />
+                                                <p className="text-sm text-center mt-2 text-text-secondary">{image.caption}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            );
+                        default: return null;
+                    }
+                })()}
+            </div>
+        );
     };
 
     const renderHeaderActions = () => {
@@ -568,11 +535,7 @@ const ProjectDetails: React.FC = () => {
 
     return (
         <>
-            <Modal 
-                isOpen={isFinalApprovalModalOpen} 
-                onClose={() => setFinalApprovalModalOpen(false)}
-                title="Final Project Approval"
-            >
+            <Modal isOpen={isFinalApprovalModalOpen} onClose={() => setFinalApprovalModalOpen(false)} title="Final Project Approval">
                 <p className="text-text-secondary mb-6">Please review the project. By approving, you are confirming that the project has been completed to your satisfaction.</p>
                 <div className="flex justify-end gap-4">
                     <Button variant="secondary" onClick={handleClientDiscussionRequest}>Discuss Further</Button>
@@ -581,93 +544,59 @@ const ProjectDetails: React.FC = () => {
             </Modal>
             
             {selectedDesignForAnnotation && (
-                <DesignAnnotationModal
-                    isOpen={isAnnotationModalOpen}
-                    onClose={() => setAnnotationModalOpen(false)}
-                    design={selectedDesignForAnnotation}
-                    currentUser={user}
-                    onSave={handleSaveComments}
-                />
+                <DesignAnnotationModal isOpen={isAnnotationModalOpen} onClose={() => setAnnotationModalOpen(false)} design={selectedDesignForAnnotation} currentUser={user} onSave={handleSaveComments} />
             )}
             
-            <UploadDesignModal
-                isOpen={isUploadDesignModalOpen}
-                onClose={() => setUploadDesignModalOpen(false)}
-                onUpload={handleUploadDesign}
-            />
+            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={handleUploadDesign} />
 
-            <Modal 
-                isOpen={isDeleteModalOpen} 
-                onClose={() => setDeleteModalOpen(false)}
-                title="Confirm Project Deletion"
-            >
-                <p className="text-text-secondary mb-4">
-                    You are about to permanently delete the project: <strong className="text-text-primary">{project.title}</strong>.
-                </p>
-                <p className="text-text-secondary mb-4">
-                    All associated designs, messages, milestones, and other data will be lost forever. This cannot be undone.
-                </p>
+            <Modal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Confirm Project Deletion">
+                <p className="text-text-secondary mb-4">You are about to permanently delete <strong className="text-text-primary">{project.title}</strong>. This action is irreversible.</p>
                 <div className="mt-4">
-                    <label htmlFor="delete-confirm" className="block text-sm font-medium text-text-primary mb-1">
-                        To confirm, type the project name: <span className="font-mono">{project.title}</span>
-                    </label>
-                    <input
-                        id="delete-confirm"
-                        type="text"
-                        value={deleteConfirmationText}
-                        onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                        className="w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500"
-                    />
+                    <label className="block text-sm font-medium text-text-primary mb-1">To confirm, type the project name: <span className="font-mono">{project.title}</span></label>
+                    <input type="text" value={deleteConfirmationText} onChange={(e) => setDeleteConfirmationText(e.target.value)} className="w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500" />
                 </div>
                 <div className="flex justify-end gap-4 mt-6">
                     <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-                    <Button 
-                        onClick={handleDeleteProject}
-                        disabled={deleteConfirmationText !== project.title}
-                        className="!bg-red-600 hover:!bg-red-700 focus:ring-red-500 disabled:!bg-red-300"
-                    >
-                        Delete Forever
-                    </Button>
+                    <Button onClick={handleDeleteProject} disabled={deleteConfirmationText !== project.title} className="!bg-red-600 hover:!bg-red-700">Delete Forever</Button>
                 </div>
             </Modal>
 
             <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 animate-in">
                     <div>
-                        <h1 className="text-3xl font-bold font-display text-text-primary">{project.title}</h1>
-                        <div className="text-text-secondary flex items-center gap-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-secondary" /></div>
+                        <h1 className="text-4xl font-bold font-display text-text-primary tracking-tight">{project.title}</h1>
+                        <div className="text-text-secondary flex items-center gap-1 mt-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-secondary font-semibold" /></div>
                     </div>
                     {renderHeaderActions()}
                 </div>
 
                 <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
 
-                <Card>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <Card className="animate-in" style={{ animationDelay: '100ms' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
                         <div>
-                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Description</h3>
-                            <p className="text-text-secondary">{project.description}</p>
+                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Description</h3>
+                            <p className="text-slate-700 leading-relaxed">{project.description}</p>
                         </div>
                         <div>
-                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Site Location</h3>
-                            <p className="text-text-secondary">{project.address}</p>
+                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Site Location</h3>
+                            <p className="text-slate-700 leading-relaxed">{project.address}</p>
                         </div>
                         <div>
-                            <h3 className="font-bold text-text-primary mb-1 uppercase tracking-wider text-xs">Client Contact</h3>
-                            <UserNameDisplay user={customer} textClassName="text-text-secondary" />
-                            <p className="text-text-secondary">{customer?.userId || 'Not available'}</p>
+                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Lead creative</h3>
+                            <UserNameDisplay user={designer} showAvatar={true} textClassName="text-slate-900 font-bold" />
                         </div>
                     </div>
                 </Card>
 
-                <div className="border-b border-border-color">
-                    <nav className="-mb-px flex space-x-6 overflow-x-auto">
+                <div className="border-b border-border-color animate-in" style={{ animationDelay: '200ms' }}>
+                    <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
                         {tabs.map(tab => (
                             <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2
+                                className={`whitespace-nowrap py-4 px-1 border-b-2 font-black text-[11px] uppercase tracking-[2px] transition-all flex items-center gap-2
                                     ${activeTab === tab 
-                                        ? 'border-brand-blue text-brand-blue' 
-                                        : 'border-transparent text-text-secondary hover:text-text-primary hover:border-text-secondary'}`}
+                                        ? 'border-brand-gold text-brand-gold' 
+                                        : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'}`}
                             >
                                 {tab === 'Timeline' && <CalendarIcon className="w-4 h-4" />}
                                 {tab === 'Feedback' && <AnnotationIcon className="w-4 h-4" />}
@@ -678,15 +607,15 @@ const ProjectDetails: React.FC = () => {
                     </nav>
                 </div>
                 
-                <div>{renderTabContent()}</div>
+                <div className="animate-in" style={{ animationDelay: '300ms' }}>{renderTabContent()}</div>
                 
                 {user.role === 'Admin' && (
-                    <Card className="border-red-500/50 bg-red-500/5 mt-8">
-                        <h2 className="text-xl font-bold font-display text-red-600 mb-4">Admin Actions</h2>
+                    <Card className="border-red-100 bg-red-50/30 mt-12 animate-in" style={{ animationDelay: '400ms' }}>
+                        <h2 className="text-xs font-black text-red-600 uppercase tracking-[4px] mb-4">Security: Terminal Actions</h2>
                         <div className="flex justify-between items-center">
-                            <p className="text-sm text-red-800">Permanently delete this project and all its associated data. This action is irreversible.</p>
-                            <Button onClick={() => setDeleteModalOpen(true)} className="!bg-red-600 hover:!bg-red-700 focus:ring-red-500">
-                                Delete Project
+                            <p className="text-xs text-red-800 font-medium">Warning: Deletion is absolute and removes all cloud assets linked to this UID.</p>
+                            <Button onClick={() => setDeleteModalOpen(true)} className="!bg-red-600 hover:!bg-red-700 !py-2 !px-4 !text-[10px] !font-black uppercase tracking-widest">
+                                Delete Record
                             </Button>
                         </div>
                     </Card>

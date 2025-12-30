@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -48,13 +49,15 @@
               'card': '0 10px 25px -12px rgba(30, 41, 59, 0.08)',
               'button': '0 8px 20px -6px rgba(37, 99, 235, 0.25)',
               'premium': '0 20px 40px -15px rgba(30, 41, 59, 0.08)',
-              'gold-glow': '0 0 20px -5px rgba(212, 175, 55, 0.3)',
+              'gold-glow': '0 0 25px -5px rgba(212, 175, 55, 0.4)',
               'modal': '0 25px 60px -12px rgba(30, 41, 59, 0.2)',
             },
             animation: {
               'ken-burns': 'kenburns 20s ease infinite alternate',
               'float': 'float 6s ease-in-out infinite',
               'glow-pulse': 'glowPulse 3s infinite',
+              'reveal': 'reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              'slide-tab': 'slideTab 0.4s ease-out forwards',
             },
             keyframes: {
               kenburns: {
@@ -66,8 +69,16 @@
                 '50%': { transform: 'translateY(-10px)' },
               },
               glowPulse: {
-                '0%, 100%': { boxShadow: '0 0 20px -5px rgba(212, 175, 55, 0.2)' },
-                '50%': { boxShadow: '0 0 35px 5px rgba(212, 175, 55, 0.4)' },
+                '0%, 100%': { opacity: 0.8, filter: 'brightness(1)' },
+                '50%': { opacity: 1, filter: 'brightness(1.3)' },
+              },
+              reveal: {
+                '0%': { opacity: 0, transform: 'translateY(20px) scale(0.98)' },
+                '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
+              },
+              slideTab: {
+                '0%': { opacity: 0, transform: 'translateX(10px)' },
+                '100%': { opacity: 1, transform: 'translateX(0)' },
               }
             }
           }
@@ -89,23 +100,18 @@
         box-shadow: inset 4px 0 0 0 #2563EB;
       }
 
-      @keyframes slideUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .animate-in { animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
+      .animate-in { animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      
       .luxury-glass {
         background: rgba(255, 255, 255, 0.85);
         backdrop-filter: blur(16px);
         border: 1px solid rgba(212, 175, 55, 0.2);
       }
 
-      .border-gradient-gold {
-        border: 1px solid;
-        border-image-source: linear-gradient(to bottom right, #D4AF37, #F4E7B1, #B69121);
-        border-image-slice: 1;
-      }
+      .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
     </style>
   <script type="importmap">
 {
