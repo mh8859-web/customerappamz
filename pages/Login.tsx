@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +16,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const [isForgotModalOpen, setForgotModalOpen] = useState(false);
 
+  // Auto-redirect if already logged in and loading is finished
   useEffect(() => {
     if (!loading && user) {
       navigate('/', { replace: true });
@@ -23,19 +25,29 @@ const Login: React.FC = () => {
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setError('');
     setIsSubmitting(true);
-    const { success, error: loginError } = await login(userId, password);
-    setIsSubmitting(false);
     
-    if (success) {
-      navigate('/');
-    } else {
-      if (loginError === 'INVALID_CREDENTIALS') {
-        setError('Invalid Identity ID or Secure Key.');
-      } else {
-        setError('An unexpected system error occurred.');
-      }
+    try {
+        const { success, error: loginError } = await login(userId, password);
+        
+        if (success) {
+          // Force immediate navigation to root. 
+          // ProtectedRoute will handle the split-second loading transition.
+          navigate('/', { replace: true });
+        } else {
+          setIsSubmitting(false);
+          if (loginError === 'INVALID_CREDENTIALS') {
+            setError('Invalid Identity ID or Secure Key.');
+          } else {
+            setError('An unexpected system error occurred.');
+          }
+        }
+    } catch (err) {
+        setIsSubmitting(false);
+        setError('Connection Fault. Please try again.');
     }
   };
   

@@ -100,6 +100,15 @@ export interface ProjectUpdate {
   createdAt: string;
 }
 
+// --- FIX: Added UnifiedUpdate interface to resolve import error in ProjectDetails.tsx ---
+export interface UnifiedUpdate {
+    id: string;
+    type: string;
+    author: User | undefined;
+    content: string;
+    timestamp: string;
+}
+
 export interface ActivityLog {
   id: string;
   projectId: string;

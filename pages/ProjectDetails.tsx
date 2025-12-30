@@ -5,29 +5,18 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { FileTextIcon, UploadCloudIcon, ZapIcon, ClipboardIcon, SettingsIcon, MessageSquareIcon, AnnotationIcon, CalendarIcon } from '../components/icons';
-import { Project, Design, Quote, ProjectUpdate, User, ActivityLog, Comment, UserRole, WorkLog } from '../types';
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon } from '../components/icons';
+import { Project, Design, User, UserRole, UnifiedUpdate } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
-import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
-import { updateRecord, createRecord, uploadProjectFile, deleteProjectAndRelatedData } from '../services/api';
 import UploadDesignModal from '../components/design/UploadDesignModal';
 
-type UnifiedUpdate = {
-    id: string;
-    type: 'update' | 'work_log' | 'system';
-    author?: User;
-    content: string;
-    timestamp: string;
-    hours?: number;
-};
-
 const TABS: Record<UserRole, string[]> = {
-    Customer: ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs', 'Milestones'],
+    Customer: ['Live Updates', 'Designs', 'Timeline', 'Quotes & Docs', 'Milestones'],
     Designer: ['Live Updates', 'Designs', 'Feedback', 'Quotes & Docs', 'Milestones'],
     Admin: ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
     'Sub-Admin': ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
@@ -37,591 +26,208 @@ const TABS: Record<UserRole, string[]> = {
     'Site Head': ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs'],
 };
 
-const UpdateIcon: React.FC<{ type: UnifiedUpdate['type'] }> = ({ type }) => {
-    const iconMap = {
-        update: <ZapIcon className="w-5 h-5 text-brand-blue" />,
-        work_log: <ClipboardIcon className="w-5 h-5 text-blue-400" />,
-        system: <SettingsIcon className="w-5 h-5 text-purple-400" />,
-    };
-    return <div className="absolute left-[-1.6rem] top-1 bg-surface p-1.5 rounded-full">{iconMap[type]}</div>;
-};
-
 const ProjectDetails: React.FC = () => {
     const { projectId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, finalGalleryImages, refetchData, loading: dataLoading } = useData();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, loading: dataLoading } = useData();
     
-    const [project, setProject] = useState<Project | undefined>(projects.find(p => p.id === projectId));
-    const [isFinalApprovalModalOpen, setFinalApprovalModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Live Updates');
-    const [newUpdateMessage, setNewUpdateMessage] = useState('');
-    const [isAnnotationModalOpen, setAnnotationModalOpen] = useState(false);
-    const [selectedDesignForAnnotation, setSelectedDesignForAnnotation] = useState<Design | null>(null);
     const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
     const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
     
+    const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
     const isLoading = dataLoading || usersLoading;
-    const isProjectReadOnly = project?.status === 'Completed';
-    
+
     const unifiedUpdateFeed = useMemo(() => {
         if (!projectId) return [];
-
-        const updates: UnifiedUpdate[] = projectUpdates
-            .filter(u => u.projectId === projectId)
-            .map(u => ({
-                id: u.id,
-                type: 'update',
-                author: findUserById(u.authorId),
-                content: u.message,
-                timestamp: u.createdAt
-            }));
-        
-        const logs: UnifiedUpdate[] = workLogs
-            .filter(w => w.projectId === projectId)
-            .map(w => ({
-                id: w.id,
-                type: 'work_log',
-                author: findUserById(w.designerId),
-                content: w.tasksCompleted,
-                timestamp: new Date(w.date).toISOString(),
-                hours: w.hoursSpent,
-            }));
-
-        const systemEvents: UnifiedUpdate[] = activityLogs
-            .filter(a => a.projectId === projectId)
-            .map(a => ({
-                id: a.id,
-                type: 'system',
-                author: findUserById(a.actorId),
-                content: a.details,
-                timestamp: a.createdAt,
-            }));
-            
-        return [...updates, ...logs, ...systemEvents].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        const updates = projectUpdates.filter(u => u.projectId === projectId).map(u => ({ id: u.id, type: 'Update', author: findUserById(u.authorId), content: u.message, timestamp: u.createdAt }));
+        const logs = workLogs.filter(w => w.projectId === projectId).map(w => ({ id: w.id, type: 'Work Log', author: findUserById(w.designerId), content: w.tasksCompleted, timestamp: new Date(w.date).toISOString() }));
+        const system = activityLogs.filter(a => a.projectId === projectId).map(a => ({ id: a.id, type: 'System', author: findUserById(a.actorId), content: a.details, timestamp: a.createdAt }));
+        return [...updates, ...logs, ...system].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [projectId, projectUpdates, workLogs, activityLogs, findUserById]);
-    
 
-    useEffect(() => {
-        const currentProject = projects.find(p => p.id === projectId);
-        setProject(currentProject);
-        
-        if(currentProject && user) {
-            const firstTab = (currentProject.status === 'Completed' && TABS[user.role].includes('Final Gallery')) ? 'Final Gallery' : 'Live Updates';
-            setActiveTab(firstTab);
-        }
-
-    }, [projectId, projects, user]);
-
-    const tabs = useMemo(() => {
-        if (!user || !project) return [];
-        let baseTabs = [...(TABS[user.role] || [])];
-        if (project.stage === 'completed') {
-            const galleryTab = 'Final Gallery';
-            if (!baseTabs.includes(galleryTab)) {
-                return [galleryTab, ...baseTabs];
-            }
-        }
-        return baseTabs;
-    }, [user, project]);
-
-    if (isLoading) {
-        return <div className="text-center text-text-primary p-12">Synchronizing Project Data...</div>;
-    }
-
-    if (!project || !user) {
-        return <div className="text-center text-red-500 p-12">Project not found or access restricted.</div>;
-    }
+    if (isLoading) return <div className="p-20 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest">Synchronizing Portfolio...</div>;
+    if (!project || !user) return <div className="text-center text-red-500 p-12">Project not found.</div>;
 
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
-    const projectMilestones = milestones.filter(m => m.projectId === project.id);
-    const projectDesigns = designs.filter(d => d.projectId === project.id);
-    const projectQuotes = quotes.filter(q => q.projectId === project.id);
-
-    const updateProjectState = async (updates: Partial<Project>, actorId: string, actionDetails: string) => {
-        const { error } = await updateRecord('projects', project.id, updates);
-        if (error) {
-            alert(`Error updating project: ${error.message}`);
-            return;
-        }
-    
-        const newLog = {
-            project_id: project.id,
-            actor_id: actorId,
-            action: 'UPDATE_STATUS',
-            details: actionDetails,
-        };
-        await createRecord('activity_logs', newLog);
-        
-        await refetchData();
-    };
-    
-    const handlePostUpdate = async () => {
-        if (!newUpdateMessage.trim() || !user || isProjectReadOnly) return;
-        const newUpdate = {
-            project_id: project.id,
-            author_id: user.id,
-            message: newUpdateMessage,
-        };
-        await createRecord('project_updates', newUpdate);
-        await refetchData();
-        setNewUpdateMessage('');
-    };
-
-    const handleApproveDesign = async (designId: string) => {
-        await updateRecord('designs', designId, { approved: true });
-        if (project.stage === 'design_phase') {
-            const details = `Approved a design concept. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_updated_quote']}.`;
-            await updateProjectState({ stage: 'awaiting_updated_quote', progress: 35 }, user.id, details);
-        } else {
-            await refetchData();
-        }
-    };
-    
-    const handleSubmitForReapproval = async (designId: string) => {
-        await updateRecord('designs', designId, { submitted_for_review: true, approved: false });
-        await refetchData();
-        alert(`Design v${designs.find(d => d.id === designId)?.version} has been submitted to the client for re-approval.`);
-    };
-
-    const handleUploadUpdatedQuote = async () => {
-        const newQuote = {
-            project_id: project.id,
-            version: 'final',
-            file_url: 'dummy.pdf',
-            uploaded_by: user.id,
-        };
-        await createRecord('quotes', newQuote);
-        const details = `Uploaded the final quote. Project moved to: ${STAGE_DISPLAY_NAMES['material_selection']}.`;
-        await updateProjectState({ stage: 'material_selection', progress: 50 }, user.id, details);
-    };
-
-    const handleCompleteMaterialSelection = async () => {
-        const details = `Marked material selection complete. Project moved to: ${STAGE_DISPLAY_NAMES['execution']}.`;
-        await updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
-    };
-
-    const handleMarkProjectDone = async () => {
-        const details = `Marked project work as done. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_client_completion_approval']}.`;
-        await updateProjectState({ stage: 'awaiting_client_completion_approval', progress: 90 }, user.id, details);
-    };
-
-    const handleClientFinalApproval = async () => {
-        const details = `Client provided final approval. Project moved to: ${STAGE_DISPLAY_NAMES['awaiting_admin_completion_approval']}.`;
-        await updateProjectState({ stage: 'awaiting_admin_completion_approval', progress: 95 }, user.id, details);
-        setFinalApprovalModalOpen(false);
-    };
-
-    const handleAdminFinalSignOff = async () => {
-        const details = `Admin gave final sign-off. Project is now complete!`;
-        await updateProjectState({ stage: 'completed', status: 'Completed', progress: 100 }, user.id, details);
-    };
-    
-    const handleClientDiscussionRequest = async () => {
-        const details = `Client requested further discussion. Project reverted to: ${STAGE_DISPLAY_NAMES['execution']}.`;
-        await updateProjectState({ stage: 'execution', progress: 75 }, user.id, details);
-        setFinalApprovalModalOpen(false);
-    };
-    
-    const handleOpenAnnotationModal = (design: Design) => {
-        setSelectedDesignForAnnotation(design);
-        setAnnotationModalOpen(true);
-    };
-
-    const handleSaveComments = async (designId: string, newComments: Comment[]) => {
-        await updateRecord('designs', designId, { comments: newComments, submitted_for_review: false });
-        await refetchData();
-    };
-    
-    const handleUploadDesign = async (file: File, notes: string, type: 'image' | 'gltf') => {
-        if (!user || !project) return;
-        
-        const fileUrl = await uploadProjectFile(project.id, file);
-        if (!fileUrl) {
-            alert('Failed to upload design file. Please try again.');
-            return;
-        }
-        
-        const existingVersions = projectDesigns.map(d => d.version);
-        const newVersion = existingVersions.length > 0 ? Math.max(...existingVersions) + 1 : 1;
-
-        const newDesign = {
-            project_id: project.id,
-            version: newVersion,
-            notes: notes,
-            file_url: fileUrl,
-            type: type,
-            uploaded_by: user.id,
-            submitted_for_review: true,
-            approved: false,
-            comments: [],
-        };
-
-        await createRecord('designs', newDesign);
-        await refetchData();
-    };
-
-    const handleCommentStatusChange = async (commentId: string, designId: string, status: 'Open' | 'Resolved') => {
-        const design = projectDesigns.find(d => d.id === designId);
-        if (design && design.comments) {
-            const updatedComments = design.comments.map(c => c.id === commentId ? { ...c, status } : c);
-            await updateRecord('designs', designId, { comments: updatedComments });
-            await refetchData();
-        }
-    };
-
-    const handleDeleteProject = async () => {
-        if (deleteConfirmationText !== project.title) {
-            alert("Project name does not match. Deletion cancelled.");
-            return;
-        }
-        
-        const { error } = await deleteProjectAndRelatedData(project.id);
-    
-        if (error) {
-            alert(`Failed to delete project: ${error.message}`);
-        } else {
-            alert('Project deleted successfully.');
-            await refetchData();
-            navigate('/projects');
-        }
-        setDeleteModalOpen(false);
-    };
-
-    const renderTabContent = () => {
-        return (
-            <div className="animate-slide-tab" key={activeTab}>
-                {(() => {
-                    switch (activeTab) {
-                        case 'Live Updates':
-                            return (
-                                <Card>
-                                    {user?.role === 'Designer' && !isProjectReadOnly && (
-                                        <div className="mb-6">
-                                            <h2 className="text-lg font-bold text-text-primary mb-2">Post a New Update</h2>
-                                            <div className="flex items-start gap-3">
-                                                <img src={user.avatarUrl} alt="avatar" className="w-10 h-10 rounded-full" />
-                                                <div className="flex-1">
-                                                    <textarea 
-                                                        value={newUpdateMessage}
-                                                        onChange={(e) => setNewUpdateMessage(e.target.value)}
-                                                        placeholder={`Share an update on "${project.title}"...`}
-                                                        className="w-full bg-page-bg border border-border-color rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                                                        rows={3}
-                                                    />
-                                                    <div className="text-right mt-2">
-                                                        <Button onClick={handlePostUpdate} disabled={!newUpdateMessage.trim()}>Post Update</Button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Update History</h2>
-                                    <div className="space-y-6">
-                                        {unifiedUpdateFeed.map(item => (
-                                            <div key={item.id} className="flex gap-4">
-                                                <div className="flex-shrink-0">
-                                                    <img src={item.author?.avatarUrl} alt={item.author?.fullName} className="w-10 h-10 rounded-full"/>
-                                                </div>
-                                                <div className="flex-1 border-l-2 border-border-color pl-8 relative">
-                                                    <UpdateIcon type={item.type}/>
-                                                    <div className="flex items-center justify-between">
-                                                        <UserNameDisplay user={item.author} textClassName="font-bold text-text-primary" />
-                                                        <p className="text-xs text-text-secondary">{new Date(item.timestamp).toLocaleString()}</p>
-                                                    </div>
-                                                    <p className="text-sm text-text-secondary mt-1">{item.content}</p>
-                                                    {item.type === 'work_log' && (
-                                                        <div className="mt-2 text-xs font-mono text-brand-blue bg-brand-blue/10 px-2 py-1 rounded inline-block">
-                                                            Hours Logged: {item.hours}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            );
-                        case 'Timeline':
-                            return <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />;
-                        case 'Designs':
-                            const hasOpenFeedback = (d: Design) => d.comments && d.comments.some(c => c.status === 'Open');
-                            return (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {user?.role === 'Designer' && (
-                                        <Card 
-                                            onClick={() => setUploadDesignModalOpen(true)}
-                                            className="flex flex-col items-center justify-center border-2 border-dashed border-border-color cursor-pointer hover:bg-page-bg transition-colors"
-                                        >
-                                            <UploadCloudIcon className="w-12 h-12 text-text-secondary mb-2"/>
-                                            <p className="text-text-primary font-semibold">Upload New Design</p>
-                                            <p className="text-xs text-center">Upload new or revised designs</p>
-                                        </Card>
-                                    )}
-                                    {projectDesigns.map(d => (
-                                        <Card key={d.id} className="hover:shadow-lg transition-shadow">
-                                            {d.type === 'image' ? (
-                                                <img src={d.fileUrl} alt={`Design v${d.version}`} className="rounded-xl mb-4 aspect-video object-cover" />
-                                            ) : (
-                                                <div className="rounded-xl mb-4 aspect-video bg-page-bg flex items-center justify-center">
-                                                    <p className="text-text-primary">3D Model</p>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-bold text-text-primary">Version {d.version}</p>
-                                                    <p className="text-sm text-text-secondary">{d.notes}</p>
-                                                </div>
-                                                <div className="text-xs text-right">
-                                                    {d.approved 
-                                                        ? <span className="text-green-400 font-semibold">Approved</span>
-                                                        : !d.submittedForReview
-                                                        ? <span className="text-purple-400">Changes Requested</span>
-                                                        : <span className="text-yellow-400">Awaiting Review</span>
-                                                    }
-                                                </div>
-                                            </div>
-                                            {user?.role === 'Customer' && d.type === 'image' && d.submittedForReview && !isProjectReadOnly && (
-                                                <Button variant="secondary" onClick={() => handleOpenAnnotationModal(d)} className="w-full mt-4 py-2 text-sm flex items-center justify-center gap-2">
-                                                    <AnnotationIcon className="w-4 h-4" />
-                                                    Annotate & Comment ({d.comments?.length || 0})
-                                                </Button>
-                                            )}
-                                            {user?.role === 'Customer' && project.stage === 'design_phase' && d.submittedForReview && !d.approved && !isProjectReadOnly && (
-                                                <div className="mt-2 flex gap-2">
-                                                    <Button onClick={() => handleApproveDesign(d.id)} className="w-full py-2 text-sm">Approve</Button>
-                                                    <Button variant="secondary" className="w-full py-2 text-sm" onClick={() => handleOpenAnnotationModal(d)}>Request Changes</Button>
-                                                </div>
-                                            )}
-                                            {user?.role === 'Designer' && hasOpenFeedback(d) && !d.submittedForReview && !isProjectReadOnly && (
-                                                <Button onClick={() => handleSubmitForReapproval(d.id)} className="w-full mt-4 py-2 text-sm">Submit for Re-approval</Button>
-                                            )}
-                                        </Card>
-                                    ))}
-                                </div>
-                            );
-                        case 'Feedback':
-                            const allComments = projectDesigns.flatMap(d => d.comments?.map(c => ({...c, design: d})) || []);
-                            return (
-                                <Card>
-                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Client Feedback</h2>
-                                    <div className="space-y-4">
-                                        {allComments.map(comment => {
-                                            const author = findUserById(comment.authorId);
-                                            return (
-                                                <div key={comment.id} className="bg-page-bg p-4 rounded-xl flex gap-4">
-                                                    <img src={comment.design.fileUrl} alt="design" className="w-24 h-24 rounded-lg object-cover" />
-                                                    <div className="flex-1">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <UserNameDisplay user={author} textClassName="text-text-primary font-semibold" />
-                                                                <p className="text-xs text-text-secondary">on Design v{comment.design.version}</p>
-                                                            </div>
-                                                            <span className={`text-xs font-semibold ${comment.status === 'Open' ? 'text-yellow-400' : 'text-green-400'}`}>{comment.status}</span>
-                                                        </div>
-                                                        <p className="text-sm text-text-secondary mt-2">{comment.text}</p>
-                                                        {comment.status === 'Open' && !isProjectReadOnly && (
-                                                            <Button variant="secondary" onClick={() => handleCommentStatusChange(comment.id, comment.design.id, 'Resolved')} className="!px-3 !py-1 text-xs mt-2">Mark as Resolved</Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                        {allComments.length === 0 && <p className="text-text-secondary">No feedback yet.</p>}
-                                    </div>
-                                </Card>
-                            );
-                        case 'Quotes & Docs':
-                            return (
-                                <Card>
-                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Quotes & Documents</h2>
-                                    <div className="space-y-3">
-                                        {projectQuotes.map(q => (
-                                            <div key={q.id} className="bg-page-bg p-4 rounded-xl flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <FileTextIcon className="w-6 h-6 text-brand-blue" />
-                                                    <div>
-                                                        <p className="font-semibold text-text-primary capitalize">{q.version} Quote</p>
-                                                        <p className="text-xs text-text-secondary">Uploaded by {findUserById(q.uploadedBy)?.fullName} on {new Date(q.createdAt).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                                <a href={q.fileUrl} target="_blank" rel="noopener noreferrer">
-                                                    <Button variant="secondary" className="px-4 py-2 text-sm">Download</Button>
-                                                </a>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {user?.role === 'Designer' && project.stage === 'awaiting_updated_quote' && !isProjectReadOnly && (
-                                        <div className="mt-6">
-                                            <Button onClick={handleUploadUpdatedQuote}>+ Upload Updated Quote</Button>
-                                        </div>
-                                    )}
-                                </Card>
-                            );
-                        case 'Milestones':
-                            return (
-                                <Card>
-                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Project Milestones</h2>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="text-xs text-text-secondary uppercase bg-page-bg">
-                                                <tr>
-                                                    <th className="px-6 py-3">Title</th>
-                                                    <th className="px-6 py-3">Due Date</th>
-                                                    <th className="px-6 py-3">Amount</th>
-                                                    <th className="px-6 py-3">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {projectMilestones.map(milestone => (
-                                                    <tr key={milestone.id} className="border-b border-border-color">
-                                                        <td className="px-6 py-4 font-medium text-text-primary">{milestone.title}</td>
-                                                        <td className="px-6 py-4">{milestone.dueDate}</td>
-                                                        <td className="px-6 py-4">₹{milestone.amountDisplay.toLocaleString()}</td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                                milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
-                                                                milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                                                                'bg-yellow-500/20 text-yellow-400'
-                                                            }`}>{milestone.statusDisplay}</span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </Card>
-                            );
-                        case 'Final Gallery':
-                            return (
-                                <Card>
-                                    <h2 className="text-xl font-bold font-display text-text-primary mb-4">Final Project Gallery</h2>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {finalGalleryImages.filter(img => img.projectId === project.id).map(image => (
-                                            <div key={image.id}>
-                                                <img src={image.url} alt={image.caption} className="rounded-lg aspect-square object-cover" />
-                                                <p className="text-sm text-center mt-2 text-text-secondary">{image.caption}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            );
-                        default: return null;
-                    }
-                })()}
-            </div>
-        );
-    };
-
-    const renderHeaderActions = () => {
-        if (isProjectReadOnly) return null;
-        if (user?.role === 'Designer' && project.stage === 'material_selection') {
-            return <Button onClick={handleCompleteMaterialSelection}>Mark Material Selection Complete</Button>
-        }
-        if (user?.role === 'Designer' && project.stage === 'execution') {
-            return <Button onClick={handleMarkProjectDone}>Mark Project as Done</Button>
-        }
-        if (user?.role === 'Customer' && project.stage === 'awaiting_client_completion_approval') {
-            return <Button onClick={() => setFinalApprovalModalOpen(true)}>Provide Final Approval</Button>
-        }
-        if (user?.role === 'Admin' && project.stage === 'awaiting_admin_completion_approval') {
-            return <Button onClick={handleAdminFinalSignOff}>Final Project Sign-off</Button>
-        }
-        return null;
-    }
+    const tabs = TABS[user.role] || [];
 
     return (
-        <>
-            <Modal isOpen={isFinalApprovalModalOpen} onClose={() => setFinalApprovalModalOpen(false)} title="Final Project Approval">
-                <p className="text-text-secondary mb-6">Please review the project. By approving, you are confirming that the project has been completed to your satisfaction.</p>
-                <div className="flex justify-end gap-4">
-                    <Button variant="secondary" onClick={handleClientDiscussionRequest}>Discuss Further</Button>
-                    <Button onClick={handleClientFinalApproval}>Approve Completion</Button>
-                </div>
-            </Modal>
-            
-            {selectedDesignForAnnotation && (
-                <DesignAnnotationModal isOpen={isAnnotationModalOpen} onClose={() => setAnnotationModalOpen(false)} design={selectedDesignForAnnotation} currentUser={user} onSave={handleSaveComments} />
-            )}
-            
-            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={handleUploadDesign} />
-
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="Confirm Project Deletion">
-                <p className="text-text-secondary mb-4">You are about to permanently delete <strong className="text-text-primary">{project.title}</strong>. This action is irreversible.</p>
-                <div className="mt-4">
-                    <label className="block text-sm font-medium text-text-primary mb-1">To confirm, type the project name: <span className="font-mono">{project.title}</span></label>
-                    <input type="text" value={deleteConfirmationText} onChange={(e) => setDeleteConfirmationText(e.target.value)} className="w-full bg-page-bg/50 border border-border-color rounded-lg p-3 text-base text-text-primary focus:outline-none focus:ring-2 focus:ring-red-500" />
-                </div>
-                <div className="flex justify-end gap-4 mt-6">
-                    <Button variant="secondary" onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-                    <Button onClick={handleDeleteProject} disabled={deleteConfirmationText !== project.title} className="!bg-red-600 hover:!bg-red-700">Delete Forever</Button>
-                </div>
-            </Modal>
-
-            <div className="space-y-6">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 animate-in">
-                    <div>
-                        <h1 className="text-4xl font-bold font-display text-text-primary tracking-tight">{project.title}</h1>
-                        <div className="text-text-secondary flex items-center gap-1 mt-1">Customer: <UserNameDisplay user={customer} textClassName="text-text-secondary font-semibold" /></div>
+        <div className="space-y-8 pb-12">
+            {/* Elegant Header */}
+            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
+                <div>
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="px-2.5 py-0.5 bg-brand-gold/10 text-brand-gold text-[10px] font-black uppercase tracking-widest rounded-md border border-brand-gold/20">Official Account</span>
+                        <span className="text-slate-300 text-xs font-medium">Ref: {project.id.slice(0, 8).toUpperCase()}</span>
                     </div>
-                    {renderHeaderActions()}
-                </div>
-
-                <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
-
-                <Card className="animate-in" style={{ animationDelay: '100ms' }}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
-                        <div>
-                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Description</h3>
-                            <p className="text-slate-700 leading-relaxed">{project.description}</p>
-                        </div>
-                        <div>
-                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Site Location</h3>
-                            <p className="text-slate-700 leading-relaxed">{project.address}</p>
-                        </div>
-                        <div>
-                            <h3 className="font-black text-slate-400 mb-2 uppercase tracking-widest text-[10px]">Lead creative</h3>
-                            <UserNameDisplay user={designer} showAvatar={true} textClassName="text-slate-900 font-bold" />
+                    <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight leading-none uppercase">{project.title}</h1>
+                    <div className="mt-4 flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                            <UserCircleIcon className="w-4 h-4 text-slate-400" />
+                            <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Client:</span>
+                            <UserNameDisplay user={customer} textClassName="text-sm font-bold text-slate-900" />
                         </div>
                     </div>
+                </div>
+                <div className="flex gap-3">
+                    <Button variant="secondary" onClick={() => navigate('/chat/' + project.id)} className="!rounded-full !px-8 h-12 shadow-sm border-slate-200">
+                      <MessageSquareIcon className="w-4 h-4 mr-2" />
+                      Open Channel
+                    </Button>
+                </div>
+            </div>
+
+            {/* Tracker Hub */}
+            <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
+
+            {/* Detail Grid - High Clarity Metadata */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <Card className="luxury-glass border-slate-100 p-8">
+                    <div className="flex items-center gap-3 mb-4 text-slate-400">
+                        <BriefcaseIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Description</span>
+                    </div>
+                    <p className="text-sm text-slate-600 font-medium leading-relaxed line-clamp-3">{project.description}</p>
                 </Card>
 
-                <div className="border-b border-border-color animate-in" style={{ animationDelay: '200ms' }}>
-                    <nav className="-mb-px flex space-x-8 overflow-x-auto no-scrollbar">
-                        {tabs.map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`whitespace-nowrap py-4 px-1 border-b-2 font-black text-[11px] uppercase tracking-[2px] transition-all flex items-center gap-2
-                                    ${activeTab === tab 
-                                        ? 'border-brand-gold text-brand-gold' 
-                                        : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'}`}
-                            >
-                                {tab === 'Timeline' && <CalendarIcon className="w-4 h-4" />}
-                                {tab === 'Feedback' && <AnnotationIcon className="w-4 h-4" />}
-                                {tab === 'Live Updates' && <ZapIcon className="w-4 h-4" />}
-                                {tab}
-                            </button>
-                        ))}
-                    </nav>
-                </div>
-                
-                <div className="animate-in" style={{ animationDelay: '300ms' }}>{renderTabContent()}</div>
-                
-                {user.role === 'Admin' && (
-                    <Card className="border-red-100 bg-red-50/30 mt-12 animate-in" style={{ animationDelay: '400ms' }}>
-                        <h2 className="text-xs font-black text-red-600 uppercase tracking-[4px] mb-4">Security: Terminal Actions</h2>
-                        <div className="flex justify-between items-center">
-                            <p className="text-xs text-red-800 font-medium">Warning: Deletion is absolute and removes all cloud assets linked to this UID.</p>
-                            <Button onClick={() => setDeleteModalOpen(true)} className="!bg-red-600 hover:!bg-red-700 !py-2 !px-4 !text-[10px] !font-black uppercase tracking-widest">
-                                Delete Record
-                            </Button>
-                        </div>
-                    </Card>
-                )}
+                <Card className="luxury-glass border-slate-100 p-8">
+                    <div className="flex items-center gap-3 mb-4 text-slate-400">
+                        <MapPinIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Site Address</span>
+                    </div>
+                    <p className="text-sm text-slate-900 font-bold leading-relaxed">{project.address}</p>
+                </Card>
+
+                <Card className="luxury-glass border-slate-100 p-8">
+                    <div className="flex items-center gap-3 mb-4 text-slate-400">
+                        <UserCircleIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Design Lead</span>
+                    </div>
+                    <UserNameDisplay user={designer} showAvatar={true} textClassName="text-slate-900 font-black text-sm" imageSize="w-10 h-10" />
+                </Card>
+
+                <Card className="luxury-glass border-slate-100 p-8">
+                    <div className="flex items-center gap-3 mb-4 text-slate-400">
+                        <DollarSignIcon className="w-5 h-5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Budget Allocation</span>
+                    </div>
+                    <p className="text-2xl font-display font-black text-slate-900 tracking-tighter">₹{(project.budgetDisplay / 100000).toFixed(1)}L</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">{project.areaSqft} SQFT</p>
+                </Card>
             </div>
-        </>
+
+            {/* Content Tabs Navigation */}
+            <div className="space-y-8">
+                <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all duration-300 ${
+                                activeTab === tab 
+                                ? 'bg-white text-brand-blue shadow-card ring-1 ring-slate-200/50' 
+                                : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                        >
+                            {tab}
+                        </button>
+                    ))}
+                </nav>
+
+                <div className="min-h-[500px] animate-in">
+                    {activeTab === 'Live Updates' && (
+                        <div className="space-y-6">
+                            {unifiedUpdateFeed.length > 0 ? (
+                                <div className="space-y-4">
+                                    {unifiedUpdateFeed.map((update) => (
+                                        <div key={update.id} className="flex gap-6 group">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-12 h-12 rounded-2xl border-2 border-white shadow-sm overflow-hidden bg-slate-50 flex-shrink-0 ring-1 ring-slate-100">
+                                                    <img src={update.author?.avatarUrl} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div className="w-0.5 flex-1 bg-slate-100 group-last:bg-transparent my-2"></div>
+                                            </div>
+                                            <div className="flex-1 pb-8">
+                                                <div className="flex justify-between items-baseline mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-black text-slate-900 uppercase tracking-wider">{update.author?.fullName}</span>
+                                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                                            update.type === 'System' ? 'bg-purple-100 text-purple-600' : 'bg-brand-blue/10 text-brand-blue'
+                                                        }`}>{update.type}</span>
+                                                    </div>
+                                                    <span className="text-[10px] text-slate-300 font-bold uppercase">{new Date(update.timestamp).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-base text-slate-600 font-medium leading-relaxed">{update.content}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-24 text-slate-300 font-black uppercase tracking-[4px] text-xs">Awaiting first update...</div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'Designs' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {user.role === 'Designer' && (
+                                <button onClick={() => setUploadDesignModalOpen(true)} className="aspect-video rounded-[32px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 hover:bg-white hover:border-brand-blue hover:shadow-premium transition-all group">
+                                    <PhotoIcon className="w-10 h-10 text-slate-300 group-hover:text-brand-blue" />
+                                    <span className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 group-hover:text-brand-blue">Upload Asset</span>
+                                </button>
+                            )}
+                            {designs.filter(d => d.projectId === project.id).map(design => (
+                                <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[32px]">
+                                    <div className="aspect-video relative group">
+                                        <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <Button variant="secondary" className="!rounded-full">View Large</Button>
+                                        </div>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h3 className="font-black text-slate-900 uppercase tracking-wide">V{design.version} Render</h3>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest ${design.approved ? 'text-accent-success' : 'text-accent-warning'}`}>
+                                                {design.approved ? 'Approved' : 'In Review'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 font-medium line-clamp-2">{design.notes}</p>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {activeTab === 'Timeline' && <ProjectGanttChart milestones={milestones.filter(m => m.projectId === project.id)} startDate={project.startDate} />}
+                    
+                    {activeTab === 'Quotes & Docs' && (
+                        <div className="grid gap-4 max-w-3xl">
+                            {quotes.filter(q => q.projectId === project.id).map(quote => (
+                                <Card key={quote.id} className="flex items-center justify-between p-6 luxury-glass border-slate-100 rounded-[24px]">
+                                    <div className="flex items-center gap-5">
+                                        <div className="p-4 bg-brand-blue/5 rounded-2xl text-brand-blue">
+                                            <FileTextIcon className="w-7 h-7" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide">{quote.version} Quote</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Uploaded {new Date(quote.createdAt).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <a href={quote.fileUrl} target="_blank" className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[3px] px-8 py-4 rounded-2xl hover:bg-brand-dark transition-all shadow-button active:scale-95">Access PDF</a>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={() => {}} />
+        </div>
     );
 };
 

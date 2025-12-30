@@ -5,14 +5,15 @@ import { useAuth } from "../../context/AuthContext";
 import DashboardLayout from "../layout/DashboardLayout";
 import { UserProvider } from "../../context/UserContext";
 import { DataProvider } from "../../context/DataContext";
+import AppShell from "../ui/AppShell";
 
 const ProtectedRoute: React.FC = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  // 1. SILENT TRANSITION: Wait for the session to be verified
+  // 1. VISUAL TRANSITION: Instead of a blank screen, show the Luxury Skeleton
   if (loading) {
-    return null; 
+    return <AppShell />; 
   }
 
   // 2. AUTH GUARD: Redirect to login if no identity exists
@@ -23,7 +24,7 @@ const ProtectedRoute: React.FC = () => {
   // 3. IDENTITY-KEYED MOUNT: 
   // By using user.id as a KEY, React will destroy and recreate the Providers 
   // every time the user changes (e.g. at Login). This guarantees an 
-  // immediate, fresh data fetch from the database.
+  // immediate, fresh data fetch from the database for the specific user.
   return (
     <UserProvider key={`users-${user.id}`}>
       <DataProvider key={`data-${user.id}`}>

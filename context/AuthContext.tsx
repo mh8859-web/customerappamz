@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -102,6 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             const shell = createShellUser(session.user);
             setUser(shell);
             fetchProfile(session.user.id);
+            setLoading(false); // CRITICAL FIX: Ensure loading is cleared on sign-in
           }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
@@ -122,7 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
-      setLoading(true);
+      setLoading(true); // Set loading to block UI during auth attempt
       const trimmedUserId = userId.trim().toLowerCase();
       const { data: profile, error: profileError } = await supabase
         .from("users")
@@ -144,6 +146,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setLoading(false);
           return { success: false, error: "INVALID_CREDENTIALS" };
       }
+      
+      // We DON'T set loading(false) here because the onAuthStateChange listener 
+      // will handle it once the session is confirmed.
       return { success: true, error: null };
     } catch (e) {
       setLoading(false);
@@ -198,6 +203,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context)
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error("useAuth must be used within AuthProvider");
   return context;
 };
