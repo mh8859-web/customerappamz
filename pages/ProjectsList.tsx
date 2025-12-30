@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +75,44 @@ const ProjectsList: React.FC = () => {
   
   if (!user) return null;
 
+  const handleCreateProject = async (projectData: any, quoteFile: File) => {
+    // 1. Create Project Entry first to get ID
+    const { data: newProject, error: projectError } = await createRecord('projects', {
+        title: projectData.title,
+        description: projectData.description,
+        customer_id: projectData.customerId,
+        designer_id: projectData.designerId,
+        admin_id: projectData.adminId,
+        address: projectData.address,
+        budget_display: projectData.budgetDisplay,
+        area_sqft: projectData.areaSqft,
+        start_date: projectData.startDate,
+        status: 'Active',
+        stage: 'design_phase',
+        progress: 0,
+        revenue_display: 0
+    });
+
+    if (projectError) throw projectError;
+
+    // 2. Upload the Quote PDF using the new Project ID
+    const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
+    if (!quoteUrl) throw new Error("Document upload failed. Please try again.");
+
+    // 3. Create Quote Record
+    const { error: quoteError } = await createRecord('quotes', {
+        project_id: newProject.id,
+        version: 'Initial',
+        file_url: quoteUrl,
+        uploaded_by: user.id
+    });
+
+    if (quoteError) throw quoteError;
+
+    // 4. Global refresh
+    await refetchData();
+  };
+
   const projectsForUser = projects.filter(p => 
       user.role === 'Admin' || user.role === 'Sub-Admin' || p.designerId === user.id || p.customerId === user.id
   );
@@ -92,7 +131,7 @@ const ProjectsList: React.FC = () => {
             <h1 className="text-5xl font-display font-light text-brand-dark tracking-tight leading-tight">Master <span className="font-bold block lg:inline">Portfolio</span></h1>
             <p className="text-text-secondary mt-2 text-lg italic font-light">Overseeing architectural excellence across the AMAZ ecosystem.</p>
         </div>
-        {user.role === 'Admin' && (
+        {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
             <div className="flex flex-wrap gap-4">
                 <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="flex items-center gap-3">
                     <RefreshIcon className="w-5 h-5 text-brand-gold" /> Sync Assets
@@ -125,7 +164,7 @@ const ProjectsList: React.FC = () => {
           </Card>
       )}
 
-      <CreateProjectModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onCreate={async () => {}} />
+      <CreateProjectModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onCreate={handleCreateProject} />
       <SyncQuotesModal isOpen={isSyncModalOpen} onClose={() => setSyncModalOpen(false)} onSyncComplete={refetchData} />
     </div>
   );

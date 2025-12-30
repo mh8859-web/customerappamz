@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
@@ -59,18 +60,27 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminUser || !quoteFile) {
+    if (!adminUser) return;
+    if (!quoteFile) {
         alert("Please select an initial quote PDF to upload.");
         return;
     };
     
     setIsSubmitting(true);
-    await onCreate({
-        ...formData,
-        budgetDisplay: parseInt(formData.budgetDisplay, 10),
-        areaSqft: parseInt(formData.areaSqft, 10),
-        adminId: adminUser.id,
-    }, quoteFile);
+    try {
+        await onCreate({
+            ...formData,
+            budgetDisplay: parseInt(formData.budgetDisplay, 10) || 0,
+            areaSqft: parseInt(formData.areaSqft, 10) || 0,
+            adminId: adminUser.id,
+        }, quoteFile);
+        onClose();
+    } catch (err: any) {
+        console.error(err);
+        alert(`Failed to create project: ${err.message || 'Unknown error'}`);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const formInputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-[14px] text-slate-800 focus:outline-none focus:ring-4 focus:ring-brand-blue/5 focus:border-brand-blue/40 focus:bg-white placeholder:text-slate-400 transition-all duration-300";
