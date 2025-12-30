@@ -27,37 +27,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const fetchAndMapProfile = async (
-  supabaseUser: SupabaseUser
-): Promise<User | null> => {
-  try {
-    // Standard profile lookup
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", supabaseUser.id)
-      .single();
-    
-    if (error || !data) {
-        console.warn("AuthContext: Profile record not found in public.users yet.");
-        return null;
-    }
-
-    return {
-      id: data.id,
-      fullName: data.full_name || "User",
-      email: data.email,
-      role: data.role,
-      avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
-      verified: !!data.verified,
-      verificationRequested: !!data.verification_requested,
-      userId: data.user_id || '',
-    };
-  } catch (err) {
-    console.error("Profile retrieval failed:", err);
-    return null;
-  }
-};
+// Helper to safely map database row to User object
+const mapProfileData = (data: any): User => ({
+  id: data.id,
+  fullName: data.full_name || "User",
+  email: data.email,
+  role: data.role || "Customer", // Default role only for initialization
+  avatarUrl: data.avatar_url || 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp',
+  verified: !!data.verified,
+  verificationRequested: !!data.verification_requested,
+  userId: data.user_id || '',
+});
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -66,64 +46,60 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(true);
   const [impersonatedUser, setImpersonatedUser] = useState<User | null>(null);
 
-  const syncAuth = useCallback(async (session: any, mounted: boolean) => {
-    if (!session?.user) {
-      if (mounted) {
-        setUser(null);
-        setLoading(false);
+  const fetchProfile = useCallback(async (supabaseUserId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", supabaseUserId)
+        .single();
+      
+      if (data && !error) {
+        setUser(mapProfileData(data));
       }
-      return;
-    }
-
-    const profile = await fetchAndMapProfile(session.user);
-    
-    if (mounted) {
-      if (profile) {
-        setUser(profile);
-      } else {
-        // CRITICAL FIX: If profile fetch fails but session exists, 
-        // DO NOT overwrite with a "Customer" skeleton. 
-        // Check if we already have a user in state. If so, don't change it.
-        // This prevents the "Role Flip" bug during navigation.
-        setUser((currentUser) => {
-            if (currentUser && currentUser.id === session.user.id) {
-                return currentUser; // Keep existing validated role
-            }
-            return null; // Only clear if it's a completely new or broken session
-        });
-      }
-      setLoading(false);
+    } catch (err) {
+      console.error("AuthContext: Profile fetch failed", err);
     }
   }, []);
 
   useEffect(() => {
     let mounted = true;
 
-    const init = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        await syncAuth(session, mounted);
-      } catch (e) {
-        console.error("Auth Initialization Error:", e);
-        if (mounted) {
-          setUser(null);
-          setLoading(false);
+    const initAuth = async () => {
+      // 1. Get current session immediately
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Try to load cached profile if possible to avoid flicker
+        const cachedUser = localStorage.getItem(`user_profile_${session.user.id}`);
+        if (cachedUser && mounted) {
+           setUser(JSON.parse(cachedUser));
         }
+        
+        // Always fetch fresh data in background
+        await fetchProfile(session.user.id);
       }
+      
+      if (mounted) setLoading(false);
     };
 
-    init();
+    initAuth();
 
+    // 2. Listen for auth changes (Login/Logout)
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-            setUser(null);
-            setLoading(false);
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            await syncAuth(session, mounted);
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session?.user) {
+            await fetchProfile(session.user.id);
+          }
+        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setUser(null);
+          localStorage.removeItem('sb-lkpgsdtriqqotovaxytx-auth-token'); // Clear Supabase cache manually if needed
         }
+        
+        setLoading(false);
       }
     );
 
@@ -131,7 +107,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       mounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, [syncAuth]);
+  }, [fetchProfile]);
+
+  // Persist user to localStorage for instant boot on next refresh
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem(`user_profile_${user.id}`, JSON.stringify(user));
+    }
+  }, [user]);
 
 
   const login = useCallback(async (
@@ -139,7 +122,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     password: string
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
+      setLoading(true);
       const trimmedUserId = userId.trim().toLowerCase();
+      
+      // Look up email by custom User ID
       const { data: profile, error: profileError } = await supabase
         .from("users")
         .select("email")
@@ -147,6 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         .single();
 
       if (profileError || !profile?.email) {
+        setLoading(false);
         return { success: false, error: "INVALID_CREDENTIALS" };
       }
 
@@ -155,9 +142,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         password: password.trim(),
       });
       
-      if (signInError) return { success: false, error: "INVALID_CREDENTIALS" };
+      if (signInError) {
+          setLoading(false);
+          return { success: false, error: "INVALID_CREDENTIALS" };
+      }
+      
+      // user state will be updated by onAuthStateChange
       return { success: true, error: null };
     } catch (e) {
+      setLoading(false);
       return { success: false, error: "UNKNOWN_ERROR" };
     }
   }, []);
@@ -165,14 +158,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const logout = useCallback(async () => {
     setLoading(true);
     try {
+        if (user) localStorage.removeItem(`user_profile_${user.id}`);
         setUser(null);
         setImpersonatedUser(null);
         await supabase.auth.signOut();
     } finally {
         setLoading(false);
-        window.location.href = '/#/login';
+        window.location.hash = '#/login';
     }
-  }, []);
+  }, [user]);
   
   const startImpersonation = useCallback((targetUser: User) => {
     if (user && (user.role === 'Admin' || user.role === 'Sub-Admin')) {
