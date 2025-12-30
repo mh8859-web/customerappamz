@@ -5,8 +5,8 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon } from '../components/icons';
-import { Project, Design, User, UserRole, UnifiedUpdate } from '../types';
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon } from '../components/icons';
+import { Project, Design, User, UserRole, UnifiedUpdate, Milestone } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
@@ -14,6 +14,9 @@ import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
 import UploadDesignModal from '../components/design/UploadDesignModal';
+import AddMilestoneModal from '../components/admin/AddMilestoneModal';
+import PaymentModal from '../components/customer/PaymentReminderModal';
+import { createRecord, updateRecord } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Timeline', 'Quotes & Docs', 'Milestones'],
@@ -31,15 +34,45 @@ const ProjectDetails: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, loading: dataLoading } = useData();
+    const { projects, designs, quotes, milestones, projectUpdates, workLogs, activityLogs, refetchData, loading: dataLoading } = useData();
     
     const [activeTab, setActiveTab] = useState('Live Updates');
     const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
-    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+    const [isAddMilestoneModalOpen, setAddMilestoneModalOpen] = useState(false);
+    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
+    const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
+    
+    const financialStats = useMemo(() => {
+        const total = projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0);
+        const settled = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
+        const outstanding = total - settled;
+        const progress = total > 0 ? (settled / total) * 100 : 0;
+        return { total, settled, outstanding, progress };
+    }, [projectMilestones]);
+
     const isLoading = dataLoading || usersLoading;
+
+    const handleAddMilestone = async (data: any) => {
+        if (!projectId) return;
+        const { error } = await createRecord('milestones', {
+            project_id: projectId,
+            title: data.title,
+            amount_display: data.amountDisplay,
+            due_date: data.dueDate,
+            status_display: 'Pending'
+        });
+        if (!error) await refetchData();
+    };
+
+    const handleUpdateMilestoneStatus = async (mId: string, status: string) => {
+        const updates: any = { status_display: status };
+        if (status === 'Paid') updates.paid_date_display = new Date().toISOString();
+        const { error } = await updateRecord('milestones', mId, updates);
+        if (!error) await refetchData();
+    };
 
     const unifiedUpdateFeed = useMemo(() => {
         if (!projectId) return [];
@@ -58,7 +91,7 @@ const ProjectDetails: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-12">
-            {/* Elegant Header */}
+            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
@@ -85,50 +118,14 @@ const ProjectDetails: React.FC = () => {
             {/* Tracker Hub */}
             <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
 
-            {/* Detail Grid - High Clarity Metadata */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <Card className="luxury-glass border-slate-100 p-8">
-                    <div className="flex items-center gap-3 mb-4 text-slate-400">
-                        <BriefcaseIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Description</span>
-                    </div>
-                    <p className="text-sm text-slate-600 font-medium leading-relaxed line-clamp-3">{project.description}</p>
-                </Card>
-
-                <Card className="luxury-glass border-slate-100 p-8">
-                    <div className="flex items-center gap-3 mb-4 text-slate-400">
-                        <MapPinIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Site Address</span>
-                    </div>
-                    <p className="text-sm text-slate-900 font-bold leading-relaxed">{project.address}</p>
-                </Card>
-
-                <Card className="luxury-glass border-slate-100 p-8">
-                    <div className="flex items-center gap-3 mb-4 text-slate-400">
-                        <UserCircleIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Design Lead</span>
-                    </div>
-                    <UserNameDisplay user={designer} showAvatar={true} textClassName="text-slate-900 font-black text-sm" imageSize="w-10 h-10" />
-                </Card>
-
-                <Card className="luxury-glass border-slate-100 p-8">
-                    <div className="flex items-center gap-3 mb-4 text-slate-400">
-                        <DollarSignIcon className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Budget Allocation</span>
-                    </div>
-                    <p className="text-2xl font-display font-black text-slate-900 tracking-tighter">₹{(project.budgetDisplay / 100000).toFixed(1)}L</p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">{project.areaSqft} SQFT</p>
-                </Card>
-            </div>
-
-            {/* Content Tabs Navigation */}
+            {/* Content Tabs */}
             <div className="space-y-8">
-                <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit">
+                <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit overflow-x-auto max-w-full no-scrollbar">
                     {tabs.map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all duration-300 ${
+                            className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] whitespace-nowrap transition-all duration-300 ${
                                 activeTab === tab 
                                 ? 'bg-white text-brand-blue shadow-card ring-1 ring-slate-200/50' 
                                 : 'text-slate-400 hover:text-slate-600'
@@ -141,14 +138,38 @@ const ProjectDetails: React.FC = () => {
 
                 <div className="min-h-[500px] animate-in">
                     {activeTab === 'Live Updates' && (
-                        <div className="space-y-6">
+                        <div className="space-y-12">
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <Card className="luxury-glass border-slate-100">
+                                    <div className="flex items-center gap-3 mb-2 text-slate-400">
+                                        <MapPinIcon className="w-4 h-4" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Site Location</span>
+                                    </div>
+                                    <p className="text-sm text-slate-900 font-bold">{project.address}</p>
+                                </Card>
+                                <Card className="luxury-glass border-slate-100">
+                                    <div className="flex items-center gap-3 mb-2 text-slate-400">
+                                        <UserCircleIcon className="w-4 h-4" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Creative Lead</span>
+                                    </div>
+                                    <UserNameDisplay user={designer} showAvatar={true} textClassName="text-slate-900 font-black text-sm" imageSize="w-8 h-8" />
+                                </Card>
+                                <Card className="luxury-glass border-slate-100">
+                                    <div className="flex items-center gap-3 mb-2 text-slate-400">
+                                        <DollarSignIcon className="w-4 h-4" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Allocation</span>
+                                    </div>
+                                    <p className="text-xl font-display font-black text-slate-900 tracking-tighter">₹{(project.budgetDisplay / 100000).toFixed(1)}L</p>
+                                </Card>
+                             </div>
+
                             {unifiedUpdateFeed.length > 0 ? (
                                 <div className="space-y-4">
                                     {unifiedUpdateFeed.map((update) => (
                                         <div key={update.id} className="flex gap-6 group">
                                             <div className="flex flex-col items-center">
                                                 <div className="w-12 h-12 rounded-2xl border-2 border-white shadow-sm overflow-hidden bg-slate-50 flex-shrink-0 ring-1 ring-slate-100">
-                                                    <img src={update.author?.avatarUrl} className="w-full h-full object-cover" />
+                                                    <img src={update.author?.avatarUrl} className="w-full h-full object-cover" alt="" />
                                                 </div>
                                                 <div className="w-0.5 flex-1 bg-slate-100 group-last:bg-transparent my-2"></div>
                                             </div>
@@ -184,7 +205,7 @@ const ProjectDetails: React.FC = () => {
                             {designs.filter(d => d.projectId === project.id).map(design => (
                                 <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[32px]">
                                     <div className="aspect-video relative group">
-                                        <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                                        <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
                                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <Button variant="secondary" className="!rounded-full">View Large</Button>
                                         </div>
@@ -202,8 +223,130 @@ const ProjectDetails: React.FC = () => {
                             ))}
                         </div>
                     )}
+
+                    {activeTab === 'Milestones' && (
+                        <div className="space-y-10">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <Card className="bg-slate-900 text-white md:col-span-2 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                                    <div className="relative z-10 space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black uppercase tracking-[3px] text-white/40">Financial Settlement</span>
+                                            <span className="text-brand-gold font-bold text-xs">{financialStats.progress.toFixed(0)}%</span>
+                                        </div>
+                                        <div className="w-full bg-white/5 rounded-full h-2 overflow-hidden ring-1 ring-white/10">
+                                            <div className="bg-brand-gold h-full rounded-full transition-all duration-1000 shadow-gold-glow" style={{ width: `${financialStats.progress}%` }}></div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Contract Total</p>
+                                                <p className="text-2xl font-display font-black tracking-tight text-white">₹{(financialStats.total / 100000).toFixed(2)}L</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-white/30 uppercase tracking-widest mb-1">Settled Capital</p>
+                                                <p className="text-2xl font-display font-black text-brand-gold tracking-tight text-brand-gold">₹{(financialStats.settled / 100000).toFixed(2)}L</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+
+                                <Card className="luxury-glass flex flex-col justify-center text-center">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pending Balance</p>
+                                    <p className="text-3xl font-display font-black text-slate-900 tracking-tighter">₹{(financialStats.outstanding / 1000).toFixed(0)}K</p>
+                                </Card>
+
+                                {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
+                                    <button 
+                                        onClick={() => setAddMilestoneModalOpen(true)}
+                                        className="h-full border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-brand-gold transition-all group"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand-gold/10 group-hover:text-brand-gold text-slate-400 transition-colors">
+                                            <DollarSignIcon className="w-5 h-5" />
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-gold">Add Milestone</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="space-y-4">
+                                {projectMilestones.map((m, idx) => (
+                                    <div key={m.id} className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-white border border-slate-100 rounded-[32px] hover:shadow-premium transition-all group">
+                                        <div className="flex items-center gap-6">
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs ${
+                                                m.statusDisplay === 'Paid' ? 'bg-accent-success/10 text-accent-success' : 
+                                                m.statusDisplay === 'Completed' ? 'bg-brand-blue/10 text-brand-blue' : 
+                                                'bg-slate-50 text-slate-300'
+                                            }`}>
+                                                {m.statusDisplay === 'Paid' ? <CheckCircleIcon className="w-6 h-6" /> : (idx + 1).toString().padStart(2, '0')}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-900 uppercase tracking-wide">{m.title}</h3>
+                                                <div className="flex items-center gap-3 mt-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                                                        <CalendarIcon className="w-3 h-3" /> Due {new Date(m.dueDate).toLocaleDateString()}
+                                                    </span>
+                                                    {m.paidDateDisplay && (
+                                                        <span className="text-[10px] font-black text-accent-success uppercase tracking-widest flex items-center gap-1">
+                                                            <CheckCircleIcon className="w-3 h-3" /> Settled {new Date(m.paidDateDisplay).toLocaleDateString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-6 md:mt-0 flex flex-col md:flex-row items-start md:items-center gap-6">
+                                            <div className="text-left md:text-right">
+                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[2px]">Allocation</p>
+                                                <p className="text-xl font-display font-black text-slate-900 tracking-tight">₹{m.amountDisplay.toLocaleString()}</p>
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                {user.role === 'Customer' && m.statusDisplay === 'Completed' && (
+                                                    <Button 
+                                                        onClick={() => { setSelectedMilestone(m); setPaymentModalOpen(true); }}
+                                                        className="!rounded-full !px-8 !py-3 !bg-slate-900 !text-[10px] !font-black uppercase tracking-widest shadow-button"
+                                                    >
+                                                        Proceed to Settlement
+                                                    </Button>
+                                                )}
+
+                                                {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
+                                                    <div className="flex gap-2">
+                                                        {m.statusDisplay === 'Pending' && (
+                                                            <button 
+                                                                onClick={() => handleUpdateMilestoneStatus(m.id, 'Completed')}
+                                                                className="px-4 py-2 bg-slate-100 hover:bg-brand-blue/10 hover:text-brand-blue text-slate-400 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+                                                            >
+                                                                Mark Completed
+                                                            </button>
+                                                        )}
+                                                        {m.statusDisplay === 'Completed' && (
+                                                            <button 
+                                                                onClick={() => handleUpdateMilestoneStatus(m.id, 'Paid')}
+                                                                className="px-4 py-2 bg-brand-gold/10 text-brand-gold text-[9px] font-black uppercase tracking-widest rounded-xl transition-all"
+                                                            >
+                                                                Confirm Payment
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <span className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${
+                                                    m.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' : 
+                                                    m.statusDisplay === 'Completed' ? 'bg-brand-blue/5 text-brand-blue border-brand-blue/20 animate-pulse' : 
+                                                    'bg-slate-50 text-slate-400 border-slate-200/50'
+                                                }`}>
+                                                    {m.statusDisplay === 'Paid' ? 'Settled' : m.statusDisplay === 'Completed' ? 'Invoiced' : 'Pending'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     
-                    {activeTab === 'Timeline' && <ProjectGanttChart milestones={milestones.filter(m => m.projectId === project.id)} startDate={project.startDate} />}
+                    {activeTab === 'Timeline' && <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />}
                     
                     {activeTab === 'Quotes & Docs' && (
                         <div className="grid gap-4 max-w-3xl">
@@ -227,6 +370,13 @@ const ProjectDetails: React.FC = () => {
             </div>
 
             <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={() => {}} />
+            <AddMilestoneModal isOpen={isAddMilestoneModalOpen} onClose={() => setAddMilestoneModalOpen(false)} onAdd={handleAddMilestone} />
+            <PaymentModal 
+                isOpen={isPaymentModalOpen} 
+                onClose={() => setPaymentModalOpen(false)} 
+                milestone={selectedMilestone} 
+                onPaymentSuccess={(id) => handleUpdateMilestoneStatus(id, 'Paid')} 
+            />
         </div>
     );
 };
