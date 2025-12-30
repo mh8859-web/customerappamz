@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts' | 'Project Head' | 'Production Head' | 'Site Head';
 
 export interface User {
@@ -11,6 +10,14 @@ export interface User {
   verified: boolean;
   verificationRequested: boolean;
   userId: string;
+}
+
+export interface CurrentWork {
+  id: string;
+  designerId: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: string;
 }
 
 export type ProjectStage =

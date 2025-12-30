@@ -9,7 +9,7 @@ interface SignUpMetadata {
 
 // Fetch all users from the public 'users' table
 export const getUsers = async (): Promise<User[]> => {
-    const { data, error } = await supabase.from('users').select('*');
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
 
     if (error) {
         console.error('Error fetching users:', error);
@@ -60,6 +60,16 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
         .from(tableName)
         .update(updates)
         .eq('id', recordId)
+        .select()
+        .single();
+    return { data, error };
+};
+
+// Robust function to handle both insert and update (useful for profile syncing)
+export const upsertRecord = async (tableName: string, recordData: Record<string, any>) => {
+    const { data, error } = await supabase
+        .from(tableName)
+        .upsert(recordData)
         .select()
         .single();
     return { data, error };

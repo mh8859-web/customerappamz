@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import { User, UserRole } from '../../types';
 import CreateUserModal from '../../components/admin/CreateUserModal';
 import EditUserModal from '../../components/admin/EditUserModal';
-import { signUpNewUser, updateRecord, deleteUser } from '../../services/api';
+import { signUpNewUser, upsertRecord, deleteUser } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
@@ -38,10 +38,22 @@ const UserManagement: React.FC = () => {
             return;
         }
 
-        // Step 2: Ensure the profile is verified if requested
-        // The DB trigger usually handles profile creation, so we just update the specific verification flag
-        if (newUser && u.verified) {
-             await updateRecord('users', newUser.id, { verified: true });
+        // Step 2: Manually Ensure Public Profile
+        // We use upsertRecord to ensure that even if a trigger is slow, the profile is registered NOW.
+        if (newUser) {
+             const { error: profileError } = await upsertRecord('users', {
+                 id: newUser.id,
+                 email: u.email.toLowerCase(),
+                 full_name: u.fullName,
+                 role: u.role,
+                 user_id: u.userId.toLowerCase(),
+                 verified: !!u.verified
+             });
+             
+             if (profileError) {
+                 console.error("Profile Manual Sync Failed:", profileError);
+                 alert(`Warning: Account created, but profile sync failed: ${profileError.message}. The user might not appear in the list immediately.`);
+             }
         }
 
         // Step 3: Refresh the list and close
@@ -49,8 +61,8 @@ const UserManagement: React.FC = () => {
         setCreateUserModalOpen(false);
         alert(`Success: Identity for ${u.fullName} has been provisioned.`);
 
-    } catch (err) {
-        alert('An unexpected system error occurred during provisioning.');
+    } catch (err: any) {
+        alert(`An unexpected system error occurred: ${err.message || 'Unknown error'}`);
         console.error(err);
     }
   };
@@ -66,7 +78,7 @@ const UserManagement: React.FC = () => {
     if (updates.role !== undefined) updatesForDb.role = updates.role;
     if (updates.verified !== undefined) updatesForDb.verified = updates.verified;
 
-    const { error } = await updateRecord('users', userId, updatesForDb);
+    const { error } = await upsertRecord('users', { id: userId, ...updatesForDb });
     if (error) alert(`Update Failed: ${error.message}`);
     else await refetchUsers();
   };
@@ -117,30 +129,40 @@ const UserManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-3">
-                        <UserNameDisplay user={user} showAvatar={true} textClassName="font-bold text-slate-800 text-sm" imageSize="w-8 h-8"/>
-                    </td>
-                    <td className="px-6 py-3 font-mono text-[11px] text-slate-400">{user.userId}</td>
-                    <td className="px-6 py-3">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
-                        user.role === 'Admin' ? 'bg-brand-blue/10 text-brand-blue' :
-                        user.role === 'Designer' ? 'bg-orange-100 text-orange-600' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{user.role}</span>
-                    </td>
-                    <td className="px-6 py-3 text-right">
-                      <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleImpersonate(user)} className="p-2 text-slate-400 hover:text-brand-blue rounded-lg transition-colors" title="Impersonate">
-                            <EyeIcon className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleOpenEditModal(user)} className="px-3 py-2 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Edit</button>
-                          <button onClick={() => handleDeleteUser(user)} className="px-3 py-2 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {loading ? (
+                    <tr>
+                        <td colSpan={4} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Syncing Directory...</td>
+                    </tr>
+                ) : filteredUsers.length === 0 ? (
+                    <tr>
+                        <td colSpan={4} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest">No Identities Found</td>
+                    </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-3">
+                          <UserNameDisplay user={user} showAvatar={true} textClassName="font-bold text-slate-800 text-sm" imageSize="w-8 h-8"/>
+                      </td>
+                      <td className="px-6 py-3 font-mono text-[11px] text-slate-400">{user.userId}</td>
+                      <td className="px-6 py-3">
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                          user.role === 'Admin' ? 'bg-brand-blue/10 text-brand-blue' :
+                          user.role === 'Designer' ? 'bg-orange-100 text-orange-600' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>{user.role}</span>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleImpersonate(user)} className="p-2 text-slate-400 hover:text-brand-blue rounded-lg transition-colors" title="Impersonate">
+                              <EyeIcon className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleOpenEditModal(user)} className="px-3 py-2 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Edit</button>
+                            <button onClick={() => handleDeleteUser(user)} className="px-3 py-2 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

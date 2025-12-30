@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
     SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate,
-    Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, FinalGalleryImage
+    Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, FinalGalleryImage,
+    CurrentWork
 } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -28,9 +30,9 @@ interface DataContextType {
     announcements: Announcement[];
     posts: Post[];
     feedComments: FeedComment[];
+    currentWorks: CurrentWork[];
     refetchData: () => Promise<void>;
     loading: boolean;
-    // For notifications
     unreadCounts: Record<string, number>;
     markChatAsRead: (projectId: string) => void;
 }
@@ -47,7 +49,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
-    // ... (all other state declarations)
     const [projects, setProjects] = useState<Project[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [designs, setDesigns] = useState<Design[]>([]);
@@ -68,6 +69,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [posts, setPosts] = useState<Post[]>([]);
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
+    const [currentWorks, setCurrentWorks] = useState<CurrentWork[]>([]);
 
     const conversations = useMemo(() => {
         if (!user || !projects) return [];
@@ -90,24 +92,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUnreadCounts({});
             return;
         }
-
         const counts: Record<string, number> = {};
         conversations.forEach(project => {
             const lastViewed = sessionStorage.getItem(`lastViewed_${project.id}`);
             const lastViewedTimestamp = lastViewed ? new Date(lastViewed).getTime() : 0;
-            
             const unread = messages.filter(m => 
                 m.chatId === project.id && 
                 m.senderId !== user.id &&
                 new Date(m.createdAt).getTime() > lastViewedTimestamp
             ).length;
-            
-            if (unread > 0) {
-                counts[project.id] = unread;
-            }
+            if (unread > 0) counts[project.id] = unread;
         });
         setUnreadCounts(counts);
-
     }, [messages, user, conversations]);
 
     useEffect(() => {
@@ -129,27 +125,19 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return;
         }
         setLoading(true);
-
         try {
             const tables = [
                 'projects', 'tasks', 'designs', 'messages', 'milestones', 'quotes', 'activity_logs', 
                 'site_visits', 'support_tickets', 'attendance_logs', 'leave_requests', 'work_logs', 
                 'project_updates', 'final_gallery_images', 'expenses', 'products', 'project_templates', 
-                'announcements', 'posts', 'feed_comments'
+                'announcements', 'posts', 'feed_comments', 'designer_hourly_updates'
             ];
-            
             const promises = tables.map(table => supabase.from(table).select('*'));
             const results = await Promise.all(promises);
-
             const dataMap: { [key: string]: any[] } = {};
             results.forEach((result, index) => {
                 const tableName = tables[index];
-                if (result.error) {
-                    console.warn(`Could not fetch from table "${tableName}":`, result.error.message);
-                    dataMap[tableName] = [];
-                } else {
-                    dataMap[tableName] = result.data || [];
-                }
+                dataMap[tableName] = result.data || [];
             });
             
             setProjects(mapToCamelCase(dataMap.projects, p => ({ ...p, customerId: p.customer_id, designerId: p.designer_id, adminId: p.admin_id, budgetDisplay: p.budget_display, areaSqft: p.area_sqft, startDate: p.start_date, createdAt: p.created_at, updatedAt: p.updated_at, revenueDisplay: p.revenue_display })));
@@ -170,6 +158,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setProducts(mapToCamelCase(dataMap.products, p => ({ ...p, projectId: p.project_id, imageUrl: p.image_url })));
             setProjectTemplates(mapToCamelCase(dataMap.project_templates, pt => ({ ...pt })));
             setAnnouncements(mapToCamelCase(dataMap.announcements, a => ({ ...a, authorId: a.author_id, createdAt: a.created_at })));
+            setCurrentWorks(mapToCamelCase(dataMap.designer_hourly_updates, cw => ({ id: cw.id, designerId: cw.designer_id, content: cw.content, imageUrl: cw.image_url, createdAt: cw.created_at })));
             setPosts(mapToCamelCase(dataMap.posts, p => ({
                 ...p,
                 authorId: p.author_id,
@@ -187,7 +176,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 content: p.content || '',
             })));
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
-
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -196,88 +184,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, [user]);
 
     useEffect(() => {
-        if (!authLoading) {
-            fetchData();
-        }
+        if (!authLoading) fetchData();
     }, [authLoading, fetchData]);
-
-    // --- REAL-TIME UPDATES IMPLEMENTATION ---
-    useEffect(() => {
-        if (!user) return;
-
-        // Create a single channel for all relevant table subscriptions
-        const channel = supabase.channel('realtime_data_changes');
-
-        // 1. MESSAGES: Listen for new chats
-        channel.on(
-            'postgres_changes',
-            { event: 'INSERT', schema: 'public', table: 'messages' },
-            (payload) => {
-                const newMessage = payload.new as any;
-                const mappedMessage: Message = {
-                    id: newMessage.id,
-                    chatId: newMessage.chat_id,
-                    senderId: newMessage.sender_id,
-                    body: newMessage.body,
-                    attachments: newMessage.attachments,
-                    createdAt: newMessage.created_at,
-                };
-                setMessages((prev) => [...prev, mappedMessage]);
-            }
-        );
-
-        // 2. PROJECTS: Listen for new projects (e.g. from Quote App)
-        channel.on(
-            'postgres_changes',
-            { event: 'INSERT', schema: 'public', table: 'projects' },
-            (payload) => {
-                const newProject = payload.new as any;
-                const mappedProject: Project = {
-                    id: newProject.id,
-                    title: newProject.title,
-                    description: newProject.description,
-                    customerId: newProject.customer_id,
-                    designerId: newProject.designer_id,
-                    adminId: newProject.admin_id,
-                    address: newProject.address,
-                    budgetDisplay: newProject.budget_display,
-                    areaSqft: newProject.area_sqft,
-                    startDate: newProject.start_date,
-                    createdAt: newProject.created_at,
-                    updatedAt: newProject.updated_at,
-                    revenueDisplay: newProject.revenue_display,
-                    progress: newProject.progress,
-                    status: newProject.status,
-                    stage: newProject.stage,
-                };
-                setProjects((prev) => [mappedProject, ...prev]);
-            }
-        );
-
-        channel.subscribe();
-        
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [user]); 
 
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,
         supportTickets, attendanceLogs, leaveRequests, workLogs, projectUpdates,
         finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments,
+        currentWorks,
         refetchData: fetchData,
         loading,
         unreadCounts,
         markChatAsRead,
     };
-
     return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
 export const useData = (): DataContextType => {
     const context = useContext(DataContext);
-    if (context === undefined) {
-        throw new Error('useData must be used within a DataProvider');
-    }
+    if (context === undefined) throw new Error('useData must be used within a DataProvider');
     return context;
 };

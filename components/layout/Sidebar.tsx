@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -7,7 +8,7 @@ import {
   ClockIcon, PieChartIcon, MessageSquareIcon, LayoutGridIcon, 
   CreditCardIcon, ClipboardIcon, CalendarIcon, LifeBuoyIcon,
   ChevronDoubleLeftIcon, PhotoIcon, DownloadIcon, UserCircleIcon, 
-  TrendingUpIcon, InfoIcon
+  TrendingUpIcon, InfoIcon, ZapIcon
 } from '../icons';
 
 interface SidebarProps {
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         main: [
           { to: '/admin/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Dashboard' },
           { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Overview' },
+          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Messages' },
           { to: '/project-wall', icon: <PhotoIcon className="w-5 h-5" />, label: 'Project Wall' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
@@ -56,26 +58,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
         ]
       },
-      'Sub-Admin': {
-        main: [
-          { to: '/admin/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Dashboard' },
-          { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Operations' },
-          { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Messages' },
-          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
-          { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'Team' },
-          { to: '/admin/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
-          { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financials' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Downloads' },
-          { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
-          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Support' },
-        ],
-        secondary: [
-          { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
-        ]
-      },
       Designer: {
         main: [
           { to: '/designer/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Workspace' },
+          { to: '/designer/current-works', icon: <ZapIcon className="w-5 h-5" />, label: 'Current Works' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'My Designs' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Team Chat' },
           { to: '/designer/task-board', icon: <LayoutGridIcon className="w-5 h-5" />, label: 'Task Board' },
@@ -105,7 +91,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         ]
       }
     };
-
     return items[user.role] || items['Admin'];
   }, [user]);
 
@@ -118,7 +103,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       <aside 
         className={`fixed md:relative z-50 md:z-auto inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${isCollapsed ? 'w-24' : 'w-72'} bg-slate-50 border-r border-slate-200 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]`}
       >
-        {/* Logo Section */}
         <div className={`flex items-center h-24 px-8 border-b border-slate-200/60 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           {!isCollapsed && (
             <div className="flex flex-col">
@@ -135,7 +119,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           </button>
         </div>
         
-        {/* Navigation Items */}
         <nav className="flex-1 px-4 overflow-y-auto pt-8 custom-scrollbar pb-8">
           <div className="space-y-1">
             {navItems.main.map(item => (
@@ -165,9 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
               </NavLink>
             ))}
           </div>
-
           {!isCollapsed && <div className="my-6 border-t border-slate-200/60 mx-4" />}
-
           <div className="space-y-1">
             {navItems.secondary.map(item => (
               <NavLink 
@@ -189,8 +170,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
             ))}
           </div>
         </nav>
-
-        {/* Footer Actions */}
         <div className={`p-6 mt-auto border-t border-slate-200/60 bg-slate-100/50 ${isCollapsed ? 'flex justify-center' : ''}`}>
            <button onClick={logout} className={`${baseLinkClasses} !bg-white/80 border border-slate-200/50 text-slate-500 hover:!bg-red-50 hover:!text-accent-danger hover:!border-red-100 w-full shadow-sm`}>
               <LogOutIcon className="w-5 h-5 flex-shrink-0" />
