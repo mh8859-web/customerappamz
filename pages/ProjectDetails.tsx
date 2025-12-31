@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon } from '../components/icons';
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon } from '../components/icons';
 import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -17,7 +17,7 @@ import UploadDesignModal from '../components/design/UploadDesignModal';
 import UploadQuoteModal from '../components/admin/UploadQuoteModal';
 import AddMilestoneModal from '../components/admin/AddMilestoneModal';
 import PaymentModal from '../components/customer/PaymentReminderModal';
-import { createRecord, updateRecord, uploadProjectFile } from '../services/api';
+import { createRecord, updateRecord, uploadProjectFile, deleteRecord } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Timeline', 'Quotes & Docs', 'Milestones'],
@@ -44,6 +44,7 @@ const ProjectDetails: React.FC = () => {
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
     const [isApproveSubmitting, setIsApproveSubmitting] = useState(false);
+    const [isResettingMilestones, setIsResettingMilestones] = useState(false);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
     const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
@@ -76,10 +77,65 @@ const ProjectDetails: React.FC = () => {
         if (!error) await refetchData();
     };
 
+    const handleResetToStandardPlan = async () => {
+        if (!project || !user || isResettingMilestones) return;
+        if (!window.confirm("WARNING: This will delete ALL existing milestones for this project and create the standard 10/40/45/5% plan. Proceed?")) return;
+
+        setIsResettingMilestones(true);
+        try {
+            // 1. Delete existing milestones
+            for (const m of projectMilestones) {
+                await deleteRecord('milestones', m.id);
+            }
+
+            // 2. Create standard milestones
+            const budget = project.budgetDisplay;
+            const standardMilestones = [
+                { title: 'TOKEN ADVANCE ON CONFIRMATION', percentage: 10, offsetDays: 0 },
+                { title: 'ADVANCE FOR MATERIALS', percentage: 40, offsetDays: 15 },
+                { title: 'ON SITE INSTALLATION', percentage: 45, offsetDays: 45 },
+                { title: 'ON COMPLETION (FINAL SETTLEMENT)', percentage: 5, offsetDays: 75 },
+            ];
+
+            const startDate = new Date(project.startDate);
+            for (const m of standardMilestones) {
+                const dueDate = new Date(startDate);
+                dueDate.setDate(dueDate.getDate() + m.offsetDays);
+                
+                await createRecord('milestones', {
+                    project_id: project.id,
+                    title: m.title,
+                    amount_display: Math.round(budget * (m.percentage / 100)),
+                    due_date: dueDate.toISOString().split('T')[0],
+                    status_display: 'Pending'
+                });
+            }
+
+            // 3. Log activity
+            await createRecord('activity_logs', {
+                project_id: project.id,
+                actor_id: user.id,
+                action: 'MILESTONES_RESET',
+                details: 'Payment plan reset to standard 10/40/45/5 configuration.'
+            });
+
+            await refetchData();
+            alert("Standard payment plan has been applied successfully.");
+        } catch (err) {
+            console.error("Reset failed:", err);
+            alert("Failed to reset milestones. Please check network.");
+        } finally {
+            setIsResettingMilestones(false);
+        }
+    };
+
     const handleUploadQuote = async (file: File, version: string) => {
         if (!projectId || !user) return;
         const url = await uploadProjectFile(projectId, file);
-        if (!url) throw new Error("Upload failed");
+        if (!url) {
+            alert("CRITICAL ERROR: 'project_files' bucket not found. Please ask Admin to create the bucket in Supabase Storage.");
+            throw new Error("Upload failed - bucket missing");
+        }
         
         const { error } = await createRecord('quotes', {
             project_id: projectId,
@@ -386,23 +442,34 @@ const ProjectDetails: React.FC = () => {
                                 </Card>
 
                                 {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
-                                    <button 
-                                        onClick={() => setAddMilestoneModalOpen(true)}
-                                        className="h-full border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-brand-gold transition-all group"
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand-gold/10 group-hover:text-brand-gold text-slate-400 transition-colors">
-                                            <DollarSignIcon className="w-5 h-5" />
-                                        </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-gold">Add Milestone</span>
-                                    </button>
+                                    <div className="flex flex-col gap-3 h-full">
+                                        <button 
+                                            onClick={() => setAddMilestoneModalOpen(true)}
+                                            className="flex-1 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-3 hover:bg-white hover:border-brand-gold transition-all group"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand-gold/10 group-hover:text-brand-gold text-slate-400 transition-colors">
+                                                <DollarSignIcon className="w-5 h-5" />
+                                            </div>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-brand-gold">Add Custom</span>
+                                        </button>
+                                        <button 
+                                            onClick={handleResetToStandardPlan}
+                                            disabled={isResettingMilestones}
+                                            className="flex-1 border-2 border-brand-gold/20 bg-brand-gold/5 rounded-[32px] flex flex-col items-center justify-center gap-2 hover:bg-brand-gold/10 transition-all group"
+                                        >
+                                            <RefreshIcon className={`w-5 h-5 text-brand-gold ${isResettingMilestones ? 'animate-spin' : ''}`} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-brand-gold">Reset Standard (10/40/45/5)</span>
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex items-center gap-2 mb-2 px-4">
-                                    <div className="h-px flex-1 bg-slate-100"></div>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Mandatory Payment Plan (10/40/45/5)</span>
-                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-2 px-4">
+                                    <div className="flex items-center gap-3">
+                                        <InfoIcon className="w-4 h-4 text-brand-blue" />
+                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-[4px]">Mandatory Payment Schedule: 10% / 40% / 45% / 5%</span>
+                                    </div>
                                 </div>
                                 {projectMilestones.map((m, idx) => (
                                     <div key={m.id} className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-white border border-slate-100 rounded-[32px] hover:shadow-premium transition-all group">
@@ -490,6 +557,12 @@ const ProjectDetails: React.FC = () => {
                     
                     {activeTab === 'Quotes & Docs' && (
                         <div className="grid gap-6 max-w-4xl">
+                            {/* Bucket Status Alert */}
+                            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                                <InfoIcon className="w-5 h-5 text-brand-blue" />
+                                <span>Note: All files are stored in the 'project_files' bucket. Ensure this bucket is created in Supabase.</span>
+                            </div>
+
                             {/* Upload Button for Designers/Admins */}
                             {(user.role === 'Designer' || user.role === 'Admin' || user.role === 'Sub-Admin') && (
                                 <button 

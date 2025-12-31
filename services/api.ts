@@ -108,12 +108,12 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
-// --- FIX: Changed bucket name to 'assets' to resolve 404 Bucket Not Found ---
+// --- FIX: Using 'project_files' bucket name. USER MUST CREATE THIS BUCKET IN SUPABASE DASHBOARD ---
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
 
     const { error: uploadError } = await supabase.storage
-        .from('assets')
+        .from('project_files')
         .upload(filePath, file);
 
     if (uploadError) {
@@ -122,7 +122,7 @@ export const uploadProjectFile = async (projectId: string, file: File): Promise<
     }
 
     const { data } = supabase.storage
-        .from('assets')
+        .from('project_files')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -133,7 +133,7 @@ export const uploadPostMedia = async (userId: string, file: File): Promise<strin
     const filePath = `public/${userId}/posts/${Date.now()}_${file.name}`;
 
     const { error: uploadError } = await supabase.storage
-        .from('assets') 
+        .from('project_files') 
         .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
@@ -142,7 +142,7 @@ export const uploadPostMedia = async (userId: string, file: File): Promise<strin
     }
 
     const { data } = supabase.storage
-        .from('assets')
+        .from('project_files')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -204,7 +204,7 @@ export const uploadChatAttachment = async (projectId: string, userId: string, fi
     const filePath = `${projectId}/chat/${userId}/${Date.now()}-${file.name}`;
 
     const { error: uploadError } = await supabase.storage
-        .from('assets') 
+        .from('project_files') 
         .upload(filePath, file);
 
     if (uploadError) {
@@ -213,7 +213,7 @@ export const uploadChatAttachment = async (projectId: string, userId: string, fi
     }
 
     const { data } = supabase.storage
-        .from('assets')
+        .from('project_files')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
