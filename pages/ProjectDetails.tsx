@@ -5,8 +5,8 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon } from '../components/icons';
-import { Project, Design, User, UserRole, UnifiedUpdate, Milestone } from '../types';
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon } from '../components/icons';
+import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
@@ -43,10 +43,17 @@ const ProjectDetails: React.FC = () => {
     const [isAddMilestoneModalOpen, setAddMilestoneModalOpen] = useState(false);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+    const [isApproveSubmitting, setIsApproveSubmitting] = useState(false);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
     const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
     
+    const projectQuotes = useMemo(() => 
+        quotes.filter(q => q.projectId === projectId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [quotes, projectId]);
+
+    const latestQuote = projectQuotes[0];
+
     const financialStats = useMemo(() => {
         const total = projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0);
         const settled = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
@@ -82,6 +89,42 @@ const ProjectDetails: React.FC = () => {
         });
         
         if (!error) await refetchData();
+    };
+
+    const handleApproveQuote = async () => {
+        if (!project || !user || isApproveSubmitting) return;
+        
+        if (!window.confirm("Do you want to finalize this quotation and move to the material selection phase?")) return;
+
+        setIsApproveSubmitting(true);
+        try {
+            // 1. Update Project Stage
+            const { error: updateError } = await updateRecord('projects', project.id, { stage: 'material_selection' });
+            if (updateError) throw updateError;
+
+            // 2. Send System Notification to Chat
+            await createRecord('messages', {
+                chat_id: project.id,
+                body: `The latest quotation (${latestQuote?.version || 'Final'}) has been OFFICIALLY APPROVED by the client. We are now moving into the Material Selection phase!`,
+                sender_id: user.id,
+                is_system_message: true
+            });
+
+            // 3. Log activity
+            await createRecord('activity_logs', {
+                project_id: project.id,
+                actor_id: user.id,
+                action: 'QUOTE_APPROVED',
+                details: `Quotation ${latestQuote?.version || ''} approved by client.`
+            });
+
+            await refetchData();
+        } catch (err) {
+            console.error("Approval failed:", err);
+            alert("Approval sync failed. Please try again.");
+        } finally {
+            setIsApproveSubmitting(false);
+        }
     };
 
     const handleUpdateMilestoneStatus = async (mId: string, status: string) => {
@@ -197,6 +240,29 @@ const ProjectDetails: React.FC = () => {
                                     <Button onClick={() => { setActiveTab('Quotes & Docs'); setUploadQuoteModalOpen(true); }} className="!rounded-full !px-10 !py-4 !bg-slate-900 !text-xs !font-black uppercase tracking-[3px]">
                                         Upload Quotation Now
                                     </Button>
+                                </Card>
+                            )}
+
+                            {/* Customer Special Action Trigger: Quote Approval */}
+                            {user.role === 'Customer' && project.stage === 'awaiting_updated_quote' && latestQuote && (
+                                <Card className="!p-8 bg-brand-gold/5 border-brand-gold/20 rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-6">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-16 h-16 rounded-[22px] bg-brand-gold text-slate-900 flex items-center justify-center shadow-gold-glow">
+                                            <FileTextIcon className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Quotation Received</h3>
+                                            <p className="text-sm text-slate-500 font-bold uppercase tracking-wider mt-1">Please review the updated quotation to proceed with procurement.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <a href={latestQuote.fileUrl} target="_blank" rel="noopener noreferrer">
+                                            <Button variant="secondary" className="!rounded-full !px-8 !py-4 !text-xs !font-black uppercase tracking-[2px]">Review PDF</Button>
+                                        </a>
+                                        <Button onClick={handleApproveQuote} disabled={isApproveSubmitting} className="!rounded-full !px-10 !py-4 !bg-slate-900 !text-xs !font-black uppercase tracking-[3px]">
+                                            {isApproveSubmitting ? 'Processing...' : 'Approve & Start'}
+                                        </Button>
+                                    </div>
                                 </Card>
                             )}
 
@@ -420,22 +486,45 @@ const ProjectDetails: React.FC = () => {
                                 </button>
                             )}
 
-                            {quotes.filter(q => q.projectId === project.id).map(quote => (
-                                <Card key={quote.id} className="flex items-center justify-between p-8 luxury-glass border-slate-100 rounded-[32px] hover:shadow-premium transition-all">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-brand-blue/5 flex items-center justify-center text-brand-blue">
-                                            <FileTextIcon className="w-7 h-7" />
+                            {projectQuotes.map((quote, idx) => {
+                                const isLatest = idx === 0;
+                                const showApproveButton = user.role === 'Customer' && project.stage === 'awaiting_updated_quote' && isLatest;
+
+                                return (
+                                    <Card key={quote.id} className={`flex flex-col md:flex-row md:items-center justify-between p-8 luxury-glass border-slate-100 rounded-[32px] hover:shadow-premium transition-all ${isLatest ? 'ring-2 ring-brand-blue/5' : ''}`}>
+                                        <div className="flex items-center gap-6">
+                                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isLatest ? 'bg-brand-blue/10 text-brand-blue' : 'bg-slate-50 text-slate-300'}`}>
+                                                <FileTextIcon className="w-7 h-7" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-3">
+                                                    <h3 className="font-black text-slate-900 text-base uppercase tracking-wide">{quote.version} Quote</h3>
+                                                    {isLatest && <span className="bg-brand-blue text-white text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Latest</span>}
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-2">
+                                                    <CalendarIcon className="w-3.5 h-3.5" /> Uploaded {new Date(quote.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h3 className="font-black text-slate-900 text-base uppercase tracking-wide">{quote.version} Quote</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-2">
-                                                <CalendarIcon className="w-3.5 h-3.5" /> Uploaded {new Date(quote.createdAt).toLocaleDateString()}
-                                            </p>
+                                        
+                                        <div className="flex items-center gap-4 mt-6 md:mt-0">
+                                            <a href={quote.fileUrl} target="_blank" rel="noopener noreferrer">
+                                                <Button variant="secondary" className="!rounded-full !px-8 !py-4 !text-[10px] !font-black uppercase tracking-[2px] shadow-sm">View Document</Button>
+                                            </a>
+                                            {showApproveButton && (
+                                                <Button 
+                                                    onClick={handleApproveQuote} 
+                                                    disabled={isApproveSubmitting}
+                                                    className="!rounded-full !px-10 !py-4 !bg-brand-gold !text-slate-900 !text-[10px] !font-black uppercase tracking-[2px] shadow-gold-glow animate-pulse-fast"
+                                                >
+                                                    <ThumbUpIcon className="w-4 h-4 mr-2" />
+                                                    {isApproveSubmitting ? 'Approving...' : 'Approve Quotation'}
+                                                </Button>
+                                            )}
                                         </div>
-                                    </div>
-                                    <a href={quote.fileUrl} target="_blank" className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[3px] px-10 py-5 rounded-2xl hover:bg-brand-dark transition-all shadow-button active:scale-95">Access PDF</a>
-                                </Card>
-                            ))}
+                                    </Card>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
