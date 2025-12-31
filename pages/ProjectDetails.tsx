@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon } from '../components/icons';
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon } from '../components/icons';
 import { Project, Design, User, UserRole, UnifiedUpdate, Milestone } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -14,9 +14,10 @@ import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
 import UploadDesignModal from '../components/design/UploadDesignModal';
+import UploadQuoteModal from '../components/admin/UploadQuoteModal';
 import AddMilestoneModal from '../components/admin/AddMilestoneModal';
 import PaymentModal from '../components/customer/PaymentReminderModal';
-import { createRecord, updateRecord } from '../services/api';
+import { createRecord, updateRecord, uploadProjectFile } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Timeline', 'Quotes & Docs', 'Milestones'],
@@ -38,6 +39,7 @@ const ProjectDetails: React.FC = () => {
     
     const [activeTab, setActiveTab] = useState('Live Updates');
     const [isUploadDesignModalOpen, setUploadDesignModalOpen] = useState(false);
+    const [isUploadQuoteModalOpen, setUploadQuoteModalOpen] = useState(false);
     const [isAddMilestoneModalOpen, setAddMilestoneModalOpen] = useState(false);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
     const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
@@ -67,6 +69,21 @@ const ProjectDetails: React.FC = () => {
         if (!error) await refetchData();
     };
 
+    const handleUploadQuote = async (file: File, version: string) => {
+        if (!projectId || !user) return;
+        const url = await uploadProjectFile(projectId, file);
+        if (!url) throw new Error("Upload failed");
+        
+        const { error } = await createRecord('quotes', {
+            project_id: projectId,
+            version: version,
+            file_url: url,
+            uploaded_by: user.id
+        });
+        
+        if (!error) await refetchData();
+    };
+
     const handleUpdateMilestoneStatus = async (mId: string, status: string) => {
         const updates: any = { status_display: status };
         if (status === 'Paid') updates.paid_date_display = new Date().toISOString();
@@ -88,6 +105,8 @@ const ProjectDetails: React.FC = () => {
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
     const tabs = TABS[user.role] || [];
+
+    const LUXURY_PLACEHOLDER = "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1200&auto=format&fit=crop";
 
     return (
         <div className="space-y-8 pb-12">
@@ -163,6 +182,24 @@ const ProjectDetails: React.FC = () => {
                                 </Card>
                              </div>
 
+                            {/* Designer Special Action Trigger */}
+                            {user.role === 'Designer' && project.stage === 'awaiting_updated_quote' && (
+                                <Card className="!p-8 bg-brand-blue/5 border-brand-blue/20 rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-6 animate-pulse-fast">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-16 h-16 rounded-[22px] bg-brand-blue text-white flex items-center justify-center shadow-button">
+                                            <ZapIcon className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Design Approved!</h3>
+                                            <p className="text-sm text-slate-500 font-bold uppercase tracking-wider mt-1">Please upload the revised execution quote to proceed.</p>
+                                        </div>
+                                    </div>
+                                    <Button onClick={() => { setActiveTab('Quotes & Docs'); setUploadQuoteModalOpen(true); }} className="!rounded-full !px-10 !py-4 !bg-slate-900 !text-xs !font-black uppercase tracking-[3px]">
+                                        Upload Quotation Now
+                                    </Button>
+                                </Card>
+                            )}
+
                             {unifiedUpdateFeed.length > 0 ? (
                                 <div className="space-y-4">
                                     {unifiedUpdateFeed.map((update) => (
@@ -196,28 +233,45 @@ const ProjectDetails: React.FC = () => {
 
                     {activeTab === 'Designs' && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {user.role === 'Designer' && (
+                            {(user.role === 'Designer' || user.role === 'Admin') && (
                                 <button onClick={() => setUploadDesignModalOpen(true)} className="aspect-video rounded-[32px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 hover:bg-white hover:border-brand-blue hover:shadow-premium transition-all group">
-                                    <PhotoIcon className="w-10 h-10 text-slate-300 group-hover:text-brand-blue" />
-                                    <span className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 group-hover:text-brand-blue">Upload Asset</span>
+                                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand-blue/10 group-hover:text-brand-blue text-slate-300 transition-colors">
+                                        <PhotoIcon className="w-6 h-6" />
+                                    </div>
+                                    <span className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 group-hover:text-brand-blue">Upload Render</span>
                                 </button>
                             )}
                             {designs.filter(d => d.projectId === project.id).map(design => (
-                                <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[32px]">
-                                    <div className="aspect-video relative group">
-                                        <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="" />
-                                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                            <Button variant="secondary" className="!rounded-full">View Large</Button>
+                                <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[32px] bg-white group/card">
+                                    <div className="aspect-video relative overflow-hidden bg-slate-100">
+                                        {design.type === 'gltf' ? (
+                                            <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-white gap-3">
+                                                <SparklesIcon className="w-10 h-10 text-brand-gold animate-pulse" />
+                                                <span className="text-[10px] font-black uppercase tracking-widest">3D Virtual Model</span>
+                                            </div>
+                                        ) : (
+                                            <img 
+                                                src={design.fileUrl} 
+                                                onError={(e) => { (e.target as HTMLImageElement).src = LUXURY_PLACEHOLDER; }}
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105" 
+                                                alt="Design View" 
+                                            />
+                                        )}
+                                        <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                                            <Button variant="secondary" className="!rounded-full !px-8 !py-3 !text-[10px] uppercase font-black tracking-widest shadow-lg">View Details</Button>
                                         </div>
                                     </div>
                                     <div className="p-6">
-                                        <div className="flex justify-between items-center mb-2">
+                                        <div className="flex justify-between items-center mb-3">
                                             <h3 className="font-black text-slate-900 uppercase tracking-wide">V{design.version} Render</h3>
-                                            <span className={`text-[10px] font-black uppercase tracking-widest ${design.approved ? 'text-accent-success' : 'text-accent-warning'}`}>
+                                            <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${
+                                                design.approved ? 'bg-accent-success/10 text-accent-success border border-accent-success/20' : 
+                                                'bg-accent-warning/10 text-accent-warning border border-accent-warning/20'
+                                            }`}>
                                                 {design.approved ? 'Approved' : 'In Review'}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-500 font-medium line-clamp-2">{design.notes}</p>
+                                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">{design.notes || 'Official Architectural Render'}</p>
                                     </div>
                                 </Card>
                             ))}
@@ -349,19 +403,37 @@ const ProjectDetails: React.FC = () => {
                     {activeTab === 'Timeline' && <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />}
                     
                     {activeTab === 'Quotes & Docs' && (
-                        <div className="grid gap-4 max-w-3xl">
+                        <div className="grid gap-6 max-w-4xl">
+                            {/* Upload Button for Designers/Admins */}
+                            {(user.role === 'Designer' || user.role === 'Admin' || user.role === 'Sub-Admin') && (
+                                <button 
+                                    onClick={() => setUploadQuoteModalOpen(true)}
+                                    className="flex items-center gap-6 p-8 border-2 border-dashed border-slate-200 rounded-[32px] hover:border-brand-blue hover:bg-white transition-all group"
+                                >
+                                    <div className="w-14 h-14 rounded-2xl bg-slate-50 group-hover:bg-brand-blue/10 flex items-center justify-center text-slate-300 group-hover:text-brand-blue transition-all">
+                                        <FilePlusIcon className="w-7 h-7" />
+                                    </div>
+                                    <div className="text-left">
+                                        <h3 className="font-black text-slate-400 group-hover:text-slate-900 uppercase tracking-widest text-sm transition-colors">Upload New Quotation</h3>
+                                        <p className="text-[10px] text-slate-300 font-black uppercase mt-1 tracking-widest">Supports PDF Documents Only</p>
+                                    </div>
+                                </button>
+                            )}
+
                             {quotes.filter(q => q.projectId === project.id).map(quote => (
-                                <Card key={quote.id} className="flex items-center justify-between p-6 luxury-glass border-slate-100 rounded-[24px]">
-                                    <div className="flex items-center gap-5">
-                                        <div className="p-4 bg-brand-blue/5 rounded-2xl text-brand-blue">
+                                <Card key={quote.id} className="flex items-center justify-between p-8 luxury-glass border-slate-100 rounded-[32px] hover:shadow-premium transition-all">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-14 h-14 rounded-2xl bg-brand-blue/5 flex items-center justify-center text-brand-blue">
                                             <FileTextIcon className="w-7 h-7" />
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-slate-900 text-sm uppercase tracking-wide">{quote.version} Quote</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Uploaded {new Date(quote.createdAt).toLocaleDateString()}</p>
+                                            <h3 className="font-black text-slate-900 text-base uppercase tracking-wide">{quote.version} Quote</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-2">
+                                                <CalendarIcon className="w-3.5 h-3.5" /> Uploaded {new Date(quote.createdAt).toLocaleDateString()}
+                                            </p>
                                         </div>
                                     </div>
-                                    <a href={quote.fileUrl} target="_blank" className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[3px] px-8 py-4 rounded-2xl hover:bg-brand-dark transition-all shadow-button active:scale-95">Access PDF</a>
+                                    <a href={quote.fileUrl} target="_blank" className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-[3px] px-10 py-5 rounded-2xl hover:bg-brand-dark transition-all shadow-button active:scale-95">Access PDF</a>
                                 </Card>
                             ))}
                         </div>
@@ -370,6 +442,7 @@ const ProjectDetails: React.FC = () => {
             </div>
 
             <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={() => {}} />
+            <UploadQuoteModal isOpen={isUploadQuoteModalOpen} onClose={() => setUploadQuoteModalOpen(false)} onUpload={handleUploadQuote} />
             <AddMilestoneModal isOpen={isAddMilestoneModalOpen} onClose={() => setAddMilestoneModalOpen(false)} onAdd={handleAddMilestone} />
             <PaymentModal 
                 isOpen={isPaymentModalOpen} 
