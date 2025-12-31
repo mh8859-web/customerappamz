@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Material } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { CheckCircleIcon, XMarkIcon, PackageIcon, FilePlusIcon, PhotoIcon, SparklesIcon } from '../icons';
+import { CheckCircleIcon, XMarkIcon, PackageIcon, FilePlusIcon, PhotoIcon, SparklesIcon, UploadCloudIcon } from '../icons';
 import { supabase } from '../../services/supabaseClient';
-import { updateRecord, createRecord } from '../../services/api';
+import { updateRecord, createRecord, uploadProjectFile } from '../../services/api';
 
 interface MaterialSelectionProps {
     projectId: string;
@@ -26,45 +26,66 @@ const AddMaterialModal: React.FC<{
         brand: '',
         imageUrl: '',
     });
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        // Basic validation
-        if (!formData.name.trim() || !formData.brand.trim() || !formData.imageUrl.trim()) {
-            alert("Please fill in all required fields.");
+        if (!formData.name.trim() || !formData.brand.trim()) {
+            alert("Please fill in the material name and brand.");
+            return;
+        }
+
+        if (!selectedFile && !formData.imageUrl.trim()) {
+            alert("Please upload a sample image or provide a direct link.");
             return;
         }
 
         setIsSubmitting(true);
         
         try {
-            const { data, error } = await createRecord('project_materials', {
+            let finalImageUrl = formData.imageUrl.trim();
+
+            // Prioritize File Upload to R2
+            if (selectedFile) {
+                const uploadedUrl = await uploadProjectFile(projectId, selectedFile);
+                if (uploadedUrl) {
+                    finalImageUrl = uploadedUrl;
+                } else {
+                    throw new Error("Cloud Storage Upload Failed.");
+                }
+            }
+
+            const { error } = await createRecord('project_materials', {
                 project_id: projectId,
                 name: formData.name.trim(),
                 category: formData.category,
                 brand: formData.brand.trim(),
-                image_url: formData.imageUrl.trim(),
+                image_url: finalImageUrl,
                 status: 'Pending'
             });
 
-            if (error) {
-                console.error('[DATABASE ERROR]', error);
-                // Handle specific long URL error or missing table/permissions
-                if (error.message.includes('too long') || error.code === '22001') {
-                    alert("The Image URL is too long for the database. Please use a shorter direct link to the image, not a Google Search URL.");
-                } else {
-                    alert(`System Error: ${error.message || 'Could not save material.'}`);
-                }
-            } else {
-                onSuccess();
-                onClose();
-                setFormData({ name: '', category: 'Laminate', brand: '', imageUrl: '' });
-            }
+            if (error) throw error;
+
+            onSuccess();
+            onClose();
+            setFormData({ name: '', category: 'Laminate', brand: '', imageUrl: '' });
+            setSelectedFile(null);
+            setPreviewUrl(null);
         } catch (err: any) {
-            console.error('[SUBMISSION EXCEPTION]', err);
-            alert("A network error occurred. Please check your connection and try again.");
+            console.error('[SUBMISSION ERROR]', err);
+            alert(`Error: ${err.message || 'Could not save material.'}`);
         } finally {
             setIsSubmitting(false);
         }
@@ -103,6 +124,7 @@ const AddMaterialModal: React.FC<{
                         />
                     </div>
                 </div>
+
                 <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Brand/Supplier</label>
                     <input 
@@ -114,21 +136,58 @@ const AddMaterialModal: React.FC<{
                         required
                     />
                 </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Sample Image URL</label>
-                    <div className="relative">
-                        <PhotoIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+
+                <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Material Swatch Image</label>
+                    
+                    <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`group relative aspect-video rounded-[32px] border-2 border-dashed transition-all cursor-pointer flex flex-col items-center justify-center gap-4 overflow-hidden ${
+                            previewUrl ? 'border-brand-gold bg-white' : 'border-slate-200 bg-slate-50 hover:border-brand-gold hover:bg-white'
+                        }`}
+                    >
+                        {previewUrl ? (
+                            <>
+                                <img src={previewUrl} className="w-full h-full object-cover" alt="Preview" />
+                                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest bg-slate-900/60 px-4 py-2 rounded-full backdrop-blur-md">Change Selection</span>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-16 h-16 rounded-3xl bg-white shadow-soft flex items-center justify-center text-slate-300 group-hover:text-brand-gold group-hover:scale-110 transition-all duration-500">
+                                    <UploadCloudIcon className="w-8 h-8" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-sm font-black text-slate-900 uppercase tracking-tight">Upload High-Res Swatch</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">PNG, JPG, or HEIC (Max 10MB)</p>
+                                </div>
+                            </>
+                        )}
                         <input 
-                            type="text" 
-                            placeholder="Direct image link (e.g., https://...jpg)"
-                            value={formData.imageUrl}
-                            onChange={e => setFormData({...formData, imageUrl: e.target.value})}
-                            className={`${inputClasses} pl-12`}
-                            required
+                            type="file" 
+                            ref={fileInputRef} 
+                            onChange={handleFileChange} 
+                            className="hidden" 
+                            accept="image/*"
                         />
                     </div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-1">Avoid long search URLs; use direct image links for best results.</p>
+
+                    <div className="flex items-center gap-4 py-2">
+                        <div className="h-px flex-1 bg-slate-100"></div>
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">OR USE URL</span>
+                        <div className="h-px flex-1 bg-slate-100"></div>
+                    </div>
+
+                    <input 
+                        type="text" 
+                        placeholder="Paste direct image link if already hosted"
+                        value={formData.imageUrl}
+                        onChange={e => setFormData({...formData, imageUrl: e.target.value})}
+                        className={`${inputClasses} !text-xs !p-3 !rounded-xl !bg-slate-50/50`}
+                    />
                 </div>
+
                 <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
                     <button 
                         type="button" 
@@ -143,7 +202,7 @@ const AddMaterialModal: React.FC<{
                         disabled={isSubmitting} 
                         className="!px-10 !py-4 !rounded-2xl !bg-slate-900 !text-[11px] !font-black uppercase tracking-widest shadow-button"
                     >
-                        {isSubmitting ? 'Registering...' : 'Provision Material'}
+                        {isSubmitting ? 'Synchronizing...' : 'Provision Material'}
                     </Button>
                 </div>
             </form>
@@ -161,7 +220,8 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
         const { data, error } = await supabase
             .from('project_materials')
             .select('*')
-            .eq('project_id', projectId);
+            .eq('project_id', projectId)
+            .order('created_at', { ascending: false });
         if (!error) setMaterials(data || []);
         setLoading(false);
     };
@@ -176,6 +236,13 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
             setMaterials(prev => prev.map(m => m.id === id ? { ...m, status } : m));
             onUpdate();
         }
+    };
+
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        // Replace broken image with a stylish placeholder
+        const target = e.target as HTMLImageElement;
+        target.onerror = null; // Prevent infinite loop
+        target.src = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800';
     };
 
     if (loading) return <div className="p-24 text-center text-slate-400 font-black uppercase tracking-[6px] animate-pulse">Scanning Material Archive...</div>;
@@ -225,7 +292,12 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
                     {materials.map(material => (
                         <Card key={material.id} className="p-0 overflow-hidden rounded-[40px] group border-slate-100 hover:shadow-premium transition-all bg-white relative">
                             <div className="aspect-[4/5] relative overflow-hidden bg-slate-100">
-                                <img src={material.imageUrl} className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110" alt={material.name} />
+                                <img 
+                                    src={material.imageUrl} 
+                                    className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110" 
+                                    alt={material.name}
+                                    onError={handleImageError}
+                                />
                                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div className="absolute top-8 left-8">
                                     <span className="px-5 py-2 bg-white/95 backdrop-blur-md shadow-premium rounded-full text-[10px] font-black text-slate-900 uppercase tracking-[3px] border border-slate-100">{material.category}</span>
