@@ -1,9 +1,10 @@
+
 import React from 'react';
 import Card from '../../components/ui/Card';
 import { useAuth } from '../../context/AuthContext';
 import { Milestone } from '../../types';
 import Button from '../../components/ui/Button';
-import { DownloadIcon } from '../../components/icons';
+import { DownloadIcon, FileTextIcon, InfoIcon } from '../../components/icons';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 
@@ -12,168 +13,104 @@ const BillingHistory: React.FC = () => {
     const { milestones, projects, loading } = useData();
     const { findUserById } = useUsers();
 
-    if (!user || loading) return null;
+    if (!user || loading) return <div className="p-20 text-center animate-pulse text-slate-400 font-black uppercase tracking-widest">Synchronizing Ledger...</div>;
 
-    const myProjectIds = projects.filter(p => p.customerId === user.id).map(p => p.id);
+    const myProjects = projects.filter(p => p.customerId === user.id);
+    const myProjectIds = myProjects.map(p => p.id);
+    
+    // Milestones from DB
     const myMilestones = milestones
         .filter(m => myProjectIds.includes(m.projectId))
         .sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 
-    const generateInvoiceHTML = (milestone: Milestone) => {
+    const handlePrintInvoice = (milestone: Milestone) => {
         const project = projects.find(p => p.id === milestone.projectId);
-        const designer = findUserById(project?.designerId || '');
-        
-        return `
-            <!DOCTYPE html>
+        const invoiceHtml = `
             <html>
-            <head>
-                <title>Invoice #${milestone.id.slice(0, 8)}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-            </head>
-            <body class="bg-gray-100 font-sans p-8">
-                <div class="max-w-4xl mx-auto bg-white p-12 rounded-lg shadow-lg">
-                    <div class="flex justify-between items-center border-b pb-6 mb-8">
-                        <div>
-                            <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ Logo" class="h-12"/>
-                        </div>
-                        <div class="text-right">
-                            <h1 class="text-3xl font-bold text-gray-800">INVOICE</h1>
-                            <p class="text-gray-500">#${milestone.id.slice(0, 8).toUpperCase()}</p>
-                        </div>
+            <head><title>Invoice ${milestone.id}</title><script src="https://cdn.tailwindcss.com"></script></head>
+            <body class="bg-gray-100 p-12">
+                <div class="max-w-4xl mx-auto bg-white p-16 shadow-2xl rounded-lg">
+                    <div class="flex justify-between border-b pb-8 mb-8">
+                        <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" class="h-12"/>
+                        <div class="text-right"><h1 class="text-3xl font-black">INVOICE</h1><p>#${milestone.id.slice(0,8)}</p></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-8 mb-8">
-                        <div>
-                            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Billed To</h2>
-                            <p class="font-bold text-gray-800">${user.fullName}</p>
-                            <p class="text-gray-600">${user.email}</p>
-                        </div>
-                        <div class="text-right">
-                            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Invoice Details</h2>
-                            <p><strong class="text-gray-600">Date Issued:</strong> ${new Date().toLocaleDateString()}</p>
-                            <p><strong class="text-gray-600">Date Due:</strong> ${new Date(milestone.dueDate).toLocaleDateString()}</p>
-                            <p><strong class="text-gray-600">Status:</strong> <span class="font-semibold ${milestone.statusDisplay === 'Paid' ? 'text-green-500' : 'text-yellow-500'}">${milestone.statusDisplay}</span></p>
-                        </div>
+                    <div class="grid grid-cols-2 gap-12 mb-12">
+                        <div><p class="text-xs font-bold text-gray-400 uppercase mb-2">Billed To</p><p class="font-bold">${user.fullName}</p></div>
+                        <div class="text-right"><p class="text-xs font-bold text-gray-400 uppercase mb-2">Details</p><p>Project: ${project?.title}</p><p>Due: ${new Date(milestone.dueDate).toLocaleDateString()}</p></div>
                     </div>
-                    <div>
-                        <table class="w-full text-left">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="p-4 text-sm font-semibold text-gray-600 uppercase">Description</th>
-                                    <th class="p-4 text-sm font-semibold text-gray-600 uppercase text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr class="border-b">
-                                    <td class="p-4">
-                                        <p class="font-medium text-gray-800">Project: ${project?.title}</p>
-                                        <p class="text-sm text-gray-500">Milestone: ${milestone.title}</p>
-                                    </td>
-                                    <td class="p-4 text-right font-medium text-gray-800">₹${milestone.amountDisplay.toLocaleString()}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex justify-end mt-8">
-                        <div class="w-full max-w-xs text-right">
-                            <div class="flex justify-between py-2">
-                                <span class="text-gray-600">Subtotal</span>
-                                <span class="font-medium text-gray-800">₹${milestone.amountDisplay.toLocaleString()}</span>
-                            </div>
-                            <div class="flex justify-between py-2 border-t font-bold text-xl text-gray-800">
-                                <span>Total Due</span>
-                                <span>₹${milestone.amountDisplay.toLocaleString()}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <table class="w-full mb-12 text-left">
+                        <thead class="bg-gray-50 border-b"><tr><th class="p-4 uppercase text-xs">Description</th><th class="p-4 uppercase text-xs text-right">Amount</th></tr></thead>
+                        <tbody><tr class="border-b"><td class="p-4 font-bold">${milestone.title}</td><td class="p-4 text-right font-mono">₹${milestone.amountDisplay.toLocaleString()}</td></tr></tbody>
+                    </table>
+                    <div class="text-right"><p class="text-xs text-gray-400 uppercase mb-1">Grand Total</p><p class="text-4xl font-black">₹${milestone.amountDisplay.toLocaleString()}</p></div>
                 </div>
             </body>
             </html>
         `;
-    };
-
-    const handlePrintInvoice = (milestone: Milestone) => {
-        const invoiceHtml = generateInvoiceHTML(milestone);
-        const printWindow = window.open('', '_blank');
-        printWindow?.document.write(invoiceHtml);
-        printWindow?.document.close();
-        setTimeout(() => printWindow?.print(), 500);
+        const win = window.open('', '_blank');
+        win?.document.write(invoiceHtml);
+        win?.document.close();
+        setTimeout(() => win?.print(), 500);
     };
 
     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold font-display text-text-headline">Billing History</h1>
-            <Card>
-                {/* Mobile View */}
-                <div className="md:hidden space-y-4">
-                    {myMilestones.map((milestone: Milestone) => {
-                         const project = projects.find(p => p.id === milestone.projectId);
-                         return (
-                            <div key={milestone.id} className="bg-primary-bg p-4 rounded-xl text-sm">
-                                <div className="flex justify-between items-start mb-2">
-                                    <div>
-                                        <p className="font-bold text-text-headline">{milestone.title}</p>
-                                        <p className="text-xs text-text-muted">{project?.title}</p>
-                                    </div>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                        milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
-                                        milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                                        'bg-yellow-500/20 text-yellow-400'
-                                    }`}>
-                                        {milestone.statusDisplay}
-                                    </span>
-                                </div>
-                                <div className="border-t border-border-color mt-2 pt-2 space-y-1">
-                                    <p className="text-text-muted"><strong className="text-text-headline/80">Amount:</strong> ₹{milestone.amountDisplay.toLocaleString()}</p>
-                                    <p className="text-text-muted"><strong className="text-text-headline/80">Due Date:</strong> {new Date(milestone.dueDate).toLocaleDateString()}</p>
-                                    {milestone.paidDateDisplay && <p className="text-text-muted"><strong className="text-text-headline/80">Paid On:</strong> {new Date(milestone.paidDateDisplay).toLocaleDateString()}</p>}
-                                </div>
-                                <Button variant="secondary" onClick={() => handlePrintInvoice(milestone)} className="w-full mt-3 py-1.5 text-xs flex items-center justify-center gap-2">
-                                    <DownloadIcon className="w-4 h-4"/> Download Invoice
-                                </Button>
-                            </div>
-                         )
-                    })}
-                </div>
+        <div className="space-y-10 pb-12">
+            <div>
+                <h1 className="text-4xl font-display font-black text-slate-900 tracking-tight uppercase">Billing Terminal</h1>
+                <p className="text-slate-400 font-bold uppercase tracking-[4px] text-[10px] mt-1.5">Official Financial Records & Ledger</p>
+            </div>
 
-                {/* Desktop View */}
-                <div className="hidden md:block overflow-x-auto">
+            <Card className="luxury-glass border-slate-100 rounded-[40px] p-0 overflow-hidden">
+                <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-text-muted uppercase bg-primary-bg">
+                        <thead className="bg-slate-900 text-white">
                             <tr>
-                                <th scope="col" className="px-6 py-3">Milestone</th>
-                                <th scope="col" className="px-6 py-3">Project</th>
-                                <th scope="col" className="px-6 py-3">Due Date</th>
-                                <th scope="col" className="px-6 py-3">Amount</th>
-                                <th scope="col" className="px-6 py-3">Status</th>
-                                <th scope="col" className="px-6 py-3">Invoice</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Milestone / Service</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Commission</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Schedule</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Valuation</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">Status</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Assets</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="divide-y divide-slate-100">
                             {myMilestones.map((milestone: Milestone) => {
                                 const project = projects.find(p => p.id === milestone.projectId);
                                 return (
-                                    <tr key={milestone.id} className="border-b border-border-color">
-                                        <td className="px-6 py-4 font-medium text-text-headline">{milestone.title}</td>
-                                        <td className="px-6 py-4 text-text-muted">{project?.title}</td>
-                                        <td className="px-6 py-4">{new Date(milestone.dueDate).toLocaleDateString()}</td>
-                                        <td className="px-6 py-4">₹{milestone.amountDisplay.toLocaleString()}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                milestone.statusDisplay === 'Paid' ? 'bg-green-500/20 text-green-400' :
-                                                milestone.statusDisplay === 'Completed' ? 'bg-blue-500/20 text-blue-400' :
-                                                'bg-yellow-500/20 text-yellow-400'
+                                    <tr key={milestone.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-8 py-6 font-black text-slate-900 uppercase tracking-wide">{milestone.title}</td>
+                                        <td className="px-8 py-6 text-slate-400 font-bold uppercase tracking-widest text-[11px]">{project?.title}</td>
+                                        <td className="px-8 py-6 text-slate-500 font-medium">{new Date(milestone.dueDate).toLocaleDateString()}</td>
+                                        <td className="px-8 py-6 text-right font-display font-black text-slate-900 text-base">₹{milestone.amountDisplay.toLocaleString()}</td>
+                                        <td className="px-8 py-6 text-center">
+                                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-[2px] border ${
+                                                milestone.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' :
+                                                milestone.statusDisplay === 'Completed' ? 'bg-brand-blue/5 text-brand-blue border-brand-blue/20' :
+                                                'bg-slate-50 text-slate-400 border-slate-200'
                                             }`}>
                                                 {milestone.statusDisplay}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <Button variant="secondary" onClick={() => handlePrintInvoice(milestone)} className="!p-2">
-                                                <DownloadIcon className="w-4 h-4" />
+                                        <td className="px-8 py-6 text-right">
+                                            <Button variant="secondary" onClick={() => handlePrintInvoice(milestone)} className="!p-2.5 !rounded-xl ml-auto border-slate-200 hover:border-brand-gold transition-all">
+                                                <DownloadIcon className="w-5 h-5 text-brand-gold" />
                                             </Button>
                                         </td>
                                     </tr>
-                                )
+                                );
                             })}
+                            
+                            {myMilestones.length === 0 && !loading && (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <InfoIcon className="w-12 h-12 text-slate-200" />
+                                            <p className="text-slate-400 font-bold uppercase tracking-[4px] text-sm">No official milestones generated in ledger.</p>
+                                            <p className="text-xs text-slate-300 max-w-sm">Please contact your relationship manager to finalize your 10/40/45/5 payment plan.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

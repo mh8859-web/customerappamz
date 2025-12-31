@@ -5,12 +5,12 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-// FIX: Path was '../icons', changed to '../components/icons' to match project structure
 import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon, AlertTriangleIcon } from '../components/icons';
 import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
+import MaterialSelection from '../components/project/MaterialSelection';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
@@ -21,8 +21,8 @@ import PaymentModal from '../components/customer/PaymentReminderModal';
 import { createRecord, updateRecord, uploadProjectFile, deleteRecord } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
-    Customer: ['Live Updates', 'Designs', 'Timeline', 'Quotes & Docs', 'Milestones'],
-    Designer: ['Live Updates', 'Designs', 'Feedback', 'Quotes & Docs', 'Milestones'],
+    Customer: ['Live Updates', 'Designs', 'Timeline', 'Materials', 'Quotes & Docs', 'Milestones'],
+    Designer: ['Live Updates', 'Designs', 'Feedback', 'Materials', 'Quotes & Docs', 'Milestones'],
     Admin: ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
     'Sub-Admin': ['Live Updates', 'Designs', 'Quotes & Docs', 'Milestones'],
     Accounts: ['Live Updates', 'Quotes & Docs', 'Milestones'],
@@ -53,13 +53,17 @@ const ProjectDetails: React.FC = () => {
     const latestQuote = projectQuotes[0];
 
     const financialStats = useMemo(() => {
-        const total = projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0);
+        const baseBudget = project?.budgetDisplay || 0;
+        const total = projectMilestones.length > 0 
+            ? projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0)
+            : baseBudget;
+            
         const settled = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
         const outstanding = total - settled;
         const invoiced = projectMilestones.filter(m => m.statusDisplay === 'Completed').reduce((sum, m) => sum + m.amountDisplay, 0);
         const progress = total > 0 ? (settled / total) * 100 : 0;
         return { total, settled, outstanding, invoiced, progress };
-    }, [projectMilestones]);
+    }, [projectMilestones, project]);
 
     const handleApplyStandardPlan = async () => {
         if (!project || isResettingPlan) return;
@@ -185,7 +189,6 @@ const ProjectDetails: React.FC = () => {
                                 </Card>
                             )}
                             
-                            {/* Billing Urgency for Customer - Redesigned for maximum "Urge" */}
                             {user.role === 'Customer' && financialStats.invoiced > 0 && (
                                 <Card className="!p-8 bg-red-600 border-none rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-6 shadow-button ring-4 ring-red-500/20">
                                     <div className="flex items-center gap-6">
@@ -233,6 +236,10 @@ const ProjectDetails: React.FC = () => {
                                 ))}
                             </div>
                         </div>
+                    )}
+
+                    {activeTab === 'Materials' && (
+                        <MaterialSelection projectId={project.id} isClient={user.role === 'Customer'} onUpdate={refetchData} />
                     )}
 
                     {activeTab === 'Milestones' && (
@@ -313,18 +320,6 @@ const ProjectDetails: React.FC = () => {
 
                     {activeTab === 'Quotes & Docs' && (
                         <div className="grid gap-6">
-                            {/* Bucket Warning Diagnostic */}
-                            <div className="p-6 bg-slate-900 rounded-[32px] border border-brand-gold/30 flex items-center justify-between gap-6 overflow-hidden relative">
-                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-full blur-3xl -mr-16 -mb-16"></div>
-                                <div className="flex items-center gap-6 z-10">
-                                    <div className="w-14 h-14 bg-brand-gold/20 rounded-2xl flex items-center justify-center"><InfoIcon className="w-7 h-7 text-brand-gold" /></div>
-                                    <div>
-                                        <h3 className="font-black text-white uppercase tracking-widest">Diagnostic Asset Hub</h3>
-                                        <p className="text-xs text-slate-400 font-bold uppercase mt-1">Bucket: project_files | Verify this exists in dashboard to avoid 404.</p>
-                                    </div>
-                                </div>
-                            </div>
-
                             {(user.role === 'Admin' || user.role === 'Designer') && (
                                 <button onClick={() => setUploadQuoteModalOpen(true)} className="flex items-center gap-8 p-10 border-2 border-dashed border-slate-200 rounded-[40px] hover:border-brand-blue hover:bg-white transition-all group shadow-sm">
                                     <div className="w-16 h-16 rounded-[24px] bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-brand-blue group-hover:text-white transition-all duration-500 shadow-sm"><FilePlusIcon className="w-8 h-8" /></div>

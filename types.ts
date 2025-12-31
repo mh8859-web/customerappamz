@@ -67,6 +67,17 @@ export interface Milestone {
   paidDateDisplay?: string;
 }
 
+export interface Material {
+    id: string;
+    projectId: string;
+    category: string;
+    name: string;
+    brand: string;
+    imageUrl: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    notes?: string;
+}
+
 export interface Comment {
     id: string;
     authorId: string;
@@ -100,7 +111,6 @@ export interface ProjectUpdate {
   createdAt: string;
 }
 
-// --- FIX: Added UnifiedUpdate interface to resolve import error in ProjectDetails.tsx ---
 export interface UnifiedUpdate {
     id: string;
     type: string;
