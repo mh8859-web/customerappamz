@@ -1,6 +1,26 @@
 
 import { supabase } from './supabaseClient';
 import { User, UserRole } from '../types';
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// --- CLOUDFLARE R2 CONFIGURATION (LIVE) ---
+const R2_ACCOUNT_ID = 'f3d381013fa9b31d787da241193ddd1b'; 
+const R2_ACCESS_KEY = '717fefd81967b09d29ea328eee3c2d71';
+const R2_SECRET_KEY = '37ad94b5d191f9ef839d47e92b283fda01f2f74c1dc48a0a92eab8ae6feaae8e';
+const R2_BUCKET_NAME = 'amaz-assets';
+const R2_PUBLIC_URL = `https://pub-7c8cbe3e82494966951800abd7c1d18b.r2.dev`;
+
+const s3Client = new S3Client({
+    region: "auto",
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+        accessKeyId: R2_ACCESS_KEY,
+        secretAccessKey: R2_SECRET_KEY,
+    },
+    // Explicitly disable the default credential provider chain which looks for files (Node-only)
+    // This fixed the "fs.readFile is not implemented" error
+    forcePathStyle: true,
+});
 
 interface SignUpMetadata {
     fullName: string;
@@ -82,66 +102,44 @@ export const deleteRecord = async (tableName: string, recordId: string) => {
     return { error };
 };
 
-export const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {
-    const filePath = `public/${userId}/${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-    if (uploadError) {
-        console.error('Avatar Upload Error:', uploadError);
-        return null;
-    }
-
-    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    return data.publicUrl;
-};
-
-// --- STORAGE BUCKET: project_files ---
-// Verification: Dashboard matches exactly 'project_files'
-export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
-    const BUCKET = 'project_files';
-    const filePath = `${projectId}/${Date.now()}_${file.name}`;
-    
-    console.log(`[STORAGE] Uploading to: ${BUCKET}/${filePath}`);
-    
-    const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
-        .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
+/**
+ * Core R2 Upload Logic
+ */
+async function uploadToR2(path: string, file: File): Promise<string | null> {
+    try {
+        const command = new PutObjectCommand({
+            Bucket: R2_BUCKET_NAME,
+            Key: path,
+            Body: file,
+            ContentType: file.type,
         });
 
-    if (uploadError) {
-        console.error(`[STORAGE ERROR] ${uploadError.message}`, uploadError);
-        // Explicit check for common 404 causes
-        if (uploadError.message.includes('Bucket not found')) {
-            alert("CRITICAL: Supabase bucket 'project_files' not found. Please ensure the bucket is PUBLIC and named exactly 'project_files' (all lowercase, underscore) in your dashboard.");
-        }
+        await s3Client.send(command);
+        return `${R2_PUBLIC_URL}/${path}`;
+    } catch (err) {
+        console.error('[R2 UPLOAD ERROR]', err);
         return null;
     }
+}
 
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
-    return data.publicUrl;
+export const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {
+    const path = `avatars/${userId}/${Date.now()}_${file.name}`;
+    return uploadToR2(path, file);
+};
+
+export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
+    const path = `projects/${projectId}/${Date.now()}_${file.name}`;
+    return uploadToR2(path, file);
 };
 
 export const uploadPostMedia = async (userId: string, file: File): Promise<string | null> => {
-    const filePath = `public/${userId}/posts/${Date.now()}_${file.name}`;
-    const { error: uploadError } = await supabase.storage
-        .from('project_files')
-        .upload(filePath, file, { upsert: true });
-
-    if (uploadError) return null;
-    const { data } = supabase.storage.from('project_files').getPublicUrl(filePath);
-    return data.publicUrl;
+    const path = `posts/${userId}/${Date.now()}_${file.name}`;
+    return uploadToR2(path, file);
 };
 
 export const uploadChatAttachment = async (projectId: string, userId: string, file: File): Promise<string | null> => {
-    const filePath = `${projectId}/chat/${userId}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage.from('project_files').upload(filePath, file);
-    if (uploadError) return null;
-    const { data } = supabase.storage.from('project_files').getPublicUrl(filePath);
-    return data.publicUrl;
+    const path = `chats/${projectId}/${userId}/${Date.now()}_${file.name}`;
+    return uploadToR2(path, file);
 };
 
 export const updateUserPassword = async (newPassword: string) => {
