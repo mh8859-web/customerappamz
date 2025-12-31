@@ -108,15 +108,17 @@
         border: 1px solid rgba(212, 175, 55, 0.2);
       }
 
-      /* CRITICAL: Hiding scrollbars across all browsers */
+      /* NUCLEAR SCROLLBAR HIDING */
       .no-scrollbar::-webkit-scrollbar { 
         display: none !important;
         width: 0 !important;
         height: 0 !important;
+        background: transparent !important;
       }
       .no-scrollbar { 
         -ms-overflow-style: none !important; 
         scrollbar-width: none !important; 
+        overflow: -moz-scrollbars-none !important;
       }
 
       .custom-scrollbar::-webkit-scrollbar { width: 6px; }

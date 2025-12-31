@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import { User, UserRole } from '../types';
 
@@ -8,7 +9,6 @@ interface SignUpMetadata {
 }
 
 // Fetch all users from the public 'users' table
-// Added explicit ordering and timestamp to help bust any potential client-side query caching
 export const getUsers = async (): Promise<User[]> => {
     const { data, error } = await supabase
         .from('users')
@@ -69,7 +69,7 @@ export const updateRecord = async (tableName: string, recordId: string, updates:
     return { data, error };
 };
 
-// Robust function to handle both insert and update (useful for profile syncing)
+// Robust function to handle both insert and update
 export const upsertRecord = async (tableName: string, recordData: Record<string, any>) => {
     const { data, error } = await supabase
         .from(tableName)
@@ -79,7 +79,7 @@ export const upsertRecord = async (tableName: string, recordData: Record<string,
     return { data, error };
 };
 
-// Generic function to delete a record by ID from any table
+// Generic function to delete a record by ID
 export const deleteRecord = async (tableName: string, recordId: string) => {
     const { error } = await supabase
         .from(tableName)
@@ -108,21 +108,21 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
-// Upload a generic project file (quote, design, etc.)
+// --- FIX: Changed bucket name to 'assets' to resolve 404 Bucket Not Found ---
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
 
-    const { error } = await supabase.storage
-        .from('project_files')
+    const { error: uploadError } = await supabase.storage
+        .from('assets')
         .upload(filePath, file);
 
-    if (error) {
-        console.error('Error uploading project file:', error);
+    if (uploadError) {
+        console.error('Error uploading project file:', uploadError);
         return null;
     }
 
     const { data } = supabase.storage
-        .from('project_files')
+        .from('assets')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -132,17 +132,17 @@ export const uploadProjectFile = async (projectId: string, file: File): Promise<
 export const uploadPostMedia = async (userId: string, file: File): Promise<string | null> => {
     const filePath = `public/${userId}/posts/${Date.now()}_${file.name}`;
 
-    const { error } = await supabase.storage
-        .from('post_media') // This requires a 'post_media' bucket in Supabase
+    const { error: uploadError } = await supabase.storage
+        .from('assets') 
         .upload(filePath, file, { upsert: true });
 
-    if (error) {
-        console.error('Error uploading post media:', error);
+    if (uploadError) {
+        console.error('Error uploading post media:', uploadError);
         return null;
     }
 
     const { data } = supabase.storage
-        .from('post_media')
+        .from('assets')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
@@ -154,7 +154,7 @@ export const updateUserPassword = async (newPassword: string) => {
     return { data, error };
 };
 
-// Admin function to update another user's password by calling an edge function.
+// Admin function to update another user's password
 export const adminUpdateUserPassword = async (userId: string, newPassword: string) => {
     const { data, error } = await supabase.rpc('admin_set_user_password', {
         user_id: userId,
@@ -163,7 +163,7 @@ export const adminUpdateUserPassword = async (userId: string, newPassword: strin
     return { data, error };
 };
 
-// Deletes a user by calling a Supabase RPC function.
+// Deletes a user
 export const deleteUser = async (userId: string) => {
     const { data, error } = await supabase.rpc('delete_user', { user_id: userId });
     return { data, error };
@@ -201,52 +201,45 @@ export const endClockOut = async (logId: string, clockOutTime: string, duration:
 
 // Upload a file for a chat message
 export const uploadChatAttachment = async (projectId: string, userId: string, file: File): Promise<string | null> => {
-    // A more structured path to avoid collisions
     const filePath = `${projectId}/chat/${userId}/${Date.now()}-${file.name}`;
 
-    const { error } = await supabase.storage
-        .from('project_files') // Re-using existing bucket, but organizing with folders
+    const { error: uploadError } = await supabase.storage
+        .from('assets') 
         .upload(filePath, file);
 
-    if (error) {
-        console.error('Error uploading chat attachment:', error);
+    if (uploadError) {
+        console.error('Error uploading chat attachment:', uploadError);
         return null;
     }
 
     const { data } = supabase.storage
-        .from('project_files')
+        .from('assets')
         .getPublicUrl(filePath);
 
     return data.publicUrl;
 };
 
 export const deleteProjectAndRelatedData = async (projectId: string) => {
-    // List of tables with a 'project_id' foreign key
     const relatedTables = [
         'tasks', 'designs', 'milestones', 'quotes', 'activity_logs', 
         'site_visits', 'support_tickets', 'work_logs', 'project_updates', 
         'final_gallery_images', 'expenses', 'products'
     ];
 
-    // Create a promise for each deletion
     const deletePromises = relatedTables.map(table => 
         supabase.from(table).delete().eq('project_id', projectId)
     );
     
-    // Messages use 'chat_id' which is the project_id
     deletePromises.push(supabase.from('messages').delete().eq('chat_id', projectId));
 
-    // Execute all deletions in parallel
     const results = await Promise.all(deletePromises);
 
-    // Check if any of the deletions failed
     const errorResult = results.find(res => res.error);
     if (errorResult) {
         console.error("Error deleting related project data:", errorResult.error);
         return { error: errorResult.error };
     }
 
-    // If all related data is deleted, delete the project itself
     const { error: projectDeleteError } = await supabase.from('projects').delete().eq('id', projectId);
 
     if (projectDeleteError) {
@@ -254,6 +247,5 @@ export const deleteProjectAndRelatedData = async (projectId: string) => {
         return { error: projectDeleteError };
     }
 
-    // Success
     return { error: null };
 };
