@@ -151,6 +151,16 @@ const ProjectDetails: React.FC = () => {
 
     const LUXURY_PLACEHOLDER = "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?q=80&w=1200&auto=format&fit=crop";
 
+    // Helper to get percentage for standard milestone titles
+    const getMilestonePercentage = (title: string) => {
+        const t = title.toUpperCase();
+        if (t.includes('TOKEN')) return '10%';
+        if (t.includes('MATERIAL')) return '40%';
+        if (t.includes('INSTALLATION')) return '45%';
+        if (t.includes('COMPLETION') || t.includes('FINAL')) return '5%';
+        return null;
+    };
+
     return (
         <div className="space-y-8 pb-12">
             {/* Header */}
@@ -389,6 +399,11 @@ const ProjectDetails: React.FC = () => {
                             </div>
 
                             <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-2 px-4">
+                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Mandatory Payment Plan (10/40/45/5)</span>
+                                    <div className="h-px flex-1 bg-slate-100"></div>
+                                </div>
                                 {projectMilestones.map((m, idx) => (
                                     <div key={m.id} className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-white border border-slate-100 rounded-[32px] hover:shadow-premium transition-all group">
                                         <div className="flex items-center gap-6">
@@ -400,14 +415,19 @@ const ProjectDetails: React.FC = () => {
                                                 {m.statusDisplay === 'Paid' ? <CheckCircleIcon className="w-6 h-6" /> : (idx + 1).toString().padStart(2, '0')}
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-slate-900 uppercase tracking-wide">{m.title}</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-black text-slate-900 uppercase tracking-wide">{m.title}</h3>
+                                                    {getMilestonePercentage(m.title) && (
+                                                        <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[9px] font-black text-slate-500 uppercase tracking-widest">{getMilestonePercentage(m.title)}</span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-3 mt-1">
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                                                        <CalendarIcon className="w-3 h-3" /> Due {new Date(m.dueDate).toLocaleDateString()}
+                                                        <CalendarIcon className="w-3.5 h-3.5" /> Due {new Date(m.dueDate).toLocaleDateString()}
                                                     </span>
                                                     {m.paidDateDisplay && (
                                                         <span className="text-[10px] font-black text-accent-success uppercase tracking-widest flex items-center gap-1">
-                                                            <CheckCircleIcon className="w-3 h-3" /> Settled {new Date(m.paidDateDisplay).toLocaleDateString()}
+                                                            <CheckCircleIcon className="w-3.5 h-3.5" /> Settled {new Date(m.paidDateDisplay).toLocaleDateString()}
                                                         </span>
                                                     )}
                                                 </div>

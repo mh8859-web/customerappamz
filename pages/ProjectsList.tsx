@@ -110,14 +110,38 @@ const ProjectsList: React.FC = () => {
 
     if (quoteError) throw quoteError;
 
-    // 4. AUTOMATED WELCOME MESSAGE - Updated to requested version
+    // --- 4. MANDATORY PAYMENT MILESTONES (10/40/45/5 Split) ---
+    const budget = projectData.budgetDisplay;
+    const standardMilestones = [
+        { title: 'TOKEN ADVANCE ON CONFIRMATION', percentage: 10, offsetDays: 0 },
+        { title: 'ADVANCE FOR MATERIALS', percentage: 40, offsetDays: 15 },
+        { title: 'ON SITE INSTALLATION', percentage: 45, offsetDays: 45 },
+        { title: 'ON COMPLETION (FINAL SETTLEMENT)', percentage: 5, offsetDays: 75 },
+    ];
+
+    const startDate = new Date(projectData.startDate);
+    
+    for (const m of standardMilestones) {
+        const dueDate = new Date(startDate);
+        dueDate.setDate(dueDate.getDate() + m.offsetDays);
+        
+        await createRecord('milestones', {
+            project_id: newProject.id,
+            title: m.title,
+            amount_display: Math.round(budget * (m.percentage / 100)),
+            due_date: dueDate.toISOString().split('T')[0],
+            status_display: 'Pending'
+        });
+    }
+
+    // 5. AUTOMATED WELCOME MESSAGE
     const currentDate = new Date().toLocaleDateString('en-US', { 
         day: 'numeric', 
         month: 'long', 
         year: 'numeric' 
     });
 
-    const welcomeBody = `This project is Officially Started ${currentDate} From Now You Can Access Your Amaz High Tech Account For Perfect Communication and Clear Updates. We Care About Your Experience So Enjoy Every Moments!!! This Is Your Life's Best Moment Congratulations!!!! Your Dream Home Process Is Started!! Uhh!!`;
+    const welcomeBody = `This project is Officially Started ${currentDate}. From Now You Can Access Your Amaz High Tech Account For Perfect Communication and Clear Updates. We Care About Your Experience So Enjoy Every Moments!!! This Is Your Life's Best Moment Congratulations!!!! Your Dream Home Process Is Started!! Uhh!!`;
 
     const { error: msgError } = await createRecord('messages', {
         chat_id: newProject.id,
@@ -130,7 +154,7 @@ const ProjectsList: React.FC = () => {
         console.error("Welcome Message Error:", msgError);
     }
 
-    // 5. Global refresh to update all UIs
+    // 6. Global refresh to update all UIs
     await refetchData();
   };
 
