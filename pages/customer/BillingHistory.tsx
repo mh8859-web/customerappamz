@@ -66,7 +66,7 @@ const BillingHistory: React.FC = () => {
                         <thead className="bg-slate-900 text-white">
                             <tr>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Milestone / Service</th>
-                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Commission</th>
+                                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Project Reference</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px]">Schedule</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Valuation</th>
                                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">Status</th>

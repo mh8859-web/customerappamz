@@ -70,7 +70,7 @@ const DesignerDashboard: React.FC = () => {
                 <div className="flex items-center text-slate-400 mb-3 text-[10px] font-black uppercase tracking-widest"><BriefcaseIcon className="w-4 h-4 mr-2 text-brand-blue"/> Portfolio Active</div>
                 <p className="text-4xl font-black font-display text-slate-900">{assignedProjects.length}</p>
                 <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Commits</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Engagement Score</span>
                     <span className="text-[10px] font-bold text-brand-blue uppercase">View Details</span>
                 </div>
             </Card>
@@ -85,7 +85,7 @@ const DesignerDashboard: React.FC = () => {
           </div>
 
           <Card className="luxury-glass border-slate-100">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[4px] mb-6">Active Commissions</h2>
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[4px] mb-6">Active Projects</h2>
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {assignedProjects.map(project => (
                 <Link to={`/projects/${project.id}`} key={project.id} className="block group bg-slate-50 hover:bg-white p-6 rounded-[24px] border border-transparent hover:border-slate-200 transition-all duration-300 hover:shadow-premium">

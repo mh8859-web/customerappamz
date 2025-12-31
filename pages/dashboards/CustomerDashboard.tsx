@@ -142,7 +142,7 @@ const CustomerDashboard: React.FC = () => {
                         <Card className="luxury-glass border-slate-100 rounded-[40px] p-10">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
-                                    <span className="text-[10px] font-black text-brand-gold uppercase tracking-[4px]">Active Commission</span>
+                                    <span className="text-[10px] font-black text-brand-gold uppercase tracking-[4px]">Active Project</span>
                                     <h2 className="text-3xl font-display font-black text-slate-900 tracking-tight mt-2 uppercase">{project.title}</h2>
                                 </div>
                                 <span className="px-5 py-2 bg-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 border border-slate-200">Stage: {project.stage.replace(/_/g, ' ')}</span>
