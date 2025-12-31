@@ -6,7 +6,7 @@ import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon, AlertTriangleIcon } from '../components/icons';
-import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote } from '../types';
+import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote, ProjectStage } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
@@ -29,6 +29,18 @@ const TABS: Record<UserRole, string[]> = {
     'Project Head': ['Live Updates', 'Designs', 'Feedback', 'Quotes & Docs', 'Milestones'],
     'Production Head': ['Live Updates', 'Quotes & Docs'],
     'Site Head': ['Live Updates', 'Timeline', 'Designs', 'Quotes & Docs'],
+};
+
+const getTabForStage = (stage: ProjectStage): string => {
+    switch(stage) {
+        case 'design_phase': return 'Designs';
+        case 'awaiting_updated_quote': return 'Quotes & Docs';
+        case 'material_selection': return 'Materials';
+        case 'execution': return 'Live Updates';
+        case 'awaiting_client_completion_approval':
+        case 'awaiting_admin_completion_approval': return 'Milestones';
+        default: return 'Live Updates';
+    }
 };
 
 const ProjectDetails: React.FC = () => {
@@ -144,6 +156,7 @@ const ProjectDetails: React.FC = () => {
     const tabs = TABS[user.role] || [];
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
+    const phaseTab = getTabForStage(project.stage);
 
     return (
         <div className="space-y-8 pb-12">
@@ -165,9 +178,32 @@ const ProjectDetails: React.FC = () => {
 
             <div className="space-y-8">
                 <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit overflow-x-auto max-w-full no-scrollbar">
-                    {tabs.map(tab => (
-                        <button key={tab} onClick={() => setActiveTab(tab)} className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all ${activeTab === tab ? 'bg-white text-brand-blue shadow-card' : 'text-slate-400 hover:text-slate-600'}`}>{tab}</button>
-                    ))}
+                    {tabs.map(tab => {
+                        const isPhaseTab = tab === phaseTab;
+                        return (
+                            <button 
+                                key={tab} 
+                                onClick={() => setActiveTab(tab)} 
+                                className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all relative ${
+                                    activeTab === tab 
+                                        ? 'bg-white text-brand-blue shadow-card' 
+                                        : isPhaseTab 
+                                            ? 'text-brand-blue bg-blue-50/50 border border-brand-blue/10 animate-pulse-fast' 
+                                            : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                            >
+                                {tab}
+                                {isPhaseTab && (
+                                    <div className="absolute -top-1 -right-1 flex items-center justify-center">
+                                        <span className="relative flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-gold"></span>
+                                        </span>
+                                    </div>
+                                )}
+                            </button>
+                        );
+                    })}
                 </nav>
 
                 <div className="min-h-[500px] animate-in">

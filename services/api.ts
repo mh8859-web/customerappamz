@@ -7,7 +7,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 const R2_ACCOUNT_ID = 'f3d381013fa9b31d787da241193ddd1b'; 
 const R2_ACCESS_KEY = '717fefd81967b09d29ea328eee3c2d71';
 const R2_SECRET_KEY = '37ad94b5d191f9ef839d47e92b283fda01f2f74c1dc48a0a92eab8ae6feaae8e';
-const R2_BUCKET_NAME = 'amaz-assets';
+const R2_BUCKET_NAME = 'amzmyaccount';
 const R2_PUBLIC_URL = `https://pub-7c8cbe3e82494966951800abd7c1d18b.r2.dev`;
 
 const s3Client = new S3Client({
