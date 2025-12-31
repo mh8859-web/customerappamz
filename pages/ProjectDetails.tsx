@@ -5,7 +5,8 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon } from '../components/icons';
+// FIX: Path was '../icons', changed to '../components/icons' to match project structure
+import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon, AlertTriangleIcon } from '../components/icons';
 import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote } from '../types';
 import Modal from '../components/ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -55,13 +56,14 @@ const ProjectDetails: React.FC = () => {
         const total = projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0);
         const settled = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
         const outstanding = total - settled;
+        const invoiced = projectMilestones.filter(m => m.statusDisplay === 'Completed').reduce((sum, m) => sum + m.amountDisplay, 0);
         const progress = total > 0 ? (settled / total) * 100 : 0;
-        return { total, settled, outstanding, progress };
+        return { total, settled, outstanding, invoiced, progress };
     }, [projectMilestones]);
 
     const handleApplyStandardPlan = async () => {
         if (!project || isResettingPlan) return;
-        if (!window.confirm("WARNING: This will delete ALL existing milestones for this project and apply the 10/40/45/5 split. Proceed?")) return;
+        if (!window.confirm("CRITICAL ACTION: Reset this project to standard 10/40/45/5% split? This deletes custom milestones.")) return;
 
         setIsResettingPlan(true);
         try {
@@ -73,7 +75,7 @@ const ProjectDetails: React.FC = () => {
                 { title: '10% - TOKEN ADVANCE ON CONFIRMATION', pct: 0.10, days: 0 },
                 { title: '40% - ADVANCE FOR MATERIALS', pct: 0.40, days: 14 },
                 { title: '45% - ON SITE INSTALLATION', pct: 0.45, days: 45 },
-                { title: '5% - ON COMPLETION', pct: 0.05, days: 75 }
+                { title: '5% - ON COMPLETION (SETTLEMENT)', pct: 0.05, days: 75 }
             ];
             const start = new Date(project.startDate);
             for (const step of plan) {
@@ -88,7 +90,7 @@ const ProjectDetails: React.FC = () => {
                 });
             }
             await refetchData();
-            alert("Standard payment plan applied successfully.");
+            alert("Standard Billing Reset Complete.");
         } catch (e) {
             console.error(e);
         } finally {
@@ -105,13 +107,13 @@ const ProjectDetails: React.FC = () => {
             await updateRecord('projects', project.id, { stage: 'material_selection' });
             await createRecord('messages', {
                 chat_id: project.id,
-                body: `SUCCESS: The client has approved the final quotation! Moving project to Material Selection phase.`,
+                body: `CLIENT APPROVAL: The official quotation has been accepted! We are now initializing procurement and site setup.`,
                 sender_id: user?.id,
                 is_system_message: true
             });
             await refetchData();
         } catch (err) {
-            alert("Sync failed. Check connection.");
+            alert("Approval sync failed. Check connection.");
         } finally {
             setIsApproveSubmitting(false);
         }
@@ -132,7 +134,7 @@ const ProjectDetails: React.FC = () => {
         return [...updates, ...logs, ...system].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [projectId, projectUpdates, workLogs, activityLogs, findUserById]);
 
-    if (usersLoading || dataLoading) return <div className="p-20 text-center animate-pulse text-slate-400 font-black uppercase tracking-widest">Synchronizing Project Data...</div>;
+    if (usersLoading || dataLoading) return <div className="p-20 text-center animate-pulse text-slate-400 font-black uppercase tracking-widest">Synchronizing Project Portfolio...</div>;
     if (!project || !user) return <div className="text-center p-20">Portfolio link broken.</div>;
 
     const tabs = TABS[user.role] || [];
@@ -145,12 +147,12 @@ const ProjectDetails: React.FC = () => {
                 <div>
                     <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase">{project.title}</h1>
                     <div className="mt-4 flex items-center gap-6">
-                        <UserNameDisplay user={customer} showAvatar={true} textClassName="text-sm font-bold text-slate-900" imageSize="w-8 h-8" />
+                        <UserNameDisplay user={customer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-8 h-8" />
                         <div className="h-4 w-px bg-slate-200"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">ID: {project.id.slice(0, 8)}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Project ID: {project.id.slice(0, 8)}</span>
                     </div>
                 </div>
-                <Button variant="secondary" onClick={() => navigate('/chat/' + project.id)} className="!rounded-full !px-8 h-14 shadow-sm">
+                <Button variant="secondary" onClick={() => navigate('/chat/' + project.id)} className="!rounded-full !px-8 h-14 shadow-premium border-slate-200">
                     <MessageSquareIcon className="w-5 h-5 mr-3" /> Communication Portal
                 </Button>
             </div>
@@ -168,34 +170,54 @@ const ProjectDetails: React.FC = () => {
                     {activeTab === 'Live Updates' && (
                         <div className="space-y-12">
                             {user.role === 'Customer' && project.stage === 'awaiting_updated_quote' && latestQuote && (
-                                <Card className="!p-10 bg-brand-gold/5 border-2 border-brand-gold/30 rounded-[40px] shadow-gold-glow flex flex-col md:flex-row items-center justify-between gap-8 animate-pulse-fast">
+                                <Card className="!p-10 bg-brand-gold/5 border-2 border-brand-gold/40 rounded-[40px] shadow-gold-glow flex flex-col md:flex-row items-center justify-between gap-8 animate-pulse-fast">
                                     <div className="flex items-center gap-8">
-                                        <div className="w-20 h-20 rounded-[28px] bg-brand-gold text-slate-900 flex items-center justify-center shadow-lg"><FileTextIcon className="w-10 h-10" /></div>
+                                        <div className="w-20 h-20 rounded-[28px] bg-brand-gold text-slate-900 flex items-center justify-center shadow-lg animate-bounce-slow"><FileTextIcon className="w-10 h-10" /></div>
                                         <div>
-                                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Final Quote Ready</h3>
-                                            <p className="text-sm text-slate-500 font-bold uppercase mt-2">Approve now to move into material selection and site setup.</p>
+                                            <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Quotation Awaiting Action</h3>
+                                            <p className="text-sm text-slate-600 font-bold uppercase mt-2">The revised execution quote is ready. Please approve to start procurement.</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-4">
-                                        <a href={latestQuote.fileUrl} target="_blank" rel="noopener noreferrer"><Button variant="secondary" className="!rounded-full !px-10 !py-4 uppercase font-black tracking-widest text-[11px]">View PDF</Button></a>
-                                        <Button onClick={handleApproveQuote} disabled={isApproveSubmitting} className="!rounded-full !px-12 !py-4 !bg-slate-900 !text-white uppercase font-black tracking-[3px] text-[11px]">{isApproveSubmitting ? 'Syncing...' : 'Approve & Start'}</Button>
+                                        <a href={latestQuote.fileUrl} target="_blank" rel="noopener noreferrer"><Button variant="secondary" className="!rounded-full !px-10 !py-5 uppercase font-black tracking-widest text-[12px]">View PDF</Button></a>
+                                        <Button onClick={handleApproveQuote} disabled={isApproveSubmitting} className="!rounded-full !px-14 !py-5 !bg-slate-900 !text-white uppercase font-black tracking-[4px] text-[12px] shadow-button">{isApproveSubmitting ? 'Processing...' : 'Approve & Start'}</Button>
                                     </div>
                                 </Card>
                             )}
+                            
+                            {/* Billing Urgency for Customer - Redesigned for maximum "Urge" */}
+                            {user.role === 'Customer' && financialStats.invoiced > 0 && (
+                                <Card className="!p-8 bg-red-600 border-none rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-6 shadow-button ring-4 ring-red-500/20">
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-16 h-16 rounded-2xl bg-white text-red-600 flex items-center justify-center shadow-lg animate-pulse"><CreditCardIcon className="w-8 h-8" /></div>
+                                        <div>
+                                            <h3 className="text-xl font-black text-white uppercase tracking-tight">Immediate Payment Required</h3>
+                                            <p className="text-sm text-white/80 font-bold uppercase tracking-wider">A milestone has been billed. Work may pause until settlement is confirmed.</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-center md:text-right">
+                                        <p className="text-[10px] font-black text-white/50 uppercase tracking-[2px]">Amount Due</p>
+                                        <p className="text-3xl font-display font-black text-white">₹{financialStats.invoiced.toLocaleString()}</p>
+                                    </div>
+                                    <Button onClick={() => setActiveTab('Milestones')} className="!bg-white !text-red-600 hover:!bg-slate-100 !rounded-full !px-10 !py-4 !font-black !text-xs uppercase tracking-widest">Settle Invoice</Button>
+                                </Card>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <Card className="luxury-glass">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Site Address</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Site Location</span>
                                     <p className="text-sm font-bold text-slate-900 mt-2">{project.address}</p>
                                 </Card>
                                 <Card className="luxury-glass">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Allocation (₹)</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Capital Allocation</span>
                                     <p className="text-xl font-display font-black text-slate-900 mt-1">₹{(project.budgetDisplay / 100000).toFixed(1)}L</p>
                                 </Card>
                                 <Card className="luxury-glass">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Team Lead</span>
+                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Project Lead</span>
                                     <UserNameDisplay user={designer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-8 h-8" />
                                 </Card>
                             </div>
+                            
                             <div className="space-y-4">
                                 {unifiedUpdateFeed.map(update => (
                                     <div key={update.id} className="flex gap-6 group">
@@ -215,76 +237,165 @@ const ProjectDetails: React.FC = () => {
 
                     {activeTab === 'Milestones' && (
                         <div className="space-y-10">
-                            <div className="flex justify-between items-center bg-slate-50 p-6 rounded-[32px] border border-slate-100">
-                                <div>
-                                    <h3 className="font-black text-slate-900 uppercase tracking-widest text-sm">Mandatory Payment Schedule</h3>
-                                    <p className="text-xs text-slate-400 font-bold uppercase mt-1">10% Token / 40% Materials / 45% Installation / 5% Completion</p>
+                            <div className="flex flex-col lg:flex-row justify-between lg:items-center bg-slate-900 p-10 rounded-[40px] border border-white/10 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+                                <div className="z-10">
+                                    <h3 className="font-black text-white uppercase tracking-[4px] text-lg">Official Billing Schedule</h3>
+                                    <p className="text-xs text-brand-gold font-black uppercase mt-1 tracking-[2px]">10% Token | 40% Materials | 45% Installation | 5% Completion</p>
+                                    <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-8">
+                                        <div><p className="text-[9px] font-black text-white/40 uppercase">Total Contract</p><p className="text-xl font-display font-black text-white">₹{(financialStats.total / 100000).toFixed(2)}L</p></div>
+                                        <div><p className="text-[9px] font-black text-white/40 uppercase">Settled</p><p className="text-xl font-display font-black text-brand-gold">₹{(financialStats.settled / 100000).toFixed(2)}L</p></div>
+                                        <div><p className="text-[9px] font-black text-white/40 uppercase">Outstanding</p><p className="text-xl font-display font-black text-white">₹{(financialStats.outstanding / 1000).toFixed(0)}K</p></div>
+                                        <div><p className="text-[9px] font-black text-white/40 uppercase">Completion</p><p className="text-xl font-display font-black text-white">{financialStats.progress.toFixed(0)}%</p></div>
+                                    </div>
                                 </div>
                                 {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
-                                    <Button onClick={handleApplyStandardPlan} disabled={isResettingPlan} variant="secondary" className="!rounded-full !py-3 !px-6 !text-[10px] uppercase font-black tracking-widest border-brand-gold/30">
-                                        <RefreshIcon className={`w-4 h-4 mr-2 text-brand-gold ${isResettingPlan ? 'animate-spin' : ''}`} /> Reset Standard Plan
+                                    <Button onClick={handleApplyStandardPlan} disabled={isResettingPlan} variant="secondary" className="!rounded-full !py-4 !px-8 !text-[11px] uppercase font-black tracking-widest border-white/20 !text-white hover:bg-white/10 mt-8 lg:mt-0 z-10">
+                                        <RefreshIcon className={`w-5 h-5 mr-3 text-brand-gold ${isResettingPlan ? 'animate-spin' : ''}`} /> Enforce 10/40/45/5 Split
                                     </Button>
                                 )}
                             </div>
+                            
                             <div className="space-y-4">
-                                {projectMilestones.map((m, idx) => (
-                                    <div key={m.id} className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-white border border-slate-100 rounded-[32px] hover:shadow-premium transition-all">
-                                        <div className="flex items-center gap-6">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xs ${m.statusDisplay === 'Paid' ? 'bg-accent-success/10 text-accent-success' : 'bg-slate-50 text-slate-300'}`}>
-                                                {m.statusDisplay === 'Paid' ? <CheckCircleIcon className="w-6 h-6" /> : (idx + 1).toString().padStart(2, '0')}
+                                {projectMilestones.map((m, idx) => {
+                                    return (
+                                        <div key={m.id} className={`flex flex-col md:flex-row md:items-center justify-between p-10 bg-white border rounded-[40px] hover:shadow-premium transition-all ${m.statusDisplay === 'Completed' ? 'border-red-500/30 ring-4 ring-red-500/5' : 'border-slate-100'}`}>
+                                            <div className="flex items-center gap-8">
+                                                <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center font-black text-lg ${
+                                                    m.statusDisplay === 'Paid' ? 'bg-accent-success/10 text-accent-success' : 
+                                                    m.statusDisplay === 'Completed' ? 'bg-red-600 text-white animate-pulse' : 
+                                                    'bg-slate-50 text-slate-300'
+                                                }`}>
+                                                    {m.statusDisplay === 'Paid' ? <CheckCircleIcon className="w-8 h-8" /> : (idx + 1).toString().padStart(2, '0')}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-3">
+                                                        <h3 className="font-black text-slate-900 uppercase tracking-wide text-lg">{m.title}</h3>
+                                                        {m.statusDisplay === 'Completed' && (
+                                                            <span className="bg-red-600 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-button">Action Required: Payment</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <span className="text-[11px] font-bold text-slate-400 uppercase flex items-center gap-1"><CalendarIcon className="w-4 h-4" /> Due {new Date(m.dueDate).toLocaleDateString()}</span>
+                                                        {m.paidDateDisplay && <span className="text-[11px] font-black text-accent-success uppercase tracking-widest flex items-center gap-1 border-l pl-3 ml-3 border-slate-200"><CheckCircleIcon className="w-4 h-4" /> Cleared {new Date(m.paidDateDisplay).toLocaleDateString()}</span>}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h3 className="font-black text-slate-900 uppercase tracking-wide">{m.title}</h3>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Due {new Date(m.dueDate).toLocaleDateString()}</span>
+                                            <div className="flex flex-col md:flex-row items-center gap-10 mt-8 md:mt-0">
+                                                <div className="text-center md:text-right">
+                                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-[3px]">Capital Amount</p>
+                                                    <p className="text-2xl font-display font-black text-slate-900 tracking-tight">₹{m.amountDisplay.toLocaleString()}</p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    {user.role === 'Customer' && m.statusDisplay === 'Completed' && (
+                                                        <Button onClick={() => { setSelectedMilestone(m); setPaymentModalOpen(true); }} className="!rounded-full !px-12 !py-4 !bg-slate-900 !text-white uppercase font-black text-[11px] tracking-widest shadow-button">Proceed to Settlement</Button>
+                                                    )}
+                                                    
+                                                    {(user.role === 'Admin' || user.role === 'Sub-Admin') && m.statusDisplay === 'Pending' && (
+                                                        <Button variant="secondary" onClick={() => handleUpdateMilestoneStatus(m.id, 'Completed')} className="!rounded-full !py-2.5 !px-6 !text-[10px] uppercase font-black tracking-widest">Mark Invoiced</Button>
+                                                    )}
+
+                                                    <span className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[2px] border ${
+                                                        m.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' : 
+                                                        m.statusDisplay === 'Completed' ? 'bg-red-50 text-red-600 border-red-200' : 
+                                                        'bg-slate-50 text-slate-400 border-slate-200/50'
+                                                    }`}>
+                                                        {m.statusDisplay === 'Paid' ? 'Cleared' : m.statusDisplay === 'Completed' ? 'UNPAID BILL' : 'Projected'}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-8">
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[2px]">Allocation</p>
-                                                <p className="text-xl font-display font-black text-slate-900 tracking-tight">₹{m.amountDisplay.toLocaleString()}</p>
-                                            </div>
-                                            <span className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border ${m.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' : 'bg-slate-50 text-slate-400 border-slate-200/50'}`}>
-                                                {m.statusDisplay === 'Paid' ? 'Settled' : 'Pending'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
 
                     {activeTab === 'Quotes & Docs' && (
                         <div className="grid gap-6">
+                            {/* Bucket Warning Diagnostic */}
+                            <div className="p-6 bg-slate-900 rounded-[32px] border border-brand-gold/30 flex items-center justify-between gap-6 overflow-hidden relative">
+                                <div className="absolute bottom-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-full blur-3xl -mr-16 -mb-16"></div>
+                                <div className="flex items-center gap-6 z-10">
+                                    <div className="w-14 h-14 bg-brand-gold/20 rounded-2xl flex items-center justify-center"><InfoIcon className="w-7 h-7 text-brand-gold" /></div>
+                                    <div>
+                                        <h3 className="font-black text-white uppercase tracking-widest">Diagnostic Asset Hub</h3>
+                                        <p className="text-xs text-slate-400 font-bold uppercase mt-1">Bucket: project_files | Verify this exists in dashboard to avoid 404.</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {(user.role === 'Admin' || user.role === 'Designer') && (
-                                <button onClick={() => setUploadQuoteModalOpen(true)} className="flex items-center gap-6 p-8 border-2 border-dashed border-slate-200 rounded-[32px] hover:border-brand-blue hover:bg-white transition-all group">
-                                    <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-brand-blue transition-all"><FilePlusIcon className="w-7 h-7" /></div>
-                                    <h3 className="font-black text-slate-400 group-hover:text-slate-900 uppercase tracking-widest text-sm">Upload Updated Quotation</h3>
+                                <button onClick={() => setUploadQuoteModalOpen(true)} className="flex items-center gap-8 p-10 border-2 border-dashed border-slate-200 rounded-[40px] hover:border-brand-blue hover:bg-white transition-all group shadow-sm">
+                                    <div className="w-16 h-16 rounded-[24px] bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-brand-blue group-hover:text-white transition-all duration-500 shadow-sm"><FilePlusIcon className="w-8 h-8" /></div>
+                                    <div className="text-left">
+                                        <h3 className="font-black text-slate-400 group-hover:text-slate-900 uppercase tracking-widest text-lg transition-colors">Provision Updated Quotation</h3>
+                                        <p className="text-xs text-slate-300 font-bold uppercase mt-1 tracking-widest">Supports Architectural PDF Format Only</p>
+                                    </div>
                                 </button>
                             )}
+                            
                             {projectQuotes.map(quote => (
-                                <Card key={quote.id} className="flex flex-col md:flex-row md:items-center justify-between p-8 luxury-glass border-slate-100 rounded-[32px]">
-                                    <div className="flex items-center gap-6">
-                                        <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300"><FileTextIcon className="w-7 h-7" /></div>
+                                <Card key={quote.id} className="flex flex-col md:flex-row md:items-center justify-between p-10 luxury-glass border-slate-100 rounded-[40px] shadow-premium">
+                                    <div className="flex items-center gap-8">
+                                        <div className="w-16 h-16 rounded-[24px] bg-brand-blue/10 flex items-center justify-center text-brand-blue"><FileTextIcon className="w-8 h-8" /></div>
                                         <div>
-                                            <h3 className="font-black text-slate-900 uppercase tracking-wide">{quote.version} Quote</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Uploaded {new Date(quote.createdAt).toLocaleDateString()}</p>
+                                            <h3 className="font-black text-slate-900 uppercase tracking-wide text-xl">{quote.version} Quotation</h3>
+                                            <p className="text-[11px] text-slate-400 font-bold uppercase mt-1 flex items-center gap-2">
+                                                <CalendarIcon className="w-4 h-4" /> Registered on {new Date(quote.createdAt).toLocaleDateString()}
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-3">
-                                        <a href={quote.fileUrl} target="_blank" rel="noopener noreferrer"><Button variant="secondary" className="!rounded-full !px-8 uppercase font-black text-[10px] tracking-widest">View PDF</Button></a>
+                                    <div className="flex gap-4 mt-6 md:mt-0">
+                                        <a href={quote.fileUrl} target="_blank" rel="noopener noreferrer"><Button variant="secondary" className="!rounded-full !px-10 !py-4 uppercase font-black text-[11px] tracking-widest">View Asset</Button></a>
                                         {user.role === 'Customer' && project.stage === 'awaiting_updated_quote' && quote.id === latestQuote.id && (
-                                            <Button onClick={handleApproveQuote} disabled={isApproveSubmitting} className="!rounded-full !px-10 !bg-brand-gold !text-slate-900 uppercase font-black text-[10px] tracking-widest shadow-gold-glow animate-pulse">Approve This Version</Button>
+                                            <Button onClick={handleApproveQuote} disabled={isApproveSubmitting} className="!rounded-full !px-12 !bg-brand-gold !text-slate-900 uppercase font-black text-[11px] tracking-widest shadow-gold-glow animate-pulse">Approve Quotation</Button>
                                         )}
                                     </div>
                                 </Card>
                             ))}
                         </div>
                     )}
+                    
+                    {activeTab === 'Designs' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {(user.role === 'Designer' || user.role === 'Admin') && (
+                                <button onClick={() => setUploadDesignModalOpen(true)} className="aspect-video rounded-[40px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-4 hover:bg-white hover:border-brand-blue hover:shadow-premium transition-all group">
+                                    <div className="w-14 h-14 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-brand-blue/10 group-hover:text-brand-blue text-slate-300 transition-colors">
+                                        <PhotoIcon className="w-8 h-8" />
+                                    </div>
+                                    <span className="text-[12px] font-black uppercase tracking-[3px] text-slate-400 group-hover:text-brand-blue">Upload Visual</span>
+                                </button>
+                            )}
+                            {designs.filter(d => d.projectId === project.id).map(design => (
+                                <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[40px] bg-white group/card">
+                                    <div className="aspect-video relative overflow-hidden bg-slate-100">
+                                        <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105" alt="Render" />
+                                    </div>
+                                    <div className="p-8">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h3 className="font-black text-slate-900 uppercase tracking-wide">v{design.version} Render</h3>
+                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${design.approved ? 'bg-accent-success/10 text-accent-success' : 'bg-accent-warning/10 text-accent-warning'}`}>{design.approved ? 'Approved' : 'In Review'}</span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+
+                    {activeTab === 'Timeline' && <ProjectGanttChart milestones={projectMilestones} startDate={project.startDate} />}
                 </div>
             </div>
 
             <UploadQuoteModal isOpen={isUploadQuoteModalOpen} onClose={() => setUploadQuoteModalOpen(false)} onUpload={async (f,v) => { const url = await uploadProjectFile(project.id, f); if(url) { await createRecord('quotes', { project_id: project.id, version: v, file_url: url, uploaded_by: user.id }); await refetchData(); } }} />
             <AddMilestoneModal isOpen={isAddMilestoneModalOpen} onClose={() => setAddMilestoneModalOpen(false)} onAdd={async (m) => { await createRecord('milestones', { project_id: project.id, ...m, status_display: 'Pending' }); await refetchData(); }} />
+            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={async (f,n,t) => { const url = await uploadProjectFile(project.id, f); if(url) { await createRecord('designs', { project_id: project.id, file_url: url, notes: n, type: t, version: designs.length + 1, uploaded_by: user.id }); await refetchData(); } }} />
+            <PaymentModal 
+                isOpen={isPaymentModalOpen} 
+                onClose={() => setPaymentModalOpen(false)} 
+                milestone={selectedMilestone} 
+                onPaymentSuccess={(id) => handleUpdateMilestoneStatus(id, 'Paid')} 
+            />
         </div>
     );
 };

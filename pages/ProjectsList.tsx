@@ -74,6 +74,7 @@ const ProjectsList: React.FC = () => {
   if (!user) return null;
 
   const handleCreateProject = async (projectData: any, quoteFile: File) => {
+    // 1. PROJECT INITIALIZATION
     const { data: newProject, error: projectError } = await createRecord('projects', {
         title: projectData.title,
         description: projectData.description,
@@ -92,27 +93,29 @@ const ProjectsList: React.FC = () => {
 
     if (projectError) throw projectError;
 
+    // 2. DOCUMENT UPLOAD (project_files)
     const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
     if (quoteUrl) {
         await createRecord('quotes', {
             project_id: newProject.id,
-            version: 'Initial',
+            version: 'Initial Proposal',
             file_url: quoteUrl,
             uploaded_by: user.id
         });
     }
 
+    // 3. MANDATORY 10/40/45/5 PAYMENT PLAN
     const budget = projectData.budgetDisplay;
-    const paymentPlan = [
-        { title: '10% - TOKEN ADVANCE ON CONFIRMATION', pct: 0.10, days: 0 },
-        { title: '40% - ADVANCE FOR MATERIALS', pct: 0.40, days: 14 },
-        { title: '45% - ON SITE INSTALLATION', pct: 0.45, days: 45 },
-        { title: '5% - ON COMPLETION', pct: 0.05, days: 75 }
+    const paymentSteps = [
+        { title: '10% - TOKEN ADVANCE ON CONFIRMATION', pct: 0.10, offset: 0 },
+        { title: '40% - ADVANCE FOR MATERIALS', pct: 0.40, offset: 15 },
+        { title: '45% - ON SITE INSTALLATION', pct: 0.45, offset: 45 },
+        { title: '5% - ON COMPLETION (SETTLEMENT)', pct: 0.05, offset: 75 }
     ];
 
-    for (const step of paymentPlan) {
+    for (const step of paymentSteps) {
         const dueDate = new Date(projectData.startDate);
-        dueDate.setDate(dueDate.getDate() + step.days);
+        dueDate.setDate(dueDate.getDate() + step.offset);
         await createRecord('milestones', {
             project_id: newProject.id,
             title: step.title,
@@ -122,9 +125,10 @@ const ProjectsList: React.FC = () => {
         });
     }
 
+    // 4. AUTOMATED WELCOME
     await createRecord('messages', {
         chat_id: newProject.id,
-        body: `Welcome to AMAZ Interiors! Your project is live. We have initialized your 10/40/45/5 mandatory payment plan. Let's build your dream home!`,
+        body: `Welcome to AMAZ High Tech Interiors! Your project is Officially Started. Your 10/40/45/5 mandatory payment schedule is active. Let's create your masterpiece.`,
         sender_id: user.id,
         is_system_message: true
     });
@@ -136,9 +140,6 @@ const ProjectsList: React.FC = () => {
       user.role === 'Admin' || user.role === 'Sub-Admin' || p.designerId === user.id || p.customerId === user.id
   );
 
-  const activeProjects = projectsForUser.filter(p => p.status === 'Active');
-  const archivedProjects = projectsForUser.filter(p => p.status === 'Completed');
-
   return (
     <div className="space-y-12 animate-in">
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
@@ -148,14 +149,16 @@ const ProjectsList: React.FC = () => {
         </div>
         {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
             <div className="flex gap-4">
-                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8"><RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync Quotes</Button>
+                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8 hover:border-brand-gold/40">
+                  <RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync Quotes
+                </Button>
                 <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow">+ Initiate Project</Button>
             </div>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {activeProjects.map(project => (
+          {projectsForUser.filter(p => p.status === 'Active').map(project => (
             <ProjectCard key={project.id} project={project} />
           ))}
       </div>

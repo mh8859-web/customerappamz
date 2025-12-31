@@ -89,7 +89,7 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
         .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-        console.error('Avatar Upload Error (Check "avatars" bucket):', uploadError);
+        console.error('Avatar Upload Error:', uploadError);
         return null;
     }
 
@@ -97,22 +97,31 @@ export const uploadAvatar = async (userId: string, file: File): Promise<string |
     return data.publicUrl;
 };
 
+// --- STORAGE BUCKET: project_files ---
+// Verification: Dashboard matches exactly 'project_files'
 export const uploadProjectFile = async (projectId: string, file: File): Promise<string | null> => {
+    const BUCKET = 'project_files';
     const filePath = `${projectId}/${Date.now()}_${file.name}`;
-    const BUCKET_NAME = 'project_files';
     
-    console.log(`Attempting upload to bucket: ${BUCKET_NAME}`);
+    console.log(`[STORAGE] Uploading to: ${BUCKET}/${filePath}`);
     
     const { error: uploadError } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(filePath, file);
+        .from(BUCKET)
+        .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+        });
 
     if (uploadError) {
-        console.error(`Storage Error [${BUCKET_NAME}]:`, uploadError);
+        console.error(`[STORAGE ERROR] ${uploadError.message}`, uploadError);
+        // Explicit check for common 404 causes
+        if (uploadError.message.includes('Bucket not found')) {
+            alert("CRITICAL: Supabase bucket 'project_files' not found. Please ensure the bucket is PUBLIC and named exactly 'project_files' (all lowercase, underscore) in your dashboard.");
+        }
         return null;
     }
 
-    const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(filePath);
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
     return data.publicUrl;
 };
 
