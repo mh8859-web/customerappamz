@@ -12,7 +12,6 @@ import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile } from '../services/api';
 import { RefreshIcon, MapPinIcon, BriefcaseIcon } from '../components/icons';
-import { AMAZ_SUPPORT_USER_ID } from '../constants';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { findUserById } = useUsers();
@@ -68,16 +67,13 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 const ProjectsList: React.FC = () => {
   const { user } = useAuth();
   const { projects, refetchData } = useData();
-  const { findUserById } = useUsers();
   const [activeTab, setActiveTab] = useState<'Active' | 'Archived'>('Active');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isSyncModalOpen, setSyncModalOpen] = useState(false);
-  const navigate = useNavigate();
   
   if (!user) return null;
 
   const handleCreateProject = async (projectData: any, quoteFile: File) => {
-    // 1. Create Project Entry first to get ID
     const { data: newProject, error: projectError } = await createRecord('projects', {
         title: projectData.title,
         description: projectData.description,
@@ -96,65 +92,43 @@ const ProjectsList: React.FC = () => {
 
     if (projectError) throw projectError;
 
-    // 2. Upload the Quote PDF using the new Project ID
     const quoteUrl = await uploadProjectFile(newProject.id, quoteFile);
-    if (!quoteUrl) throw new Error("Document upload failed. Please try again.");
+    if (quoteUrl) {
+        await createRecord('quotes', {
+            project_id: newProject.id,
+            version: 'Initial',
+            file_url: quoteUrl,
+            uploaded_by: user.id
+        });
+    }
 
-    // 3. Create Quote Record
-    const { error: quoteError } = await createRecord('quotes', {
-        project_id: newProject.id,
-        version: 'Initial',
-        file_url: quoteUrl,
-        uploaded_by: user.id
-    });
-
-    if (quoteError) throw quoteError;
-
-    // --- 4. MANDATORY PAYMENT MILESTONES (10/40/45/5 Split) ---
     const budget = projectData.budgetDisplay;
-    const standardMilestones = [
-        { title: 'TOKEN ADVANCE ON CONFIRMATION', percentage: 10, offsetDays: 0 },
-        { title: 'ADVANCE FOR MATERIALS', percentage: 40, offsetDays: 15 },
-        { title: 'ON SITE INSTALLATION', percentage: 45, offsetDays: 45 },
-        { title: 'ON COMPLETION (FINAL SETTLEMENT)', percentage: 5, offsetDays: 75 },
+    const paymentPlan = [
+        { title: '10% - TOKEN ADVANCE ON CONFIRMATION', pct: 0.10, days: 0 },
+        { title: '40% - ADVANCE FOR MATERIALS', pct: 0.40, days: 14 },
+        { title: '45% - ON SITE INSTALLATION', pct: 0.45, days: 45 },
+        { title: '5% - ON COMPLETION', pct: 0.05, days: 75 }
     ];
 
-    const startDate = new Date(projectData.startDate);
-    
-    for (const m of standardMilestones) {
-        const dueDate = new Date(startDate);
-        dueDate.setDate(dueDate.getDate() + m.offsetDays);
-        
+    for (const step of paymentPlan) {
+        const dueDate = new Date(projectData.startDate);
+        dueDate.setDate(dueDate.getDate() + step.days);
         await createRecord('milestones', {
             project_id: newProject.id,
-            title: m.title,
-            amount_display: Math.round(budget * (m.percentage / 100)),
+            title: step.title,
+            amount_display: Math.round(budget * step.pct),
             due_date: dueDate.toISOString().split('T')[0],
             status_display: 'Pending'
         });
     }
 
-    // 5. AUTOMATED WELCOME MESSAGE
-    const currentDate = new Date().toLocaleDateString('en-US', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-    });
-
-    const welcomeBody = `This project is Officially Started ${currentDate}. From Now You Can Access Your Amaz High Tech Account For Perfect Communication and Clear Updates. We Care About Your Experience So Enjoy Every Moments!!! This Is Your Life's Best Moment Congratulations!!!! Your Dream Home Process Is Started!! Uhh!!`;
-
-    const { error: msgError } = await createRecord('messages', {
+    await createRecord('messages', {
         chat_id: newProject.id,
-        body: welcomeBody,
-        sender_id: user.id, 
-        is_system_message: true 
+        body: `Welcome to AMAZ Interiors! Your project is live. We have initialized your 10/40/45/5 mandatory payment plan. Let's build your dream home!`,
+        sender_id: user.id,
+        is_system_message: true
     });
 
-    if (msgError) {
-        console.error("Welcome Message Error:", msgError);
-    }
-
-    // 6. Global refresh to update all UIs
     await refetchData();
   };
 
@@ -165,49 +139,26 @@ const ProjectsList: React.FC = () => {
   const activeProjects = projectsForUser.filter(p => p.status === 'Active');
   const archivedProjects = projectsForUser.filter(p => p.status === 'Completed');
 
-  const projectsToDisplay = user.role === 'Customer'
-    ? (activeTab === 'Active' ? activeProjects : archivedProjects)
-    : projectsForUser;
-    
   return (
-    <div className="space-y-12 animate-luxury-reveal">
+    <div className="space-y-12 animate-in">
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
         <div>
-            <h1 className="text-5xl font-display font-light text-brand-dark tracking-tight leading-tight">Master <span className="font-bold block lg:inline">Portfolio</span></h1>
-            <p className="text-text-secondary mt-2 text-lg italic font-light">Overseeing architectural excellence across the AMAZ ecosystem.</p>
+            <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase">Master Portfolio</h1>
+            <p className="text-slate-400 mt-2 text-lg font-bold uppercase tracking-[4px]">Architectural Excellence System</p>
         </div>
         {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
-            <div className="flex flex-wrap gap-4">
-                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="flex items-center gap-3">
-                    <RefreshIcon className="w-5 h-5 text-brand-gold" /> Sync Assets
-                </Button>
-                <Button variant="gold" onClick={() => setCreateModalOpen(true)}>+ Initiate New Project</Button>
+            <div className="flex gap-4">
+                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8"><RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync Quotes</Button>
+                <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow">+ Initiate Project</Button>
             </div>
         )}
       </div>
 
-      {user.role === 'Customer' && (
-        <div className="flex gap-10 border-b border-border-luxury">
-            <button onClick={() => setActiveTab('Active')} className={`pb-4 text-sm font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === 'Active' ? 'border-brand-gold text-brand-gold' : 'border-transparent text-text-secondary hover:text-brand-dark'}`}>Active ({activeProjects.length})</button>
-            <button onClick={() => setActiveTab('Archived')} className={`pb-4 text-sm font-bold uppercase tracking-[0.2em] transition-all border-b-2 ${activeTab === 'Archived' ? 'border-brand-gold text-brand-gold' : 'border-transparent text-text-secondary hover:text-brand-dark'}`}>Archived ({archivedProjects.length})</button>
-        </div>
-      )}
-
-      {projectsToDisplay.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {projectsToDisplay.map(project => (
-              <ProjectCard key={project.id} project={project} />
-              ))}
-          </div>
-      ) : (
-          <Card className="text-center py-24 bg-page-bg/50 border-dashed border-zinc-300">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                  <BriefcaseIcon className="w-10 h-10 text-zinc-300" />
-              </div>
-              <h3 className="text-2xl font-display font-bold text-zinc-500">No projects found</h3>
-              <p className="text-zinc-400 mt-2">The portfolio is currently waiting for new inspiration.</p>
-          </Card>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {activeProjects.map(project => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+      </div>
 
       <CreateProjectModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onCreate={handleCreateProject} />
       <SyncQuotesModal isOpen={isSyncModalOpen} onClose={() => setSyncModalOpen(false)} onSyncComplete={refetchData} />
