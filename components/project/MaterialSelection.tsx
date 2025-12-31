@@ -30,20 +30,43 @@ const AddMaterialModal: React.FC<{
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Basic validation
+        if (!formData.name.trim() || !formData.brand.trim() || !formData.imageUrl.trim()) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
         setIsSubmitting(true);
-        const { error } = await createRecord('project_materials', {
-            project_id: projectId,
-            name: formData.name,
-            category: formData.category,
-            brand: formData.brand,
-            image_url: formData.imageUrl,
-            status: 'Pending'
-        });
-        setIsSubmitting(false);
-        if (!error) {
-            onSuccess();
-            onClose();
-            setFormData({ name: '', category: 'Laminate', brand: '', imageUrl: '' });
+        
+        try {
+            const { data, error } = await createRecord('project_materials', {
+                project_id: projectId,
+                name: formData.name.trim(),
+                category: formData.category,
+                brand: formData.brand.trim(),
+                image_url: formData.imageUrl.trim(),
+                status: 'Pending'
+            });
+
+            if (error) {
+                console.error('[DATABASE ERROR]', error);
+                // Handle specific long URL error or missing table/permissions
+                if (error.message.includes('too long') || error.code === '22001') {
+                    alert("The Image URL is too long for the database. Please use a shorter direct link to the image, not a Google Search URL.");
+                } else {
+                    alert(`System Error: ${error.message || 'Could not save material.'}`);
+                }
+            } else {
+                onSuccess();
+                onClose();
+                setFormData({ name: '', category: 'Laminate', brand: '', imageUrl: '' });
+            }
+        } catch (err: any) {
+            console.error('[SUBMISSION EXCEPTION]', err);
+            alert("A network error occurred. Please check your connection and try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -96,18 +119,30 @@ const AddMaterialModal: React.FC<{
                     <div className="relative">
                         <PhotoIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                         <input 
-                            type="url" 
-                            placeholder="https://images.unsplash.com/..."
+                            type="text" 
+                            placeholder="Direct image link (e.g., https://...jpg)"
                             value={formData.imageUrl}
                             onChange={e => setFormData({...formData, imageUrl: e.target.value})}
                             className={`${inputClasses} pl-12`}
                             required
                         />
                     </div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 ml-1">Avoid long search URLs; use direct image links for best results.</p>
                 </div>
                 <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
-                    <button type="button" onClick={onClose} className="text-xs font-black uppercase tracking-widest text-slate-400">Cancel</button>
-                    <Button type="submit" disabled={isSubmitting} className="!px-10 !py-4 !rounded-2xl !bg-slate-900 !text-[11px] !font-black uppercase tracking-widest shadow-button">
+                    <button 
+                        type="button" 
+                        onClick={onClose} 
+                        disabled={isSubmitting}
+                        className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 px-4"
+                    >
+                        Cancel
+                    </button>
+                    <Button 
+                        type="submit" 
+                        disabled={isSubmitting} 
+                        className="!px-10 !py-4 !rounded-2xl !bg-slate-900 !text-[11px] !font-black uppercase tracking-widest shadow-button"
+                    >
                         {isSubmitting ? 'Registering...' : 'Provision Material'}
                     </Button>
                 </div>
