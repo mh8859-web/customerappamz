@@ -11,7 +11,7 @@ import {
     LockIcon, PackageIcon, ClockIcon, MapPinIcon, MessageSquareIcon,
     ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon, BuildingIcon
 } from '../components/icons';
-import { UserRole, Milestone, Design } from '../types';
+import { UserRole, Milestone, Design, Project } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import MaterialSelection from '../components/project/MaterialSelection';
 import SiteUpdateModule from '../components/project/SiteUpdateModule';
@@ -48,8 +48,11 @@ const ProjectDetails: React.FC = () => {
     const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
     const [siteHistory, setSiteHistory] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [localProject, setLocalProject] = useState<Project | null>(null);
     
-    const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
+    const project = useMemo(() => {
+        return localProject || projects.find(p => p.id === projectId) || null;
+    }, [projects, projectId, localProject]);
 
     useEffect(() => {
         if (user && !activeTab) {
@@ -86,10 +89,7 @@ const ProjectDetails: React.FC = () => {
             return;
         }
         
-        // --- HARD 45-DAY COMMITMENT LOGIC ---
-        // We calculate distance from start date + 45 days.
-        // If distance is negative, project is overdue.
-        // If distance is more than 45 days (can happen with future start dates), we cap it at 45.
+        // --- STRICT PERFORMANCE TIMER ---
         const startTime = new Date(project.startDate).getTime();
         const fortyFiveDaysInMs = 45 * 24 * 60 * 60 * 1000;
         const deadlineTime = startTime + fortyFiveDaysInMs; 
@@ -97,9 +97,7 @@ const ProjectDetails: React.FC = () => {
         
         let distance = deadlineTime - now;
 
-        // CAP AT 45 DAYS: If the distance calculated is higher than 45 days 
-        // (meaning project hasn't reached its internal start window or has a future start date), 
-        // we strictly show 45 days.
+        // Ensure we never show more than 45 days even if server clock is slightly ahead
         if (distance > fortyFiveDaysInMs) {
             distance = fortyFiveDaysInMs;
         }
@@ -126,14 +124,27 @@ const ProjectDetails: React.FC = () => {
     const handleStartProject = async () => {
         if (!project || isStartingProject) return;
         setIsStartingProject(true);
+        const startTime = new Date().toISOString();
         try {
+            // Optimistically update local project to trigger timer immediately
+            setLocalProject({
+                ...project,
+                status: 'Active',
+                startDate: startTime,
+                stage: 'Design',
+                progress: 0
+            });
+
             await updateRecord('projects', project.id, {
                 status: 'Active',
-                start_date: new Date().toISOString(),
+                start_date: startTime,
                 stage: 'Design',
                 progress: 0
             });
             await refetchData();
+        } catch (err) {
+            setLocalProject(null); // Rollback on error
+            alert("Commencement signal failed. Check network link.");
         } finally {
             setIsStartingProject(false);
         }
@@ -161,7 +172,7 @@ const ProjectDetails: React.FC = () => {
             });
 
             if (dbError) {
-                alert(`DATABASE ERROR: Could not create design record. Ensure 'designs' table exists in Public schema.`);
+                alert(`DATABASE ERROR: Could not create design record. Ensure 'designs' table exists.`);
                 console.error(dbError);
             } else {
                 await refetchData();
@@ -230,11 +241,13 @@ const ProjectDetails: React.FC = () => {
                     <Card className="luxury-glass !p-8 sm:!p-10 rounded-[40px] border-brand-gold/20 min-w-[340px] sm:min-w-[480px] relative z-10 shadow-premium overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-brand-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
                         <div className="flex justify-between items-center mb-8">
-                            <span className="text-[11px] font-black text-brand-gold uppercase tracking-[5px] flex items-center gap-3">
-                                <ClockIcon className="w-5 h-5 animate-spin-slow" />
-                                45-Day Performance Deadline
-                            </span>
-                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">STRICT COMMITMENT</div>
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(212,175,55,1)]"></div>
+                                <span className="text-[11px] font-black text-brand-gold uppercase tracking-[5px]">
+                                    45-Day Commitment Live
+                                </span>
+                            </div>
+                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">MECHANICAL SYNC</div>
                         </div>
                         <div className="flex justify-around items-center">
                             {[
@@ -244,7 +257,7 @@ const ProjectDetails: React.FC = () => {
                                 { v: timeLeft.s, l: 'SEC' }
                             ].map((unit, idx) => (
                                 <React.Fragment key={unit.l}>
-                                    <div className="text-center group/unit">
+                                    <div className="text-center group/unit min-w-[60px]">
                                         <div className="text-4xl sm:text-6xl font-display font-black text-slate-900 tabular-nums tracking-tighter leading-none group-hover/unit:text-brand-gold transition-colors">{String(unit.v).padStart(2, '0')}</div>
                                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-[3px] mt-4 block group-hover/unit:text-slate-500">{unit.l}</span>
                                     </div>
