@@ -4,15 +4,42 @@ import { Material } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import { CheckCircleIcon, XMarkIcon, PackageIcon, FilePlusIcon, PhotoIcon, SparklesIcon, UploadCloudIcon } from '../icons';
+import { CheckCircleIcon, XMarkIcon, PackageIcon, FilePlusIcon, PhotoIcon, SparklesIcon, UploadCloudIcon, ZapIcon, EyeIcon } from '../icons';
 import { supabase } from '../../services/supabaseClient';
 import { updateRecord, createRecord, uploadProjectFile } from '../../services/api';
+import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface MaterialSelectionProps {
     projectId: string;
     isClient: boolean;
     onUpdate: () => void;
 }
+
+const ImagePreviewModal: React.FC<{ isOpen: boolean; onClose: () => void; imageUrl: string; title: string }> = ({ isOpen, onClose, imageUrl, title }) => (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Visual Inspection: ${title}`}>
+        <div className="flex flex-col items-center gap-6">
+            <div className="w-full aspect-[16/10] bg-slate-900 rounded-[32px] overflow-hidden shadow-2xl border border-white/10 relative group">
+                <img 
+                    src={imageUrl} 
+                    className="w-full h-full object-contain" 
+                    alt={title}
+                    onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=1200';
+                    }}
+                />
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-slate-900/40 via-transparent to-transparent"></div>
+            </div>
+            <div className="flex gap-4">
+                <a href={imageUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="secondary" className="!rounded-full !px-8">Open Original Source</Button>
+                </a>
+                <Button onClick={onClose} className="!rounded-full !px-8 !bg-slate-900">Close Inspection</Button>
+            </div>
+        </div>
+    </Modal>
+);
 
 const AddMaterialModal: React.FC<{ 
     isOpen: boolean; 
@@ -57,7 +84,6 @@ const AddMaterialModal: React.FC<{
         try {
             let finalImageUrl = formData.imageUrl.trim();
 
-            // Prioritize File Upload to R2
             if (selectedFile) {
                 const uploadedUrl = await uploadProjectFile(projectId, selectedFile);
                 if (uploadedUrl) {
@@ -84,7 +110,6 @@ const AddMaterialModal: React.FC<{
             setSelectedFile(null);
             setPreviewUrl(null);
         } catch (err: any) {
-            console.error('[SUBMISSION ERROR]', err);
             alert(`Error: ${err.message || 'Could not save material.'}`);
         } finally {
             setIsSubmitting(false);
@@ -211,9 +236,15 @@ const AddMaterialModal: React.FC<{
 };
 
 const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClient, onUpdate }) => {
+    const { projects } = useData();
+    const { user } = useAuth();
     const [materials, setMaterials] = useState<Material[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAddModalOpen, setAddModalOpen] = useState(false);
+    const [isCompleting, setIsCompleting] = useState(false);
+    const [viewerAsset, setViewerAsset] = useState<{ url: string; name: string } | null>(null);
+
+    const currentProject = projects.find(p => p.id === projectId);
 
     const fetchMaterials = async () => {
         setLoading(true);
@@ -238,14 +269,49 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
         }
     };
 
+    const handleCompleteSelection = async () => {
+        if (isCompleting || !currentProject) return;
+        
+        const pendingCount = materials.filter(m => m.status === 'Pending').length;
+        if (pendingCount > 0) {
+            if (!window.confirm(`There are still ${pendingCount} materials awaiting client approval. Complete selection anyway?`)) return;
+        } else {
+            if (!window.confirm("Finalize material selection and transition project to execution phase?")) return;
+        }
+
+        setIsCompleting(true);
+        try {
+            const { error } = await updateRecord('projects', projectId, { 
+                stage: 'execution',
+                progress: Math.max(currentProject.progress, 45)
+            });
+
+            if (error) throw error;
+
+            await createRecord('messages', {
+                chat_id: projectId,
+                body: `PHASE UPDATE: Material selection is complete. The project has now moved to the EXECUTION phase. Site work initialization in progress.`,
+                sender_id: user?.id,
+                is_system_message: true
+            });
+
+            onUpdate();
+        } catch (err) {
+            alert("Failed to update project phase.");
+        } finally {
+            setIsCompleting(false);
+        }
+    };
+
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-        // Replace broken image with a stylish placeholder
         const target = e.target as HTMLImageElement;
-        target.onerror = null; // Prevent infinite loop
+        target.onerror = null; 
         target.src = 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=800';
     };
 
     if (loading) return <div className="p-24 text-center text-slate-400 font-black uppercase tracking-[6px] animate-pulse">Scanning Material Archive...</div>;
+
+    const canComplete = !isClient && currentProject?.stage === 'material_selection';
 
     return (
         <div className="space-y-10 animate-in">
@@ -256,16 +322,36 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
                 onSuccess={fetchMaterials} 
             />
 
+            {viewerAsset && (
+                <ImagePreviewModal 
+                    isOpen={!!viewerAsset} 
+                    onClose={() => setViewerAsset(null)} 
+                    imageUrl={viewerAsset.url} 
+                    title={viewerAsset.name} 
+                />
+            )}
+
             <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
                 <div>
                     <h3 className="text-3xl font-display font-black text-slate-900 uppercase tracking-tight">Material Specification</h3>
                     <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-[4px]">Verified Board, Finish, and Hardware Palette</p>
                 </div>
-                {!isClient && (
-                    <Button onClick={() => setAddModalOpen(true)} className="!rounded-full !px-8 !py-4 shadow-button !bg-slate-900 !text-[11px] font-black uppercase tracking-widest">
-                        <FilePlusIcon className="w-5 h-5 mr-2 text-brand-gold" /> Register New Finish
-                    </Button>
-                )}
+                <div className="flex gap-4">
+                    {canComplete && materials.length > 0 && (
+                        <Button 
+                            onClick={handleCompleteSelection} 
+                            disabled={isCompleting}
+                            className="!rounded-full !px-8 !py-4 shadow-gold-glow !bg-brand-gold !text-slate-900 !text-[11px] font-black uppercase tracking-widest animate-pulse hover:animate-none"
+                        >
+                            <ZapIcon className="w-5 h-5 mr-2" /> {isCompleting ? 'Finalizing...' : 'Complete Selection'}
+                        </Button>
+                    )}
+                    {!isClient && (
+                        <Button onClick={() => setAddModalOpen(true)} className="!rounded-full !px-8 !py-4 shadow-button !bg-slate-900 !text-[11px] font-black uppercase tracking-widest">
+                            <FilePlusIcon className="w-5 h-5 mr-2 text-brand-gold" /> Register New Finish
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {materials.length === 0 ? (
@@ -281,11 +367,6 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
                                 : "Initialize the material registry for this project."}
                         </p>
                     </div>
-                    {!isClient && (
-                        <Button variant="secondary" onClick={() => setAddModalOpen(true)} className="!rounded-full !px-10 !py-4 uppercase !text-[11px] font-black tracking-[4px] mt-4 border-slate-200">
-                            Start Selection Process
-                        </Button>
-                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -298,7 +379,14 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
                                     alt={material.name}
                                     onError={handleImageError}
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                                    <Button 
+                                        onClick={() => setViewerAsset({ url: material.imageUrl, name: material.name })}
+                                        className="!rounded-full !px-8 !py-3 !bg-white !text-slate-900 !text-[10px] uppercase font-black tracking-widest shadow-premium"
+                                    >
+                                        <EyeIcon className="w-4 h-4 mr-2" /> Inspect Swatch
+                                    </Button>
+                                </div>
                                 <div className="absolute top-8 left-8">
                                     <span className="px-5 py-2 bg-white/95 backdrop-blur-md shadow-premium rounded-full text-[10px] font-black text-slate-900 uppercase tracking-[3px] border border-slate-100">{material.category}</span>
                                 </div>
