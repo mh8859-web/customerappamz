@@ -84,14 +84,18 @@ const ProjectDetails: React.FC = () => {
             setTimeLeft({ d: 45, h: 0, m: 0, s: 0 });
             return;
         };
+        
+        // STRICT 45 DAY COMMITMENT LOGIC
         const startTime = new Date(project.startDate).getTime();
-        const deadlineTime = startTime + (45 * 24 * 60 * 60 * 1000);
+        const deadlineTime = startTime + (45 * 24 * 60 * 60 * 1000); 
         const now = new Date().getTime();
         const distance = deadlineTime - now;
+
         if (distance <= 0 || project.status === 'Completed') {
             setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
             return;
         }
+
         setTimeLeft({
             d: Math.floor(distance / (1000 * 60 * 60 * 24)),
             h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -143,7 +147,6 @@ const ProjectDetails: React.FC = () => {
     if (usersLoading || dataLoading) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[8px] text-xs font-display">Syncing Portfolio Data...</div>;
     if (!project || !user) return <div className="text-center p-20 font-display font-black text-slate-400 uppercase">Registry Not Found</div>;
 
-    // Fixed "Blank Page" by ensuring locked content is descriptive and integrated
     if (isLocked) return (
         <div className="flex flex-col items-center justify-center p-20 text-center min-h-[60vh] animate-reveal">
             <div className="w-24 h-24 bg-red-50 rounded-[32px] flex items-center justify-center mb-8 border border-red-100 shadow-xl">
@@ -193,18 +196,22 @@ const ProjectDetails: React.FC = () => {
                     <h1 className="text-5xl font-display font-black text-slate-900 uppercase leading-none">{project.title}</h1>
                 </div>
 
-                <div className="bg-white rounded-[40px] shadow-premium p-8 border border-slate-100 min-w-[380px]">
-                    <div className="grid grid-cols-4 gap-4">
+                {/* REFINED PREMIUM TIMER UI */}
+                <div className="bg-white rounded-[40px] shadow-premium p-6 sm:p-8 border border-slate-100 min-w-[340px] sm:min-w-[420px]">
+                    <div className="flex justify-around items-center">
                         {[
                             { v: timeLeft.d, l: 'DAYS' },
                             { v: timeLeft.h, l: 'HRS' },
                             { v: timeLeft.m, l: 'MIN' },
                             { v: timeLeft.s, l: 'SEC' }
-                        ].map((unit) => (
-                            <div key={unit.l} className="text-center">
-                                <div className="text-4xl font-display font-black text-slate-900 tabular-nums">{unit.v || 0}</div>
-                                <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{unit.l}</span>
-                            </div>
+                        ].map((unit, idx) => (
+                            <React.Fragment key={unit.l}>
+                                <div className="text-center">
+                                    <div className="text-3xl sm:text-5xl font-display font-extrabold text-slate-900 tabular-nums tracking-tighter leading-none">{String(unit.v).padStart(2, '0')}</div>
+                                    <span className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[3px] mt-3 block">{unit.l}</span>
+                                </div>
+                                {idx < 3 && <div className="h-8 w-px bg-slate-100 mx-1 sm:mx-2"></div>}
+                            </React.Fragment>
                         ))}
                     </div>
                 </div>
@@ -339,7 +346,7 @@ const ProjectDetails: React.FC = () => {
                                 <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-100"></div>
                                 {siteHistory.map(log => (
                                     <div key={log.id} className="relative pl-14">
-                                        <div className="absolute left-[21px] top-1 w-3 h-3 bg-brand-gold rounded-full ring-4 ring-white shadow-sm"></div>
+                                        <div className="absolute left-[21px] top-1.5 w-3 h-3 bg-brand-gold rounded-full ring-4 ring-white shadow-sm"></div>
                                         <Card className="luxury-glass border-slate-100 !p-6 rounded-[24px]">
                                             <div className="flex justify-between items-start mb-4">
                                                 <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/5 px-2 py-1 rounded">{log.stage}</p>
