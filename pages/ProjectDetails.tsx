@@ -76,6 +76,8 @@ const ProjectDetails: React.FC = () => {
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
 
+    const projectDesigns = useMemo(() => designs.filter(d => d.projectId === projectId), [designs, projectId]);
+
     // --- REAL-TIME TIMER LOGIC ---
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0, total: 0 });
 
@@ -128,6 +130,44 @@ const ProjectDetails: React.FC = () => {
             alert("Approval sync failed.");
         } finally {
             setIsApproveSubmitting(false);
+        }
+    };
+
+    const handleDesignUpload = async (file: File, notes: string, type: 'image' | 'gltf') => {
+        if (!project || !user) return;
+        
+        try {
+            // 1. Cloud Storage Upload
+            const url = await uploadProjectFile(project.id, file);
+            if (!url) {
+                alert("Storage service failed to receive the visual asset. Please check your connection.");
+                return;
+            }
+
+            // 2. Database Record Creation
+            const { error } = await createRecord('designs', {
+                project_id: project.id,
+                file_url: url,
+                notes: notes,
+                type: type,
+                version: projectDesigns.length + 1,
+                uploaded_by: user.id,
+                submitted_for_review: true,
+                approved: false
+            });
+
+            if (error) {
+                console.error("Database sync failed:", error);
+                alert(`Asset stored but index failed: ${error.message}`);
+                return;
+            }
+
+            // 3. Refresh and Notify
+            await refetchData();
+            alert("Visual asset successfully synchronized with project timeline.");
+        } catch (err: any) {
+            console.error("Upload process crash:", err);
+            alert("A critical system error occurred during synchronization.");
         }
     };
 
@@ -353,7 +393,7 @@ const ProjectDetails: React.FC = () => {
                                     <span className="text-[12px] font-black uppercase tracking-[3px] text-slate-400 group-hover:text-brand-blue">Upload Visual</span>
                                 </button>
                             )}
-                            {designs.filter(d => d.projectId === project.id).map(design => (
+                            {projectDesigns.map(design => (
                                 <Card key={design.id} className="p-0 overflow-hidden border-slate-100 hover:shadow-premium transition-all rounded-[40px] bg-white group/card relative">
                                     <div className="aspect-video relative overflow-hidden bg-slate-100">
                                         <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105" alt="Render" />
@@ -380,7 +420,7 @@ const ProjectDetails: React.FC = () => {
                 </div>
             </div>
             <UploadQuoteModal isOpen={isUploadQuoteModalOpen} onClose={() => setUploadQuoteModalOpen(false)} onUpload={async (f,v) => { const url = await uploadProjectFile(project.id, f); if(url) { await createRecord('quotes', { project_id: project.id, version: v, file_url: url, uploaded_by: user.id }); await refetchData(); } }} />
-            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={async (f,n,t) => { const url = await uploadProjectFile(project.id, f); if(url) { await createRecord('designs', { project_id: project.id, file_url: url, notes: n, type: t, version: designs.length + 1, uploaded_by: user.id }); await refetchData(); } }} />
+            <UploadDesignModal isOpen={isUploadDesignModalOpen} onClose={() => setUploadDesignModalOpen(false)} onUpload={handleDesignUpload} />
         </div>
     );
 };
