@@ -9,7 +9,7 @@ import {
     BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, 
     SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon, 
     LockIcon, PackageIcon, ClockIcon, MapPinIcon, MessageSquareIcon,
-    ArrowPathIcon, ChevronRightIcon
+    ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon
 } from '../components/icons';
 import { UserRole, Milestone, Design } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -22,6 +22,7 @@ import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
 import { updateRecord, createRecord, uploadProjectFile } from '../services/api';
+import { supabase } from '../services/supabaseClient';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Materials', 'Docs', 'Milestones'],
@@ -45,6 +46,7 @@ const ProjectDetails: React.FC = () => {
     const [isStartingProject, setIsStartingProject] = useState(false);
     const [isUploadModalOpen, setUploadModalOpen] = useState(false);
     const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
+    const [siteHistory, setSiteHistory] = useState<any[]>([]);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
 
@@ -54,6 +56,16 @@ const ProjectDetails: React.FC = () => {
             setActiveTab(tabs[0]);
         }
     }, [user, activeTab]);
+
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (activeTab === 'Site Log' || activeTab === 'Execution Log') {
+                const { data } = await supabase.from('site_updates').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+                if (data) setSiteHistory(data);
+            }
+        };
+        fetchHistory();
+    }, [activeTab, projectId]);
 
     const isLocked = useMemo(() => {
         if (!project || !user || user.role !== 'Customer') return false;
@@ -131,12 +143,27 @@ const ProjectDetails: React.FC = () => {
     if (usersLoading || dataLoading) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[8px] text-xs font-display">Syncing Portfolio Data...</div>;
     if (!project || !user) return <div className="text-center p-20 font-display font-black text-slate-400 uppercase">Registry Not Found</div>;
 
-    if (isLocked) return <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 text-center"><LockIcon className="w-20 h-20 text-brand-gold mb-4"/><h2 className="text-white text-3xl font-black uppercase">Access Locked</h2></div>;
+    // Fixed "Blank Page" by ensuring locked content is descriptive and integrated
+    if (isLocked) return (
+        <div className="flex flex-col items-center justify-center p-20 text-center min-h-[60vh] animate-reveal">
+            <div className="w-24 h-24 bg-red-50 rounded-[32px] flex items-center justify-center mb-8 border border-red-100 shadow-xl">
+                <LockIcon className="w-12 h-12 text-red-600 animate-pulse"/>
+            </div>
+            <h2 className="text-4xl font-display font-black text-slate-900 uppercase tracking-tighter">Vault Restricted</h2>
+            <p className="text-slate-500 mt-4 max-w-md mx-auto font-medium leading-relaxed uppercase tracking-widest text-[10px]">
+                Technical access to the project interface has been restricted by Accounts HQ pending milestone settlement. 
+                Please refer to the payment alerts in your main dashboard to restore access.
+            </p>
+            <Button onClick={() => navigate('/customer/dashboard')} variant="secondary" className="mt-10 !rounded-full !px-12 uppercase font-black text-[11px] tracking-widest">Return to Base</Button>
+        </div>
+    );
 
     const tabs = TABS[user.role] || [];
     const designer = findUserById(project.designerId);
-    const projectDesigns = designs.filter(d => d.projectId === project.id).sort((a,b) => b.version - a.version);
+    const projectDesigns = designs.filter(d => d.projectId === project.id).sort((a,b) => (b.version || 0) - (a.version || 0));
     const projectQuotes = quotes.filter(q => q.projectId === project.id);
+    const projectMilestones = milestones.filter(m => m.projectId === project.id);
+    const projectExpenses = expenses.filter(e => e.projectId === project.id);
 
     return (
         <div className="space-y-12 pb-24">
@@ -175,7 +202,7 @@ const ProjectDetails: React.FC = () => {
                             { v: timeLeft.s, l: 'SEC' }
                         ].map((unit) => (
                             <div key={unit.l} className="text-center">
-                                <div className="text-4xl font-display font-black text-slate-900 tabular-nums">{unit.v}</div>
+                                <div className="text-4xl font-display font-black text-slate-900 tabular-nums">{unit.v || 0}</div>
                                 <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest">{unit.l}</span>
                             </div>
                         ))}
@@ -305,11 +332,72 @@ const ProjectDetails: React.FC = () => {
 
                     {activeTab === 'Materials' && <MaterialSelection projectId={project.id} isClient={user.role === 'Customer'} onUpdate={refetchData} />}
                     
-                    {activeTab === 'Execution Log' && (
-                         <div className="space-y-6">
-                            <SiteUpdateModule projectId={project.id} onSuccess={refetchData} />
-                            <p className="text-center text-slate-300 font-black uppercase text-[10px] tracking-[5px] py-20">Full site history sync complete.</p>
+                    {(activeTab === 'Execution Log' || activeTab === 'Site Log') && (
+                         <div className="space-y-8">
+                            {user.role === 'Site Head' && <SiteUpdateModule projectId={project.id} onSuccess={refetchData} />}
+                            <div className="space-y-6 relative">
+                                <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-100"></div>
+                                {siteHistory.map(log => (
+                                    <div key={log.id} className="relative pl-14">
+                                        <div className="absolute left-[21px] top-1 w-3 h-3 bg-brand-gold rounded-full ring-4 ring-white shadow-sm"></div>
+                                        <Card className="luxury-glass border-slate-100 !p-6 rounded-[24px]">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest bg-brand-blue/5 px-2 py-1 rounded">{log.stage}</p>
+                                                <span className="text-[10px] font-bold text-slate-300 uppercase">{new Date(log.created_at).toLocaleString()}</span>
+                                            </div>
+                                            <p className="text-slate-700 font-medium">{log.notes}</p>
+                                            {log.image_url && <img src={log.image_url} className="mt-4 rounded-xl h-40 w-full object-cover border border-slate-100" alt="Site" />}
+                                        </Card>
+                                    </div>
+                                ))}
+                                {siteHistory.length === 0 && <p className="text-center text-slate-300 font-black uppercase text-[10px] tracking-[5px] py-20">Full site history sync complete.</p>}
+                            </div>
                          </div>
+                    )}
+
+                    {activeTab === 'Expenses' && (
+                        <div className="space-y-8">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Project P&L (Expenses)</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {projectExpenses.map(e => (
+                                    <div key={e.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
+                                                <DollarSignIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-slate-900 uppercase text-sm">{e.description}</p>
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">{e.category} &bull; {new Date(e.date).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-lg font-display font-black text-red-500">₹{e.amount.toLocaleString()}</p>
+                                            <span className="text-[9px] font-black uppercase text-slate-300">{e.status}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {projectExpenses.length === 0 && <div className="col-span-full py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No project-specific expenses logged.</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'Financial Ledger' && (
+                        <Card className="luxury-glass !p-10 rounded-[40px] bg-white border-slate-100">
+                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Receivables Sentinel</h3>
+                             <div className="space-y-6">
+                                {projectMilestones.map(m => (
+                                    <div key={m.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-[28px] border border-slate-100">
+                                        <div>
+                                            <p className="font-black text-slate-900 uppercase tracking-tight text-sm">{m.title}</p>
+                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Valuation: ₹{m.amountDisplay.toLocaleString()}</p>
+                                        </div>
+                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${m.statusDisplay === 'Paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-white text-slate-400 border-slate-200'}`}>
+                                            {m.statusDisplay}
+                                        </div>
+                                    </div>
+                                ))}
+                             </div>
+                        </Card>
                     )}
 
                     {activeTab === 'Sourcing' && (
@@ -337,7 +425,7 @@ const ProjectDetails: React.FC = () => {
                     {activeTab === 'Milestones' && (
                         <Card className="luxury-glass !p-10 rounded-[40px] bg-white border-slate-100 shadow-premium">
                              <div className="space-y-8">
-                                {milestones.filter(m => m.projectId === project.id).map(m => (
+                                {projectMilestones.map(m => (
                                     <div key={m.id} className="flex flex-col md:flex-row justify-between items-center bg-slate-50/50 p-8 rounded-[32px] border border-slate-100">
                                         <div>
                                             <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">{m.title}</h4>

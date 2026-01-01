@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { ProjectStage } from '../types';
-import { PROJECT_STAGES, STAGE_DISPLAY_NAMES, STAGE_DESCRIPTIONS } from '../constants';
-import { CheckCircleIcon, ChevronDownIcon, SparklesIcon } from './icons';
+import { PROJECT_STAGES, STAGE_DISPLAY_NAMES, getStageDescription } from '../constants';
+import { CheckCircleIcon, SparklesIcon } from './icons';
 
 interface ProjectStatusBarProps {
   currentStage: ProjectStage;
@@ -10,8 +10,13 @@ interface ProjectStatusBarProps {
 }
 
 const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progress }) => {
-  const [activeInfoStage, setActiveInfoStage] = useState<ProjectStage | null>(currentStage);
-  const currentStageIndex = PROJECT_STAGES.indexOf(currentStage);
+  const [activeInfoStage, setActiveInfoStage] = useState<string | null>(currentStage);
+  
+  // Normalized lookup to prevent -1 index crashes
+  const normalizedStage = currentStage || 'Design';
+  const currentStageIndex = PROJECT_STAGES.findIndex(s => 
+    s === normalizedStage || STAGE_DISPLAY_NAMES[s] === STAGE_DISPLAY_NAMES[normalizedStage]
+  );
 
   return (
     <div className="w-full bg-[#0F172A] rounded-[32px] overflow-hidden relative shadow-premium animate-in border border-white/5">
@@ -24,7 +29,7 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
           <div className="space-y-1">
             <span className="text-[9px] font-black text-brand-gold uppercase tracking-[4px] opacity-70">Current Registry Phase</span>
             <h2 className="text-2xl sm:text-3xl font-display font-black text-white tracking-tight uppercase leading-none">
-              {STAGE_DISPLAY_NAMES[currentStage]}
+              {STAGE_DISPLAY_NAMES[normalizedStage] || normalizedStage}
             </h2>
           </div>
 
@@ -46,10 +51,7 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
         <div className="relative pt-4 pb-4">
             <div className="overflow-x-auto no-scrollbar pb-10">
                 <div className="flex items-center min-w-[1000px] justify-between relative px-16">
-                    {/* Background Line */}
                     <div className="absolute top-[24px] left-20 right-20 h-[1px] bg-white/10"></div>
-                    
-                    {/* Active Line */}
                     <div 
                         className="absolute top-[24px] left-20 h-[1px] bg-brand-gold transition-all duration-1000 ease-in-out"
                         style={{ width: `calc(${Math.max(0, (currentStageIndex / (PROJECT_STAGES.length - 1)) * 100)}% - 40px)` }}
@@ -62,7 +64,6 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
 
                         return (
                             <div key={stage} className="flex flex-col items-center relative z-10">
-                                {/* Refined Small Circular Node */}
                                 <button
                                     onClick={() => setActiveInfoStage(isInfoActive ? null : stage)}
                                     className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-500 border group ${
@@ -71,25 +72,12 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
                                         'bg-slate-800/40 border-white/10 text-white/20'
                                     }`}
                                 >
-                                    {isCompleted ? (
-                                        <CheckCircleIcon className="h-6 w-6" />
-                                    ) : (
-                                        <span className="font-display font-black text-base">{index + 1}</span>
-                                    )}
-                                    
-                                    {isCurrent && (
-                                        <span className="absolute -inset-2 rounded-full border border-white/10 animate-ping"></span>
-                                    )}
+                                    {isCompleted ? <CheckCircleIcon className="h-6 w-6" /> : <span className="font-display font-black text-base">{index + 1}</span>}
+                                    {isCurrent && <span className="absolute -inset-2 rounded-full border border-white/10 animate-ping"></span>}
                                 </button>
-
-                                {/* Small Node Label */}
                                 <div className={`absolute top-full mt-6 text-center transition-all duration-500 w-32 ${isCurrent ? 'opacity-100' : 'opacity-30'}`}>
-                                    <p className={`text-[8px] font-black uppercase tracking-[3px] leading-relaxed ${
-                                        isCompleted ? 'text-brand-gold' : 
-                                        isCurrent ? 'text-white' : 
-                                        'text-slate-500'
-                                    }`}>
-                                        {STAGE_DISPLAY_NAMES[stage]}
+                                    <p className={`text-[8px] font-black uppercase tracking-[3px] leading-relaxed ${isCompleted ? 'text-brand-gold' : isCurrent ? 'text-white' : 'text-slate-500'}`}>
+                                        {STAGE_DISPLAY_NAMES[stage] || stage}
                                     </p>
                                 </div>
                             </div>
@@ -99,7 +87,7 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
             </div>
         </div>
 
-        {/* Compact Intelligence Card */}
+        {/* Intelligence Card - Fixed with normalization fallback */}
         {activeInfoStage && (
             <div className="mt-4 pt-6 border-t border-white/5 animate-in slide-in-from-top-2">
                 <div className="bg-white/5 p-6 rounded-3xl flex flex-col md:flex-row gap-6 items-center border border-white/5">
@@ -109,14 +97,14 @@ const ProjectStatusBar: React.FC<ProjectStatusBarProps> = ({ currentStage, progr
                     <div className="flex-1 space-y-2 text-center md:text-left">
                         <div>
                             <span className="text-[8px] font-black text-brand-gold uppercase tracking-[3px]">Phase Intel</span>
-                            <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">{STAGE_DESCRIPTIONS[activeInfoStage].title}</h4>
+                            <h4 className="text-xl font-display font-black text-white uppercase tracking-tight">{getStageDescription(activeInfoStage).title}</h4>
                         </div>
-                        <p className="text-slate-400 font-medium leading-relaxed text-sm opacity-90">{STAGE_DESCRIPTIONS[activeInfoStage].note}</p>
+                        <p className="text-slate-400 font-medium leading-relaxed text-sm opacity-90">{getStageDescription(activeInfoStage).note}</p>
                     </div>
                     <div className="bg-slate-900/50 p-4 rounded-2xl border border-white/5 flex-shrink-0 min-w-[240px]">
                         <p className="text-[8px] font-black text-white/30 uppercase tracking-[3px] mb-2">Monitor Status</p>
                         <p className="text-[10px] text-brand-gold font-black tracking-widest italic uppercase">
-                            "{STAGE_DESCRIPTIONS[activeInfoStage].action}"
+                            "{getStageDescription(activeInfoStage).action}"
                         </p>
                     </div>
                 </div>
