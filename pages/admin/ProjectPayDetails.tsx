@@ -7,6 +7,7 @@ import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
 import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
+import AddMilestoneModal from '../../components/admin/AddMilestoneModal';
 
 const ProjectPayDetails: React.FC = () => {
     const { projectId } = useParams();
@@ -14,6 +15,7 @@ const ProjectPayDetails: React.FC = () => {
     const { findUserById } = useUsers();
     const navigate = useNavigate();
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isMilestoneModalOpen, setMilestoneModalOpen] = useState(false);
 
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
     const pMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId), [milestones, projectId]);
@@ -21,29 +23,40 @@ const ProjectPayDetails: React.FC = () => {
 
     const handleToggleLock = async () => {
         if (!project || isSyncing) return;
+        
+        const nextState = !project.isPaymentAlertActive;
+        console.log(`[PAYMENT LOCK] Toggling for ${project.title}. Current: ${project.isPaymentAlertActive}, Next: ${nextState}`);
+        
         setIsSyncing(true);
         try {
-            const nextState = !project.isPaymentAlertActive;
-            await updateRecord('projects', project.id, { is_payment_alert_active: nextState });
+            // Update the database using snake_case field name
+            const { error } = await updateRecord('projects', project.id, { 
+                is_payment_alert_active: nextState,
+                updated_at: new Date().toISOString()
+            });
             
-            if (nextState) {
-                // Formal System Notice
-                await createRecord('messages', {
-                    chat_id: project.id,
-                    body: "BLOCKER ACTIVATED: Project dashboard has been limited pending payment release. Please settle the dues to continue workflow.",
-                    sender_id: '786786',
-                    is_system_message: true
-                });
-            } else {
-                // Formal System Release
-                await createRecord('messages', {
-                    chat_id: project.id,
-                    body: "BLOCKER DEACTIVATED: Full dashboard access restored by Administration.",
-                    sender_id: '786786',
-                    is_system_message: true
-                });
+            if (error) {
+                console.error("[DB ERROR]", error);
+                alert(`Sync Error: ${error.message}. Ensure the 'is_payment_alert_active' column exists in your projects table.`);
+                return;
             }
+            
+            // Log the action in the project chat for transparency
+            await createRecord('messages', {
+                chat_id: project.id,
+                body: nextState 
+                    ? "BLOCKER ACTIVATED: Project dashboard access restricted pending payment release. Secure settlement required."
+                    : "BLOCKER DEACTIVATED: Full access restored by Administration.",
+                sender_id: '786786',
+                is_system_message: true
+            });
+            
+            // Refresh global data context to update all UI components
             await refetchData();
+            console.log("[PAYMENT LOCK] Update successful.");
+        } catch (err) {
+            console.error("Critical Failure:", err);
+            alert("A system error occurred while toggling the lock.");
         } finally {
             setIsSyncing(false);
         }
@@ -51,7 +64,7 @@ const ProjectPayDetails: React.FC = () => {
 
     const handleMarkAsPaid = async (milestoneId: string) => {
         if (isSyncing) return;
-        if (!window.confirm("CONFIRM SETTLEMENT: Are you sure you want to verify this payment?")) return;
+        if (!window.confirm("CONFIRM SETTLEMENT: Verify this payment receipt?")) return;
         
         setIsSyncing(true);
         try {
@@ -59,29 +72,49 @@ const ProjectPayDetails: React.FC = () => {
                 status_display: 'Paid',
                 paid_date_display: new Date().toISOString()
             });
-            // Automatically clear the lock if it was active
+            
+            // Automatically clear the lockout if it was active
             if (project?.isPaymentAlertActive) {
                 await updateRecord('projects', project.id, { is_payment_alert_active: false });
             }
+            
             await refetchData();
         } finally {
             setIsSyncing(false);
         }
     };
 
-    if (loading || !project) return <div className="p-20 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest font-display text-xs">Opening Financial Terminal...</div>;
+    const handleAddMilestone = async (m: any) => {
+        if (!project) return;
+        await createRecord('milestones', {
+            project_id: project.id,
+            title: m.title,
+            amount_display: m.amountDisplay,
+            due_date: m.dueDate,
+            status_display: 'Pending'
+        });
+        await refetchData();
+    };
+
+    if (loading || !project) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[6px] text-xs font-display">Opening Financial Terminal...</div>;
 
     const totalPaid = pMilestones.filter(m => m.statusDisplay === 'Paid').reduce((s, m) => s + m.amountDisplay, 0);
 
     return (
-        <div className="space-y-12 animate-reveal pb-24">
+        <div className="space-y-12 animate-reveal pb-24 px-4 sm:px-0">
+            <AddMilestoneModal 
+                isOpen={isMilestoneModalOpen} 
+                onClose={() => setMilestoneModalOpen(false)} 
+                onAdd={handleAddMilestone} 
+            />
+
             <header className="flex flex-col lg:flex-row justify-between lg:items-end gap-8">
                 <div className="space-y-3">
                     <button onClick={() => navigate('/admin/track-pay')} className="text-[10px] font-extrabold uppercase tracking-[4px] text-brand-blue hover:text-brand-gold transition-colors flex items-center gap-2 mb-6">
                         &larr; Master Registry
                     </button>
                     <h1 className="text-4xl sm:text-5xl font-display font-extrabold text-slate-900 tracking-tighter uppercase leading-none">{project.title}</h1>
-                    <div className="flex items-center gap-8 mt-6">
+                    <div className="flex flex-wrap items-center gap-6 mt-6">
                         <div className="flex items-center gap-2.5 text-slate-400">
                             <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center"><UserIcon className="w-4 h-4 text-brand-gold" /></div>
                             <UserNameDisplay user={customer} textClassName="text-sm font-bold text-slate-700" />
@@ -93,32 +126,31 @@ const ProjectPayDetails: React.FC = () => {
                     </div>
                 </div>
 
-                <div className={`p-8 flex items-center gap-8 rounded-[36px] shadow-premium transition-all duration-500 border border-white/5 ${project.isPaymentAlertActive ? 'bg-slate-900' : 'bg-slate-50'}`}>
+                <div className={`p-8 flex items-center gap-8 rounded-[36px] shadow-premium transition-all duration-500 border border-white/5 ${project.isPaymentAlertActive ? 'bg-red-600' : 'bg-slate-50'}`}>
                     <div className="text-right">
-                        <p className={`text-[10px] font-black uppercase tracking-[4px] ${project.isPaymentAlertActive ? 'text-brand-gold' : 'text-slate-400'}`}>BLOCKER SENTINEL</p>
+                        <p className={`text-[10px] font-black uppercase tracking-[4px] ${project.isPaymentAlertActive ? 'text-white/60' : 'text-slate-400'}`}>BLOCKER SENTINEL</p>
                         <p className={`text-sm font-extrabold uppercase tracking-widest mt-1.5 ${project.isPaymentAlertActive ? 'text-white' : 'text-slate-900'}`}>
-                            {project.isPaymentAlertActive ? 'REGISTRY LOCKED' : 'REGISTRY OPEN'}
+                            {project.isPaymentAlertActive ? 'LOCK ACTIVE' : 'REGISTRY OPEN'}
                         </p>
                     </div>
                     <Button 
                         onClick={handleToggleLock}
                         disabled={isSyncing}
-                        className={`!rounded-full !px-12 !py-5 !text-[11px] font-extrabold uppercase tracking-[3px] shadow-xl transition-all hover:scale-[1.03] active:scale-95 font-display ${project.isPaymentAlertActive ? '!bg-white !text-slate-900' : '!bg-brand-gold !text-slate-900 shadow-gold-glow'}`}
+                        className={`!rounded-full !px-12 !py-5 !text-[11px] font-extrabold uppercase tracking-[3px] shadow-xl transition-all hover:scale-[1.03] active:scale-95 font-display ${project.isPaymentAlertActive ? '!bg-white !text-red-600' : '!bg-brand-gold !text-slate-900 shadow-gold-glow'}`}
                     >
-                        {project.isPaymentAlertActive ? 'CLOSE REQUEST' : 'REQUEST PAYMENT'}
+                        {isSyncing ? 'SYNCING...' : project.isPaymentAlertActive ? 'CLOSE REQUEST' : 'REQUEST PAYMENT'}
                     </Button>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 <div className="lg:col-span-8 space-y-10">
                     <Card className="luxury-glass !p-0 overflow-hidden !rounded-[48px] border-slate-100 shadow-premium">
                         <div className="bg-slate-50/80 px-12 py-8 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-[4px]">Financial Milestones (10/40/45/5)</h2>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-brand-gold animate-pulse"></div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Registry</span>
-                            </div>
+                            <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-[4px]">Project Milestones</h2>
+                            <Button onClick={() => setMilestoneModalOpen(true)} variant="secondary" className="!rounded-full !px-6 !py-2 !text-[10px] uppercase font-black tracking-widest">
+                                + Add Manually
+                            </Button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
@@ -163,6 +195,11 @@ const ProjectPayDetails: React.FC = () => {
                                             </td>
                                         </tr>
                                     ))}
+                                    {pMilestones.length === 0 && (
+                                        <tr>
+                                            <td colSpan={4} className="p-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">No milestones defined for this ledger.</td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -186,10 +223,10 @@ const ProjectPayDetails: React.FC = () => {
                         <div className="mt-14 relative w-full aspect-square flex items-center justify-center">
                             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                                 <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F8FAFC" strokeWidth="2.5" />
-                                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#D4AF37" strokeWidth="2.5" strokeDasharray={`${(totalPaid/project.budgetDisplay)*100}, 100`} strokeLinecap="round" className="transition-all duration-[2000ms] ease-out" />
+                                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#D4AF37" strokeWidth="2.5" strokeDasharray={`${(totalPaid / (project.budgetDisplay || 1)) * 100}, 100`} strokeLinecap="round" className="transition-all duration-[2000ms] ease-out" />
                             </svg>
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="text-4xl font-display font-extrabold text-slate-900 tracking-tighter">{Math.round((totalPaid/project.budgetDisplay)*100)}%</span>
+                                <span className="text-4xl font-display font-extrabold text-slate-900 tracking-tighter">{Math.round((totalPaid / (project.budgetDisplay || 1)) * 100)}%</span>
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">CLEARED</span>
                             </div>
                         </div>

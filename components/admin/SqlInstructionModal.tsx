@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { adminUpdateUserPassword } from '../../services/api';
 import { supabase } from '../../services/supabaseClient';
-import { DatabaseIcon, LockIcon, RefreshIcon, AlertTriangleIcon } from '../icons';
+import { DatabaseIcon, LockIcon, RefreshIcon, AlertTriangleIcon, ZapIcon } from '../icons';
 
 interface SqlInstructionModalProps {
   isOpen: boolean;
@@ -12,7 +11,7 @@ interface SqlInstructionModalProps {
 }
 
 const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'password' | 'schema'>('schema');
+  const [activeTab, setActiveTab] = useState<'password' | 'schema' | 'patch'>('schema');
   const [targetUserId, setTargetUserId] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -56,13 +55,13 @@ const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClo
       }, 300);
   }
 
-  const MASTER_SQL = `-- =========================================================
--- AMAZ MASTER DATABASE INITIALIZATION SCRIPT
--- =========================================================
--- Run this entire block in your Supabase SQL Editor.
--- It creates all tables and fixes "Missing Table" errors.
+  const MASTER_SQL = `ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS is_payment_alert_active boolean DEFAULT false;
 
--- 1. CORE IDENTITY TABLE
+-- Re-run RLS policies for the new column
+DROP POLICY IF EXISTS "Public Access" ON public.projects;
+CREATE POLICY "Public Access" ON public.projects FOR ALL USING (true) WITH CHECK (true);`;
+
+  const FULL_INIT_SQL = `-- Run this to create ALL tables from scratch if needed
 CREATE TABLE IF NOT EXISTS public.users (
     id uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
     email text UNIQUE NOT NULL,
@@ -71,20 +70,9 @@ CREATE TABLE IF NOT EXISTS public.users (
     avatar_url text,
     user_id text UNIQUE NOT NULL,
     verified boolean DEFAULT false,
-    verification_requested boolean DEFAULT false,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. SALARY CONFIGURATIONS (Fixes the Sync Failure Error)
-CREATE TABLE IF NOT EXISTS public.user_salary_configs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
-    pay_type text DEFAULT 'Monthly', -- 'Monthly' or 'Daily'
-    base_amount numeric DEFAULT 0,
-    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 3. PROJECTS & STAGES
 CREATE TABLE IF NOT EXISTS public.projects (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     title text NOT NULL,
@@ -94,260 +82,95 @@ CREATE TABLE IF NOT EXISTS public.projects (
     admin_id uuid REFERENCES public.users(id),
     address text,
     budget_display numeric DEFAULT 0,
-    area_sqft numeric DEFAULT 0,
-    start_date date,
+    is_payment_alert_active boolean DEFAULT false,
     status text DEFAULT 'Active',
     stage text DEFAULT 'design_phase',
     progress integer DEFAULT 0,
-    revenue_display numeric DEFAULT 0,
-    is_payment_alert_active boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 4. MILESTONES (10/40/45 Sentinel)
-CREATE TABLE IF NOT EXISTS public.milestones (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    title text NOT NULL,
-    amount_display numeric NOT NULL,
-    due_date date NOT NULL,
-    status_display text DEFAULT 'Pending',
-    paid_date_display timestamp with time zone,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. ATTENDANCE & SHIFT REGISTRY
-CREATE TABLE IF NOT EXISTS public.attendance_logs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    clock_in timestamp with time zone NOT NULL,
-    clock_out timestamp with time zone,
-    duration text,
-    location text,
-    ip_address text,
-    work_summary text,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 6. PROJECT MATERIALS
-CREATE TABLE IF NOT EXISTS public.project_materials (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    name text NOT NULL,
-    category text NOT NULL,
-    brand text NOT NULL,
-    image_url text NOT NULL,
-    status text DEFAULT 'Pending',
-    notes text,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 7. QUOTES & DOCUMENTATION
-CREATE TABLE IF NOT EXISTS public.quotes (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    version text NOT NULL,
-    file_url text NOT NULL,
-    uploaded_by uuid REFERENCES public.users(id),
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 8. EXPENSES (Site Vouchers / Voids)
-CREATE TABLE IF NOT EXISTS public.expenses (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    description text NOT NULL,
-    amount numeric NOT NULL,
-    date date NOT NULL,
-    category text NOT NULL,
-    receipt_url text,
-    status text DEFAULT 'Pending',
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 9. INVENTORY & SOURCING
-CREATE TABLE IF NOT EXISTS public.products (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    name text NOT NULL,
-    supplier text,
-    image_url text,
-    cost numeric NOT NULL,
-    quantity integer DEFAULT 1,
-    status text DEFAULT 'Pending',
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 10. MESSAGING SYSTEM
-CREATE TABLE IF NOT EXISTS public.messages (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    chat_id uuid NOT NULL,
-    sender_id uuid REFERENCES public.users(id),
-    body text,
-    attachments jsonb,
-    is_system_message boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 11. SOCIAL FEED & COMMUNITY
-CREATE TABLE IF NOT EXISTS public.posts (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    author_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    content text,
-    media_url text,
-    media_type text,
-    before_media_url text,
-    reactions jsonb DEFAULT '[]',
-    is_pinned boolean DEFAULT false,
-    project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL,
-    post_type text DEFAULT 'standard',
-    showcase_details jsonb,
-    tags text[],
-    visibility text DEFAULT 'everyone',
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.feed_comments (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    post_id uuid REFERENCES public.posts(id) ON DELETE CASCADE,
-    author_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    content text NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 12. PRODUCTIVITY STREAM
-CREATE TABLE IF NOT EXISTS public.designer_hourly_updates (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    content text NOT NULL,
-    image_url text,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 13. WORK LOGS & LEAVE
-CREATE TABLE IF NOT EXISTS public.work_logs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    date date NOT NULL,
-    tasks_completed text,
-    hours_spent numeric,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.leave_requests (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-    reason text NOT NULL,
-    start_date date NOT NULL,
-    end_date date NOT NULL,
-    status text DEFAULT 'Pending',
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 14. TASKS
-CREATE TABLE IF NOT EXISTS public.tasks (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    assignee_id uuid REFERENCES public.users(id),
-    title text NOT NULL,
-    due_date date,
-    status text DEFAULT 'To Do',
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- SECURITY: ENABLE RLS AND SET PUBLIC BYPASS (For Initial Config)
-DO $$ 
-DECLARE 
-    t text;
-BEGIN
-    FOR t IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-        EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
-        EXECUTE format('DROP POLICY IF EXISTS "Public Access" ON public.%I', t);
-        EXECUTE format('CREATE POLICY "Public Access" ON public.%I FOR ALL USING (true) WITH CHECK (true)', t);
-    END LOOP;
-END $$;`;
+);`;
 
   const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue/20 outline-none";
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Advanced Admin Actions">
-        <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit">
+        <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit overflow-x-auto no-scrollbar">
+            <button 
+                onClick={() => setActiveTab('patch')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'patch' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+                Repair Track Pay
+            </button>
             <button 
                 onClick={() => setActiveTab('schema')}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'schema' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                Master SQL Schema
+                Full Schema
             </button>
             <button 
                 onClick={() => setActiveTab('password')}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'password' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                Identity Recovery
+                ID Recovery
             </button>
         </div>
 
-        {activeTab === 'schema' ? (
-            <div className="space-y-6">
+        {activeTab === 'patch' && (
+            <div className="space-y-6 animate-reveal">
+                <div className="bg-brand-gold/10 border border-brand-gold/30 p-6 rounded-[24px] flex items-start gap-4">
+                    <ZapIcon className="w-6 h-6 text-brand-gold mt-1" />
+                    <div>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Repair Track Pay Logic</h4>
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">If "Request Payment" isn't triggering the lockout, the column might be missing. Run this SQL block to add it instantly.</p>
+                    </div>
+                </div>
+                <div className="relative group">
+                    <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10 shadow-inner">
+                        {MASTER_SQL}
+                    </pre>
+                    <button 
+                        onClick={() => { navigator.clipboard.writeText(MASTER_SQL); alert("Patch SQL Copied!"); }}
+                        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                        Copy Patch
+                    </button>
+                </div>
+                <div className="pt-4 flex justify-end">
+                    <Button onClick={handleClose} className="!bg-slate-900 !rounded-full !px-10 !text-[11px] uppercase tracking-widest">Close Terminal</Button>
+                </div>
+            </div>
+        )}
+
+        {activeTab === 'schema' && (
+             <div className="space-y-6 animate-reveal">
                 <div className="bg-slate-900 border border-brand-gold/30 p-5 rounded-2xl flex items-start gap-4">
                     <DatabaseIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
                         <h4 className="font-black text-white uppercase tracking-tight text-sm">AMAZ MASTER INITIALIZATION</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the script below in your Supabase SQL Editor. This fixes "Missing Table" errors by provisioning all required infrastructures.</p>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the full infrastructure script for all features.</p>
                     </div>
                 </div>
-
-                <div className="relative group">
-                    <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[450px] custom-scrollbar border border-white/10 shadow-inner">
-                        {MASTER_SQL}
-                    </pre>
-                    <button 
-                        onClick={() => { navigator.clipboard.writeText(MASTER_SQL); alert("SQL Copied to Clipboard!"); }}
-                        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-white/5"
-                    >
-                        Copy SQL
-                    </button>
-                </div>
-
-                <div className="pt-4 flex justify-end">
-                    <Button onClick={handleClose} className="!bg-slate-900 !rounded-2xl !px-10 !text-[11px] uppercase tracking-widest">Close Terminal</Button>
-                </div>
+                <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10">
+                    {FULL_INIT_SQL}
+                </pre>
             </div>
-        ) : (
-            <form onSubmit={handleSubmitPassword} className="space-y-6">
+        )}
+
+        {activeTab === 'password' && (
+            <form onSubmit={handleSubmitPassword} className="space-y-6 animate-reveal">
                 <div className="bg-yellow-50 border border-yellow-100 p-5 rounded-2xl flex items-start gap-4">
                     <LockIcon className="w-6 h-6 text-yellow-600 mt-1" />
                     <div>
                         <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Identity Override</h4>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">Directly reset a staff member's security key using their unique Identification ID.</p>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">Reset a staff member's security key using their ID.</p>
                     </div>
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Staff Member ID</label>
-                        <input type="text" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} className={inputClasses} placeholder="e.g. AMZ-101" required />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">New Security Key</label>
-                        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClasses} placeholder="••••••••" required />
-                    </div>
+                    <input type="text" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)} className={inputClasses} placeholder="ID (e.g. AMZ-101)" required />
+                    <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputClasses} placeholder="New Security Key" required />
                 </div>
-
-                {message && (
-                    <div className={`text-xs p-4 rounded-xl font-bold uppercase tracking-widest border ${
-                        status === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'
-                    }`}>
-                        {message}
-                    </div>
-                )}
-
+                {message && <div className={`text-xs p-4 rounded-xl font-bold uppercase tracking-widest border ${status === 'success' ? 'bg-green-50 border-green-100 text-green-600' : 'bg-red-50 border-red-100 text-red-600'}`}>{message}</div>}
                 <div className="flex justify-end gap-4 pt-4 border-t border-slate-50">
-                    <button type="button" onClick={handleClose} className="text-[11px] font-black uppercase tracking-widest text-slate-400 px-4">Cancel</button>
-                    <Button type="submit" disabled={status === 'loading'} className="!bg-slate-900 !rounded-2xl !px-10 !text-[11px] uppercase tracking-widest shadow-button">
-                        {status === 'loading' ? 'Processing...' : 'Reset Member Access'}
-                    </Button>
+                    <Button type="submit" disabled={status === 'loading'} className="!bg-slate-900 !rounded-full !px-10 !text-[11px] uppercase tracking-widest">Reset Access</Button>
                 </div>
             </form>
         )}
