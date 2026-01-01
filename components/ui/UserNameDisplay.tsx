@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
@@ -18,9 +17,9 @@ const badgeUrlMap: Record<UserRole, string> = {
   Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
   Accounts: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
-  'Project Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
-  'Production Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
-  'Site Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  'Project Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
+  'Production Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
+  'Site Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
 };
 
 const roleDetails: Record<UserRole, { title: string; text: string; }> = {
@@ -29,9 +28,9 @@ const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     Designer: { title: 'Lead Designer', text: 'Creative project lead.' },
     Customer: { title: 'Client', text: 'Verified project owner.' },
     Accounts: { title: 'Financial Auditor', text: 'Official accounts & audit department.' },
-    'Project Head': { title: 'Director', text: 'Strategic oversight.' },
-    'Production Head': { title: 'Prod Lead', text: 'Manufacturing lead.' },
-    'Site Head': { title: 'Supervisor', text: 'Execution supervisor.' },
+    'Project Head': { title: 'PROJECT HEAD', text: 'Portfolio Strategy & Team Lead.' },
+    'Production Head': { title: 'Production Head', text: 'Manufacturing & Sourcing lead.' },
+    'Site Head': { title: 'Site Head', text: 'Execution & Operations supervisor.' },
 };
 
 const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-7 h-7' }) => {

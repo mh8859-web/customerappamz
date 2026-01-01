@@ -59,6 +59,20 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
         ]
       },
+      'Project Head': {
+        main: [
+          { to: '/project-head/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Management HQ' },
+          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
+          { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Global Channel' },
+          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Portfolios' },
+          { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Portfolio Stats' },
+          { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Margin Analytics' },
+          { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My HQ Profile' },
+        ],
+        secondary: [
+          { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'System Intel' },
+        ]
+      },
       Accounts: {
         main: [
           { to: '/accounts/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Nerve Center' },
@@ -139,7 +153,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
-                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard' || item.to === '/admin/track-pay'} 
+                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard' || item.to === '/admin/track-pay' || item.to === '/project-head/dashboard'} 
                 key={item.to} 
                 to={item.to} 
                 className={getNavLinkClass} 
@@ -154,7 +168,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
                     {isActive && !isCollapsed && (
                       <div className="absolute left-[-1rem] top-1/2 -translate-y-1/2 w-1.5 h-6 bg-brand-gold rounded-r-full shadow-[0_0_8px_rgba(212,175,55,0.4)]"></div>
                     )}
-                    {(item.label === 'Messages' || item.label === 'Chat') && totalUnreadCount > 0 && !isCollapsed && (
+                    {(item.label === 'Messages' || item.label === 'Chat' || item.label === 'Global Channel') && totalUnreadCount > 0 && !isCollapsed && (
                         <span className="ml-auto bg-brand-blue text-white text-[10px] px-2 py-0.5 rounded-full font-black shadow-lg">
                             {totalUnreadCount}
                         </span>

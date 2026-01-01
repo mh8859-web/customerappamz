@@ -123,7 +123,7 @@ const App: React.FC = () => {
           <Route path="downloads" element={<DownloadCenter />} />
           <Route path="project-wall" element={<ProjectWall />} />
           <Route path="about" element={<AboutPage />} />
-          <Route element={<RoleBasedRoutes allowedRoles={["Admin", "Sub-Admin"]} />}>
+          <Route element={<RoleBasedRoutes allowedRoles={["Admin", "Sub-Admin", "Project Head"]} />}>
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="admin/overview" element={<AdminOverview />} />
             <Route path="admin/attendance" element={<AttendanceLogs />} />
