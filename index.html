@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!-- Specific weights requested: Poppins (400-700) and Exo 2 (700-800) -->
+    <!-- Specific fonts: Exo 2 (700, 800) and Poppins (400, 500, 600, 700) -->
     <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <script>
@@ -43,6 +43,7 @@
               'xl': '12px',
               '2xl': '20px',
               '3xl': '32px',
+              '4xl': '40px',
             },
             boxShadow: {
               'soft': '0 2px 10px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02)',
@@ -86,23 +87,22 @@
       .no-scrollbar::-webkit-scrollbar { display: none !important; }
       .no-scrollbar { -ms-overflow-style: none !important; scrollbar-width: none !important; }
     </style>
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.3.1",
-        "react/": "https://esm.sh/react@18.3.1/",
-        "react-dom": "https://esm.sh/react-dom@18.3.1",
-        "react-dom/": "https://esm.sh/react-dom@18.3.1/",
-        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
-        "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.3.1",
-        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.39.8",
-        "recharts": "https://esm.sh/recharts@2.12.3?deps=react@18.3.1",
-        "vite": "https://esm.sh/vite@^7.3.0",
-        "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
-      }
-    }
-    </script>
-  </head>
+  <script type="importmap">
+{
+  "imports": {
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.89.0"
+  }
+}
+</script>
+</head>
   <body class="font-sans">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>

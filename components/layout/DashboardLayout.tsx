@@ -20,7 +20,6 @@ const PaymentAlertBanner = () => {
 
     const activeMilestone = useMemo(() => {
         if (!activeProject) return null;
-        // Priority check for milestones needing payment
         return milestones.find(m => m.projectId === activeProject.id && (m.statusDisplay === 'Completed' || m.statusDisplay === 'Verifying'));
     }, [activeProject, milestones]);
 
@@ -46,51 +45,62 @@ const PaymentAlertBanner = () => {
     const isAwaitingVerification = activeMilestone.statusDisplay === 'Verifying';
 
     return (
-        <div className="p-4 md:p-6 bg-page-bg relative z-[60]">
-            <div className={`max-w-6xl mx-auto rounded-[32px] overflow-hidden shadow-premium animate-in ${isAwaitingVerification ? 'bg-slate-900' : 'bg-gradient-to-r from-red-600 to-red-500'} p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5`}>
-                <div className="flex items-center gap-6">
-                    <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center flex-shrink-0 ${isAwaitingVerification ? 'bg-brand-gold text-slate-900' : 'bg-white text-red-600 shadow-xl'}`}>
-                        {isAwaitingVerification ? <ClockIcon className="w-8 h-8 animate-spin-slow" /> : <AlertTriangleIcon className="w-8 h-8" />}
-                    </div>
-                    <div>
-                        <h3 className="text-xl md:text-2xl font-display font-bold uppercase tracking-tight text-white">
-                            {isAwaitingVerification ? 'AWAITING VERIFICATION' : 'IMMEDIATE ACTION REQUIRED'}
-                        </h3>
-                        <p className="text-xs font-medium text-white/70 uppercase tracking-widest mt-1.5 font-sans">
-                            {isAwaitingVerification 
-                                ? 'Project team is confirming your payment. access will be restored soon.' 
-                                : `MANDATORY SETTLEMENT: ${activeMilestone.title}`}
-                        </p>
-                    </div>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                    {isAwaitingVerification ? (
-                       <div className="flex items-center gap-3 bg-white/10 px-8 py-4 rounded-2xl border border-white/10 backdrop-blur-md">
-                            <CheckCircleIcon className="w-5 h-5 text-brand-gold" />
-                            <span className="text-[11px] font-bold uppercase tracking-[2px] text-brand-gold font-display">Notification Sent</span>
-                       </div>
-                    ) : (
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                            <div className="flex-1 flex flex-col justify-center items-center sm:items-end px-6">
-                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-[2px]">DUE AMOUNT</p>
-                                <p className="text-3xl font-display font-extrabold text-white">₹{activeMilestone.amountDisplay.toLocaleString()}</p>
-                            </div>
-                            <Button 
-                                onClick={handleMarkAsPaid} 
-                                disabled={isVerifying}
-                                variant="secondary" 
-                                className="!bg-white/10 !text-white !border-white/20 !rounded-full !px-8 !py-4 !text-[11px] !font-bold uppercase tracking-widest hover:!bg-white/20 transition-all font-display"
-                            >
-                                I Paid
-                            </Button>
-                            <Link to="/customer/dashboard" className="w-full sm:w-auto">
-                                <Button className="!w-full !bg-white !text-red-600 hover:!bg-slate-50 !rounded-full !px-10 !py-4 !text-[11px] !font-bold uppercase tracking-widest shadow-lg transition-all font-display">
-                                    Pay Now
-                                </Button>
-                            </Link>
+        <div className="mb-10 animate-reveal">
+            <div className={`rounded-[40px] overflow-hidden shadow-premium relative ${isAwaitingVerification ? 'bg-slate-900' : 'bg-gradient-to-r from-[#E11D48] to-[#BE123C]'} p-8 md:p-12 border border-white/10`}>
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full -ml-16 -mb-16 blur-2xl"></div>
+
+                <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
+                    <div className="flex items-center gap-8 text-white">
+                        <div className={`w-20 h-20 rounded-[28px] flex items-center justify-center shadow-2xl ${isAwaitingVerification ? 'bg-brand-gold text-slate-900' : 'bg-white text-[#E11D48]'}`}>
+                            {isAwaitingVerification ? <ClockIcon className="w-10 h-10 animate-spin-slow" /> : <AlertTriangleIcon className="w-10 h-10" />}
                         </div>
-                    )}
+                        <div>
+                            <h3 className="text-2xl md:text-3xl font-display font-bold uppercase tracking-tight leading-none">
+                                {isAwaitingVerification ? 'Awaiting Verification' : 'Immediate Action Required'}
+                            </h3>
+                            <p className="text-sm font-medium text-white/70 uppercase tracking-[3px] mt-3 font-sans">
+                                {isAwaitingVerification 
+                                    ? 'PROJECT TEAM IS CONFIRMING YOUR PAYMENT. ACCESS WILL BE RESTORED SOON.' 
+                                    : `MANDATORY SETTLEMENT: ${activeMilestone.title}`}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row items-center gap-6 w-full lg:w-auto">
+                        {!isAwaitingVerification && (
+                            <div className="text-center sm:text-right px-6">
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-[4px]">DUE AMOUNT</p>
+                                <p className="text-4xl md:text-5xl font-display font-extrabold text-white tracking-tighter">₹{activeMilestone.amountDisplay.toLocaleString()}</p>
+                            </div>
+                        )}
+                        
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            {isAwaitingVerification ? (
+                               <div className="flex items-center gap-3 bg-white/10 px-8 py-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                                    <CheckCircleIcon className="w-5 h-5 text-brand-gold" />
+                                    <span className="text-[11px] font-bold uppercase tracking-[2px] text-brand-gold font-display">Notification Sent</span>
+                               </div>
+                            ) : (
+                                <>
+                                    <Button 
+                                        onClick={handleMarkAsPaid} 
+                                        disabled={isVerifying}
+                                        variant="secondary" 
+                                        className="!flex-1 sm:!flex-none !bg-white/10 !text-white !border-white/20 !rounded-full !px-10 !py-4 !text-[11px] !font-bold uppercase tracking-widest hover:!bg-white/20 transition-all font-display"
+                                    >
+                                        I Paid
+                                    </Button>
+                                    <Link to="/customer/dashboard" className="flex-1 sm:flex-none">
+                                        <Button className="!w-full !bg-white !text-[#E11D48] hover:!bg-slate-50 !rounded-full !px-12 !py-4 !text-[11px] !font-bold uppercase tracking-widest shadow-xl active:scale-95 transition-all font-display">
+                                            Pay Now
+                                        </Button>
+                                    </Link>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,7 +129,7 @@ const MobileDock = () => {
                         }`}
                     >
                         {link.icon}
-                        <span className="text-[10px]">{link.label}</span>
+                        <span className="text-[10px] font-sans">{link.label}</span>
                     </NavLink>
                 );
             })}
@@ -132,24 +142,27 @@ const DashboardLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen bg-page-bg text-text-primary overflow-hidden">
-      <PaymentAlertBanner />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar 
-            sidebarOpen={sidebarOpen} 
-            setSidebarOpen={setSidebarOpen} 
-            isCollapsed={isSidebarCollapsed}
-            toggleCollapsed={() => setSidebarCollapsed(!isSidebarCollapsed)}
-        />
-        <div className="flex flex-col flex-1 relative overflow-hidden">
-            <Header setSidebarOpen={setSidebarOpen} toggleSidebarCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)} isSidebarCollapsed={isSidebarCollapsed} />
-            <main className="p-4 md:p-8 flex-1 overflow-y-auto pb-24 md:pb-8 no-scrollbar">
-            <div className="max-w-6xl mx-auto w-full animate-in">
-                {children}
+    <div className="flex h-screen bg-page-bg text-text-primary overflow-hidden">
+      <Sidebar 
+          sidebarOpen={sidebarOpen} 
+          setSidebarOpen={setSidebarOpen} 
+          isCollapsed={isSidebarCollapsed}
+          toggleCollapsed={() => setSidebarCollapsed(!isSidebarCollapsed)}
+      />
+      <div className="flex flex-col flex-1 relative overflow-hidden">
+          <Header setSidebarOpen={setSidebarOpen} toggleSidebarCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)} isSidebarCollapsed={isSidebarCollapsed} />
+          
+          <main className="p-4 md:p-10 flex-1 overflow-y-auto pb-24 md:pb-12 no-scrollbar">
+            <div className="max-w-7xl mx-auto w-full">
+                {/* Payment Alert now integrated inside main content area */}
+                <PaymentAlertBanner />
+                <div className="animate-reveal">
+                    {children}
+                </div>
             </div>
-            </main>
-            <MobileDock />
-        </div>
+          </main>
+
+          <MobileDock />
       </div>
     </div>
   );
