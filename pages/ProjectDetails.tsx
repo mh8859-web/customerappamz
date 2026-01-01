@@ -78,20 +78,33 @@ const ProjectDetails: React.FC = () => {
         return user.role === 'Designer' && project.designerId === user.id && !project.startDate;
     }, [project, user]);
 
-    const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
+    const [timeLeft, setTimeLeft] = useState({ d: 45, h: 0, m: 0, s: 0 });
 
     const calculateTimeRemaining = useCallback(() => {
-        if (!project || !project.startDate) {
+        if (!project || !project.startDate || project.status === 'Completed') {
             setTimeLeft({ d: 45, h: 0, m: 0, s: 0 });
             return;
-        };
+        }
         
+        // --- HARD 45-DAY COMMITMENT LOGIC ---
+        // We calculate distance from start date + 45 days.
+        // If distance is negative, project is overdue.
+        // If distance is more than 45 days (can happen with future start dates), we cap it at 45.
         const startTime = new Date(project.startDate).getTime();
-        const deadlineTime = startTime + (45 * 24 * 60 * 60 * 1000); 
+        const fortyFiveDaysInMs = 45 * 24 * 60 * 60 * 1000;
+        const deadlineTime = startTime + fortyFiveDaysInMs; 
         const now = new Date().getTime();
-        const distance = deadlineTime - now;
+        
+        let distance = deadlineTime - now;
 
-        if (distance <= 0 || project.status === 'Completed') {
+        // CAP AT 45 DAYS: If the distance calculated is higher than 45 days 
+        // (meaning project hasn't reached its internal start window or has a future start date), 
+        // we strictly show 45 days.
+        if (distance > fortyFiveDaysInMs) {
+            distance = fortyFiveDaysInMs;
+        }
+
+        if (distance <= 0) {
             setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
             return;
         }
