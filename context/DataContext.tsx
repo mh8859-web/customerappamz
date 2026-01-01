@@ -148,8 +148,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 updatedAt: p.updated_at, 
                 revenueDisplay: p.revenue_display,
                 isPaymentAlertActive: p.is_payment_alert_active === true,
-                // NEW: Track which specific milestone is requested
-                requestedMilestoneId: p.requested_milestone_id 
+                requestedMilestoneId: p.requested_milestone_id,
+                // NEW: Friendly nudge reference
+                friendlyReminderMilestoneId: p.friendly_reminder_milestone_id 
             })));
             setTasks(mapToCamelCase(dataMap.tasks, t => ({ ...t, projectId: t.project_id, assigneeId: t.assignee_id, dueDate: t.due_date })));
             setDesigns(mapToCamelCase(dataMap.designs, d => ({ ...d, projectId: d.project_id, uploadedBy: d.uploaded_by, fileUrl: d.file_url, submittedForReview: d.submitted_for_review, comments: d.comments || [], approvedBy: d.approved_by, approvedAt: d.approved_at })));

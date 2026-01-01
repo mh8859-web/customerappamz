@@ -50,6 +50,7 @@ export interface Project {
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
   requestedMilestoneId?: string;
+  friendlyReminderMilestoneId?: string;
 }
 
 export type ProjectStage =

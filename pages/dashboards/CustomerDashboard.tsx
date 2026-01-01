@@ -1,12 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Project, Milestone } from '../../types';
 import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
 import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
-// Added missing SparklesIcon and CheckCircleIcon imports
-import { DownloadIcon, MegaphoneIcon, CreditCardIcon, AlertTriangleIcon, FileTextIcon, SparklesIcon, CheckCircleIcon, ZapIcon } from '../../components/icons';
+import { DownloadIcon, MegaphoneIcon, CreditCardIcon, AlertTriangleIcon, FileTextIcon, SparklesIcon, CheckCircleIcon, ZapIcon, BellIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
@@ -31,12 +29,16 @@ const CustomerDashboard: React.FC = () => {
         return { project: myProject, projectMilestones: projectMilestonesData, designer: projectDesigner, admin: projectAdmin };
     }, [user, projects, milestones, findUserById]);
     
+    // Friendly reminder logic
+    const friendlyMilestone = useMemo(() => {
+        if (!project?.friendlyReminderMilestoneId) return null;
+        return projectMilestones.find(m => m.id === project.friendlyReminderMilestoneId);
+    }, [project, projectMilestones]);
+
     const overdueMilestone = useMemo(() => {
-        // High priority: Specifically invoiced milestones
         const invoiced = projectMilestones.find(m => m.statusDisplay === 'Completed');
         if (invoiced) return invoiced;
 
-        // Logic check: If no milestones are "Paid", the 10% token is overdue if project is Active
         if (project && projectMilestones.length > 0) {
             const tokenMilestone = projectMilestones.find(m => m.title.includes('10%'));
             if (tokenMilestone && tokenMilestone.statusDisplay === 'Pending') {
@@ -61,8 +63,7 @@ const CustomerDashboard: React.FC = () => {
     };
 
     const handlePaymentComplete = async (milestoneId: string) => {
-        // Corrected: refetchData returns void, so no need to destructure 'error'
-        await refetchData(); // Refresh all data to reflect payment
+        await refetchData(); 
         setPaymentModalOpen(false);
     };
     
@@ -97,8 +98,41 @@ const CustomerDashboard: React.FC = () => {
                         <p className="text-slate-400 font-bold uppercase tracking-[4px] text-[10px] mt-1.5">Project Synchronization Active</p>
                     </div>
                 </div>
+
+                {/* Friendly Notification Banner */}
+                {friendlyMilestone && !project.isPaymentAlertActive && (
+                    <Card className="!p-8 bg-brand-gold/10 border-brand-gold/30 rounded-[32px] animate-in relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+                            <div className="flex items-center gap-6">
+                                <div className="w-14 h-14 rounded-2xl bg-brand-gold text-slate-900 flex items-center justify-center shadow-lg">
+                                    <BellIcon className="w-7 h-7" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Dream Home Care</h3>
+                                    <p className="text-sm text-slate-700 font-medium mt-1">
+                                        Delay works may affect! Its your dream home we care. <br/> 
+                                        Please pay this current threshold <span className="font-bold">({friendlyMilestone.title})</span> as per planned.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-8">
+                                <div className="text-right">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">THRESHOLD AMOUNT</p>
+                                    <p className="text-2xl font-display font-black text-slate-900 tabular-nums">₹{friendlyMilestone.amountDisplay.toLocaleString()}</p>
+                                </div>
+                                <Button 
+                                    onClick={() => handlePayNow(friendlyMilestone)}
+                                    className="!bg-slate-900 !text-white !rounded-full !px-10 !py-3 !text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-button"
+                                >
+                                    Proceed Settlement
+                                </Button>
+                            </div>
+                        </div>
+                    </Card>
+                )}
                  
-                 {overdueMilestone && (
+                 {overdueMilestone && project.isPaymentAlertActive && (
                     <Card className="!p-10 bg-red-600 border-none rounded-[40px] shadow-button ring-[12px] ring-red-500/10 animate-in relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full -mr-40 -mt-40 blur-3xl animate-pulse"></div>
                         <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
@@ -109,12 +143,10 @@ const CustomerDashboard: React.FC = () => {
                                 <div>
                                     <h3 className="text-3xl font-black uppercase tracking-tight leading-none">Immediate Action Required</h3>
                                     <p className="text-sm font-black text-white/80 uppercase tracking-[3px] mt-3">MANDATORY SETTLEMENT: {overdueMilestone.title}</p>
-                                    {project.isPaymentAlertActive && (
-                                        <div className="mt-4 flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-xl w-fit border border-white/10">
-                                            <ZapIcon className="w-4 h-4 text-brand-gold" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest">High-Priority Nudge from Accounts</span>
-                                        </div>
-                                    )}
+                                    <div className="mt-4 flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-xl w-fit border border-white/10">
+                                        <ZapIcon className="w-4 h-4 text-brand-gold" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">High-Priority Nudge from Accounts</span>
+                                    </div>
                                 </div>
                             </div>
                             <div className="flex flex-col md:flex-row items-center gap-10">

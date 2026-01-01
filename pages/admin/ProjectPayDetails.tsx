@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
-import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon, MegaphoneIcon, XMarkIcon, RefreshIcon } from '../../components/icons';
+import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon, MegaphoneIcon, XMarkIcon, RefreshIcon, BellIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import AddMilestoneModal from '../../components/admin/AddMilestoneModal';
 
@@ -26,9 +26,11 @@ const ProjectPayDetails: React.FC = () => {
         
         setIsSyncing(true);
         try {
+            // Set the alert flag and point to the specific milestone
             const { error } = await updateRecord('projects', project.id, { 
                 is_payment_alert_active: true,
                 requested_milestone_id: milestoneId,
+                friendly_reminder_milestone_id: null, // Clear friendly if going to hard lock
                 updated_at: new Date().toISOString()
             });
             
@@ -50,13 +52,36 @@ const ProjectPayDetails: React.FC = () => {
         }
     };
 
+    const handleFriendlyNudge = async (milestoneId: string, title: string) => {
+        if (!project || isSyncing) return;
+        setIsSyncing(true);
+        try {
+            await updateRecord('projects', project.id, {
+                friendly_reminder_milestone_id: milestoneId,
+                is_payment_alert_active: false // Ensure it's not locked if we are sending a friendly nudge
+            });
+            
+            await createRecord('messages', {
+                chat_id: project.id,
+                body: `FRIENDLY REMINDER: Payment for "${title}" is now due. Please process this to maintain the current project speed.`,
+                sender_id: '786786',
+                is_system_message: true
+            });
+            
+            await refetchData();
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const handleClearLock = async () => {
         if (!project || isSyncing) return;
         setIsSyncing(true);
         try {
             await updateRecord('projects', project.id, { 
                 is_payment_alert_active: false,
-                requested_milestone_id: null 
+                requested_milestone_id: null,
+                friendly_reminder_milestone_id: null
             });
             await refetchData();
         } finally {
@@ -75,10 +100,12 @@ const ProjectPayDetails: React.FC = () => {
                 paid_date_display: new Date().toISOString()
             });
             
-            if (project?.requestedMilestoneId === milestoneId) {
+            // Automatically clear alerts if this was the requested/nudged milestone
+            if (project?.requestedMilestoneId === milestoneId || project?.friendlyReminderMilestoneId === milestoneId) {
                 await updateRecord('projects', project.id, { 
                     is_payment_alert_active: false,
-                    requested_milestone_id: null 
+                    requested_milestone_id: null,
+                    friendly_reminder_milestone_id: null
                 });
             }
             
@@ -158,20 +185,20 @@ const ProjectPayDetails: React.FC = () => {
                     </div>
                 </div>
 
-                <div className={`p-8 flex items-center gap-8 rounded-[36px] shadow-premium transition-all duration-500 border border-white/5 ${project.isPaymentAlertActive ? 'bg-red-600' : 'bg-slate-50'}`}>
+                <div className={`p-8 flex items-center gap-8 rounded-[36px] shadow-premium transition-all duration-500 border border-white/5 ${project.isPaymentAlertActive ? 'bg-red-600' : project.friendlyReminderMilestoneId ? 'bg-brand-gold/10 border-brand-gold/30' : 'bg-slate-50'}`}>
                     <div className="text-right">
                         <p className={`text-[10px] font-black uppercase tracking-[4px] ${project.isPaymentAlertActive ? 'text-white/60' : 'text-slate-400'}`}>BLOCKER SENTINEL</p>
-                        <p className={`text-sm font-extrabold uppercase tracking-widest mt-1.5 ${project.isPaymentAlertActive ? 'text-white' : 'text-slate-900'}`}>
-                            {project.isPaymentAlertActive ? 'VAULT RESTRICTED' : 'REGISTRY OPEN'}
+                        <p className={`text-sm font-extrabold uppercase tracking-widest mt-1.5 ${project.isPaymentAlertActive ? 'text-white' : project.friendlyReminderMilestoneId ? 'text-brand-gold' : 'text-slate-900'}`}>
+                            {project.isPaymentAlertActive ? 'VAULT RESTRICTED' : project.friendlyReminderMilestoneId ? 'FRIENDLY NUDGE ACTIVE' : 'REGISTRY OPEN'}
                         </p>
                     </div>
-                    {project.isPaymentAlertActive && (
+                    {(project.isPaymentAlertActive || project.friendlyReminderMilestoneId) && (
                         <Button 
                             onClick={handleClearLock}
                             disabled={isSyncing}
-                            className="!rounded-full !px-8 !py-4 !text-[10px] font-black uppercase tracking-[2px] !bg-white !text-red-600 shadow-xl"
+                            className={`!rounded-full !px-8 !py-4 !text-[10px] font-black uppercase tracking-[2px] shadow-xl ${project.isPaymentAlertActive ? '!bg-white !text-red-600' : '!bg-brand-gold !text-slate-900'}`}
                         >
-                            CLOSE LOCK
+                            CLOSE NOTIFICATION
                         </Button>
                     )}
                 </div>
@@ -198,7 +225,8 @@ const ProjectPayDetails: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
                                     {pMilestones.map(m => {
-                                        const isRequested = project.requestedMilestoneId === m.id;
+                                        const isBlocked = project.requestedMilestoneId === m.id && project.isPaymentAlertActive;
+                                        const isNudged = project.friendlyReminderMilestoneId === m.id;
                                         return (
                                             <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-12 py-8 font-extrabold text-slate-900 uppercase tracking-wide text-sm font-display">{m.title}</td>
@@ -218,10 +246,18 @@ const ProjectPayDetails: React.FC = () => {
                                                         {m.statusDisplay !== 'Paid' ? (
                                                             <>
                                                                 <button 
+                                                                    onClick={() => handleFriendlyNudge(m.id, m.title)}
+                                                                    disabled={isSyncing || isNudged}
+                                                                    className={`p-3 rounded-xl transition-all ${isNudged ? 'bg-brand-gold text-slate-900 animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-brand-gold hover:bg-brand-gold/10'}`}
+                                                                    title="Send Friendly Nudge"
+                                                                >
+                                                                    <BellIcon className="w-5 h-5" />
+                                                                </button>
+                                                                <button 
                                                                     onClick={() => handleRequestMilestone(m.id, m.title)}
-                                                                    disabled={isSyncing || isRequested}
-                                                                    className={`p-3 rounded-xl transition-all ${isRequested ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-                                                                    title="Trigger Blocker for this Milestone"
+                                                                    disabled={isSyncing || isBlocked}
+                                                                    className={`p-3 rounded-xl transition-all ${isBlocked ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                                                                    title="Trigger Block Blocker"
                                                                 >
                                                                     <MegaphoneIcon className="w-5 h-5" />
                                                                 </button>
