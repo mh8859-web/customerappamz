@@ -79,7 +79,8 @@ const AccountsDashboard: React.FC = () => {
     }, [milestones, expenses, projects]);
 
     const staffPayroll = useMemo(() => {
-        const staff = users.filter(u => u.role !== 'Customer');
+        // ADMIN IS HEAD: Explicitly filter out 'Admin' role from the payroll processing list
+        const staff = users.filter(u => u.role !== 'Customer' && u.role !== 'Admin');
         return staff.map(s => {
             const config = salaryConfigs.find(c => c.userId === s.id);
             const logs = attendanceLogs.filter(l => l.designerId === s.id);

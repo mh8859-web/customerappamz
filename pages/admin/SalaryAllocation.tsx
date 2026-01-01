@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useUsers } from '../../context/UserContext';
 import { supabase } from '../../services/supabaseClient';
-import { DollarSignIcon, ZapIcon, RefreshIcon, UserGroupIcon } from '../../components/icons';
+import { DollarSignIcon, ZapIcon, RefreshIcon, UserGroupIcon, AlertTriangleIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import { UserSalaryConfig } from '../../types';
 
@@ -13,22 +13,36 @@ const SalaryAllocation: React.FC = () => {
     const [configs, setConfigs] = useState<UserSalaryConfig[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState<string | null>(null);
+    const [dbError, setDbError] = useState<string | null>(null);
 
-    const staffUsers = users.filter(u => u.role !== 'Customer');
+    // ADMIN IS HEAD: Exclude 'Admin' from salary allocation list.
+    const staffUsers = users.filter(u => u.role !== 'Customer' && u.role !== 'Admin');
 
     const fetchConfigs = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('user_salary_configs').select('*');
-        if (!error && data) {
-            setConfigs(data.map(c => ({
-                id: c.id,
-                userId: c.user_id,
-                payType: c.pay_type,
-                baseAmount: c.base_amount,
-                updatedAt: c.updated_at
-            })));
+        setDbError(null);
+        try {
+            const { data, error } = await supabase.from('user_salary_configs').select('*');
+            if (error) {
+                if (error.message.includes('not found') || error.code === 'PGRST116') {
+                    setDbError("SCHEMA_MISSING");
+                } else {
+                    throw error;
+                }
+            } else if (data) {
+                setConfigs(data.map(c => ({
+                    id: c.id,
+                    userId: c.user_id,
+                    payType: c.pay_type,
+                    baseAmount: c.base_amount,
+                    updatedAt: c.updated_at
+                })));
+            }
+        } catch (err: any) {
+            setDbError(err.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     useEffect(() => {
@@ -50,13 +64,24 @@ const SalaryAllocation: React.FC = () => {
             ? await supabase.from('user_salary_configs').update(payload).eq('id', existing.id)
             : await supabase.from('user_salary_configs').insert(payload);
 
-        if (error) alert(`Sync Failure: ${error.message}`);
+        if (error) alert(`Sync Failure: ${error.message}. Ensure the Salary tables are created in Supabase.`);
         else await fetchConfigs();
         
         setIsSaving(null);
     };
 
     if (usersLoading || loading) return <div className="p-20 text-center animate-pulse text-slate-400 font-black uppercase tracking-[6px]">Syncing Payroll Ledger...</div>;
+
+    if (dbError === "SCHEMA_MISSING") {
+        return (
+            <div className="p-20 text-center space-y-6">
+                <AlertTriangleIcon className="w-16 h-16 text-brand-gold mx-auto animate-bounce" />
+                <h2 className="text-2xl font-display font-black text-slate-900 uppercase">Schema Initialization Required</h2>
+                <p className="text-slate-500 max-w-md mx-auto font-medium">The Salary Allocation table does not exist in your database yet. Please go to <strong>Admin Settings > Danger Zone</strong> and run the <strong>Master SQL</strong> script to initialize all features.</p>
+                <Button onClick={() => window.location.reload()} variant="secondary" className="!rounded-full">Check Connection Again</Button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-10 pb-16">

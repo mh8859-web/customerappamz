@@ -85,6 +85,11 @@ export const deleteRecord = async (tableName: string, recordId: string) => {
     return { error };
 };
 
+export const deleteProject = async (projectId: string) => {
+    const { error } = await deleteRecord('projects', projectId);
+    return { error };
+};
+
 /**
  * Core Supabase Storage Upload Logic
  */

@@ -4,7 +4,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { adminUpdateUserPassword } from '../../services/api';
 import { supabase } from '../../services/supabaseClient';
-import { DatabaseIcon, LockIcon, RefreshIcon } from '../icons';
+import { DatabaseIcon, LockIcon, RefreshIcon, AlertTriangleIcon } from '../icons';
 
 interface SqlInstructionModalProps {
   isOpen: boolean;
@@ -56,9 +56,13 @@ const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClo
       }, 300);
   }
 
-  const MASTER_SQL = `-- AMAZ MODULAR ECOSYSTEM - FULL DATABASE INITIALIZATION SCRIPT --
+  const MASTER_SQL = `-- =========================================================
+-- AMAZ MASTER DATABASE INITIALIZATION SCRIPT
+-- =========================================================
+-- Run this entire block in your Supabase SQL Editor.
+-- It creates all tables and fixes "Missing Table" errors.
 
--- 1. CORE USERS & IDENTITY
+-- 1. CORE IDENTITY TABLE
 CREATE TABLE IF NOT EXISTS public.users (
     id uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
     email text UNIQUE NOT NULL,
@@ -71,7 +75,16 @@ CREATE TABLE IF NOT EXISTS public.users (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. PROJECTS & MILESTONES
+-- 2. SALARY CONFIGURATIONS (Fixes the Sync Failure Error)
+CREATE TABLE IF NOT EXISTS public.user_salary_configs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
+    pay_type text DEFAULT 'Monthly', -- 'Monthly' or 'Daily'
+    base_amount numeric DEFAULT 0,
+    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. PROJECTS & STAGES
 CREATE TABLE IF NOT EXISTS public.projects (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     title text NOT NULL,
@@ -92,6 +105,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 4. MILESTONES (10/40/45 Sentinel)
 CREATE TABLE IF NOT EXISTS public.milestones (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -103,7 +117,20 @@ CREATE TABLE IF NOT EXISTS public.milestones (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. MATERIALS & ASSETS
+-- 5. ATTENDANCE & SHIFT REGISTRY
+CREATE TABLE IF NOT EXISTS public.attendance_logs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    clock_in timestamp with time zone NOT NULL,
+    clock_out timestamp with time zone,
+    duration text,
+    location text,
+    ip_address text,
+    work_summary text,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 6. PROJECT MATERIALS
 CREATE TABLE IF NOT EXISTS public.project_materials (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -116,6 +143,7 @@ CREATE TABLE IF NOT EXISTS public.project_materials (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 7. QUOTES & DOCUMENTATION
 CREATE TABLE IF NOT EXISTS public.quotes (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -125,28 +153,7 @@ CREATE TABLE IF NOT EXISTS public.quotes (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. ATTENDANCE & PAYROLL
-CREATE TABLE IF NOT EXISTS public.attendance_logs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id),
-    clock_in timestamp with time zone NOT NULL,
-    clock_out timestamp with time zone,
-    duration text,
-    location text,
-    ip_address text,
-    work_summary text,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.user_salary_configs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid REFERENCES public.users(id) UNIQUE,
-    pay_type text DEFAULT 'Monthly', -- 'Monthly' or 'Daily'
-    base_amount numeric DEFAULT 0,
-    updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 5. EXPENSES & PRODUCTS
+-- 8. EXPENSES (Site Vouchers / Voids)
 CREATE TABLE IF NOT EXISTS public.expenses (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -159,6 +166,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 9. INVENTORY & SOURCING
 CREATE TABLE IF NOT EXISTS public.products (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
@@ -171,7 +179,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6. COMMUNICATION & FEED
+-- 10. MESSAGING SYSTEM
 CREATE TABLE IF NOT EXISTS public.messages (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     chat_id uuid NOT NULL,
@@ -182,16 +190,17 @@ CREATE TABLE IF NOT EXISTS public.messages (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 11. SOCIAL FEED & COMMUNITY
 CREATE TABLE IF NOT EXISTS public.posts (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    author_id uuid REFERENCES public.users(id),
+    author_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
     content text,
     media_url text,
     media_type text,
     before_media_url text,
     reactions jsonb DEFAULT '[]',
     is_pinned boolean DEFAULT false,
-    project_id uuid REFERENCES public.projects(id),
+    project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL,
     post_type text DEFAULT 'standard',
     showcase_details jsonb,
     tags text[],
@@ -199,16 +208,56 @@ CREATE TABLE IF NOT EXISTS public.posts (
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 7. PRODUCTIVITY LOGS
+CREATE TABLE IF NOT EXISTS public.feed_comments (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    post_id uuid REFERENCES public.posts(id) ON DELETE CASCADE,
+    author_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    content text NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 12. PRODUCTIVITY STREAM
 CREATE TABLE IF NOT EXISTS public.designer_hourly_updates (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    designer_id uuid REFERENCES public.users(id),
+    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
     content text NOT NULL,
     image_url text,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- SECURITY: ENABLE RLS & CREATE BYPASS POLICY (FOR EASY INITIAL SETUP)
+-- 13. WORK LOGS & LEAVE
+CREATE TABLE IF NOT EXISTS public.work_logs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
+    date date NOT NULL,
+    tasks_completed text,
+    hours_spent numeric,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.leave_requests (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    designer_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+    reason text NOT NULL,
+    start_date date NOT NULL,
+    end_date date NOT NULL,
+    status text DEFAULT 'Pending',
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 14. TASKS
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
+    assignee_id uuid REFERENCES public.users(id),
+    title text NOT NULL,
+    due_date date,
+    status text DEFAULT 'To Do',
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- SECURITY: ENABLE RLS AND SET PUBLIC BYPASS (For Initial Config)
 DO $$ 
 DECLARE 
     t text;
@@ -229,7 +278,7 @@ END $$;`;
                 onClick={() => setActiveTab('schema')}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'schema' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                System Schema (SQL)
+                Master SQL Schema
             </button>
             <button 
                 onClick={() => setActiveTab('password')}
@@ -244,13 +293,13 @@ END $$;`;
                 <div className="bg-slate-900 border border-brand-gold/30 p-5 rounded-2xl flex items-start gap-4">
                     <DatabaseIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
-                        <h4 className="font-black text-white uppercase tracking-tight text-sm">AMAZ Master initialization</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">This script generates the complete infrastructure for Salaries, Attendance, Projects, and Social Feed. Execute it in your Supabase SQL Editor.</p>
+                        <h4 className="font-black text-white uppercase tracking-tight text-sm">AMAZ MASTER INITIALIZATION</h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the script below in your Supabase SQL Editor. This fixes "Missing Table" errors by provisioning all required infrastructures.</p>
                     </div>
                 </div>
 
                 <div className="relative group">
-                    <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10 shadow-inner">
+                    <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[450px] custom-scrollbar border border-white/10 shadow-inner">
                         {MASTER_SQL}
                     </pre>
                     <button 

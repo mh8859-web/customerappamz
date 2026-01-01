@@ -10,21 +10,38 @@ import Button from '../components/ui/Button';
 import CreateProjectModal from '../components/admin/CreateProjectModal';
 import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
-import { createRecord, uploadProjectFile } from '../services/api';
-import { RefreshIcon, MapPinIcon, BriefcaseIcon } from '../components/icons';
+import { createRecord, uploadProjectFile, deleteProject } from '../services/api';
+import { RefreshIcon, MapPinIcon, BriefcaseIcon, TrashIcon } from '../components/icons';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
+    const { user } = useAuth();
+    const { refetchData } = useData();
     const { findUserById } = useUsers();
     const designer = findUserById(project.designerId);
     const customer = findUserById(project.customerId);
 
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (window.confirm(`PERMANENTLY PURGE PROJECT: "${project.title}"?`)) {
+            const { error } = await deleteProject(project.id);
+            if (error) alert(error.message);
+            else await refetchData();
+        }
+    };
+
     return (
         <Card className="group relative overflow-hidden h-full border-luxury hover:border-brand-gold/40">
-            <div className="absolute top-0 right-0 p-6">
+            <div className="absolute top-0 right-0 p-6 flex items-center gap-3">
                 <span className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${
                     project.status === 'Active' ? 'bg-accent-emerald/10 text-accent-emerald' : 
                     project.status === 'Completed' ? 'bg-brand-gold/20 text-brand-gold' :
                     'bg-zinc-200 text-zinc-500'}`}>{project.status}</span>
+                {user?.role === 'Admin' && (
+                    <button onClick={handleDelete} className="p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Purge Portfolio">
+                        <TrashIcon className="w-4 h-4" />
+                    </button>
+                )}
             </div>
             
             <Link to={`/projects/${project.id}`} className="flex flex-col h-full">
