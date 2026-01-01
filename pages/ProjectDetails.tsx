@@ -117,29 +117,36 @@ const ProjectDetails: React.FC = () => {
     };
 
     if (usersLoading || dataLoading) return <div className="p-10 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest text-xs">Syncing Portfolio...</div>;
-    if (!project || !user) return <div className="text-center p-20">Broken Link.</div>;
+    if (!project || !user) return <div className="text-center p-20 font-sans">Broken Link.</div>;
 
     if (isLocked) {
         return (
             <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 text-center">
-                <div className="max-w-xl w-full space-y-12 animate-in">
+                <div className="max-w-xl w-full space-y-10 animate-reveal">
                     <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" className="h-10 mx-auto" alt="AMAZ" />
-                    <div className="w-24 h-24 rounded-[32px] bg-white text-slate-900 flex items-center justify-center mx-auto shadow-gold-glow">
-                        <LockIcon className="w-10 h-10" />
-                    </div>
-                    <div className="space-y-4">
-                        <h2 className="text-5xl font-display font-black text-white uppercase tracking-tighter leading-tight">VAULT LOCKED</h2>
-                        <p className="text-brand-gold font-bold uppercase tracking-[6px] text-xs">Awaiting Settlement Confirmation</p>
-                    </div>
-                    <Card className="!bg-white/5 border-white/10 rounded-[40px] p-10">
-                        <p className="text-slate-300 text-lg leading-relaxed font-medium">
-                            "Your live project dashboard is currently restricted. Once our accounts department confirms your payment receipt, full access will be restored immediately."
-                        </p>
-                        <div className="mt-8 flex flex-col gap-4">
-                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Expected Verification Time: 2-4 Hours</p>
-                            <Button onClick={() => navigate('/')} variant="secondary" className="!rounded-full !bg-white/10 !text-white !border-white/20 !px-12 !py-4">Return Home</Button>
+                    
+                    <div className="relative mx-auto w-24 h-24">
+                        <div className="absolute inset-0 bg-brand-gold/20 rounded-[32px] blur-2xl animate-pulse"></div>
+                        <div className="relative w-24 h-24 rounded-[32px] bg-white text-slate-900 flex items-center justify-center shadow-gold-glow">
+                            <LockIcon className="w-10 h-10" />
                         </div>
-                    </Card>
+                    </div>
+
+                    <div className="space-y-4">
+                        <h2 className="text-4xl md:text-5xl font-display font-black text-white uppercase tracking-tighter leading-tight">VAULT LOCKED</h2>
+                        <p className="text-brand-gold font-bold uppercase tracking-[4px] text-[10px]">Awaiting for Payment Confirmation</p>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-[40px] p-8 md:p-12 backdrop-blur-xl">
+                        <p className="text-slate-300 text-base md:text-lg leading-relaxed font-medium font-sans">
+                            "Once confirmed you can access live project dashboard and monitor all updates! Our accounts team usually verifies within 2-4 hours."
+                        </p>
+                        <div className="mt-10 flex flex-col gap-4">
+                            <Button onClick={() => navigate('/')} variant="secondary" className="!w-full !rounded-full !bg-white/10 !text-white !border-white/20 !px-12 !py-5 font-black uppercase tracking-widest text-[11px]">
+                                Return Home
+                            </Button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -155,13 +162,13 @@ const ProjectDetails: React.FC = () => {
                     <div className="max-w-xl w-full text-center space-y-10 animate-in">
                         <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ" className="h-12 mx-auto" />
                         <div className="space-y-4">
-                            <h2 className="text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">
+                            <h2 className="text-4xl md:text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">
                                 ARE YOU READY TO <span className="text-brand-gold">START</span> PROJECT?
                             </h2>
                             <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">Architectural Commitment Interface</p>
                         </div>
                         <div className="bg-white/5 p-8 rounded-[40px] border border-white/10">
-                            <p className="text-slate-300 text-sm font-medium leading-relaxed italic">
+                            <p className="text-slate-300 text-sm font-medium leading-relaxed italic font-sans">
                                 "Once selected, the 45-day countdown begins immediately. Accurate time tracking will be visible to the client. Ensure all initial site inspections are completed."
                             </p>
                         </div>
@@ -175,11 +182,11 @@ const ProjectDetails: React.FC = () => {
             <Modal isOpen={isCommitmentModalOpen} onClose={() => setCommitmentModalOpen(false)} title="AMAZ GUARANTEE">
                 <div className="text-center py-6 px-4">
                     <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ" className="h-10 mx-auto mb-10" />
-                    <p className="text-2xl sm:text-3xl font-display font-black text-slate-900 leading-tight tracking-tight uppercase mb-8">
+                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 leading-tight tracking-tight uppercase mb-8">
                         "WE ARE FULLY COMMITED TO PROVIDE YOU A GREAT EXPERIENCE THIS IS YOUR LIFE'S BEST MOMENT SO WE MAKE EVERY PROCESS AMAZING SO WE ARE ON TIME"
                     </p>
                     <div className="h-px w-20 bg-brand-gold mx-auto mb-8"></div>
-                    <Button onClick={() => setCommitmentModalOpen(false)} className="!rounded-full !px-12 !py-4 shadow-button">
+                    <Button onClick={() => setCommitmentModalOpen(false)} className="!rounded-full !px-12 !py-4 shadow-button font-black tracking-widest text-[11px] uppercase">
                         ACKNOWLEDGED
                     </Button>
                 </div>
@@ -197,7 +204,7 @@ const ProjectDetails: React.FC = () => {
                                 </button>
                             )}
                         </div>
-                        <h1 className="text-4xl sm:text-5xl font-display font-black text-slate-900 tracking-tight uppercase">
+                        <h1 className="text-3xl sm:text-4xl font-display font-black text-slate-900 tracking-tight uppercase leading-none">
                             {project.title}
                         </h1>
                     </div>
@@ -253,7 +260,7 @@ const ProjectDetails: React.FC = () => {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <Card className="luxury-glass group border-slate-100/50">
                                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-[3px]">Site Location</span>
-                                    <p className="text-base font-bold text-slate-900 mt-2">{project.address}</p>
+                                    <p className="text-sm font-bold text-slate-900 mt-2 font-sans">{project.address}</p>
                                 </Card>
                                 <Card className="luxury-glass group border-slate-100/50">
                                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-[3px]">Capital Allocation</span>
@@ -262,7 +269,7 @@ const ProjectDetails: React.FC = () => {
                                 <Card className="luxury-glass group border-slate-100/50">
                                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-[3px]">Project Lead</span>
                                     <div className="mt-2">
-                                        <UserNameDisplay user={designer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-8 h-8" />
+                                        <UserNameDisplay user={designer} showAvatar={true} textClassName="font-bold text-sm text-slate-900 font-sans" imageSize="w-8 h-8" />
                                     </div>
                                 </Card>
                             </div>
@@ -277,7 +284,7 @@ const ProjectDetails: React.FC = () => {
                                         </div>
                                         <div className="p-4 flex items-center justify-between">
                                             <div>
-                                                <h4 className="font-bold text-slate-900 text-sm">Version {design.version}</h4>
+                                                <h4 className="font-bold text-slate-900 text-sm font-sans">Version {design.version}</h4>
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{design.approved ? '✓ Approved' : 'Awaiting Review'}</p>
                                             </div>
                                             <a href={design.fileUrl} target="_blank" rel="noopener noreferrer">
@@ -305,8 +312,8 @@ const ProjectDetails: React.FC = () => {
                                                     <FileTextIcon className="w-6 h-6" />
                                                 </div>
                                                 <div>
-                                                    <h4 className="font-bold text-slate-900 uppercase tracking-wide text-sm">{quote.version}</h4>
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Uploaded {new Date(quote.createdAt).toLocaleDateString()}</p>
+                                                    <h4 className="font-bold text-slate-900 uppercase tracking-wide text-sm font-sans">{quote.version}</h4>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 font-sans">Uploaded {new Date(quote.createdAt).toLocaleDateString()}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">

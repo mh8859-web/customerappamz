@@ -6,7 +6,6 @@ import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { updateRecord, createRecord } from '../../services/api';
-// --- FIX: Added missing Button import ---
 import Button from '../ui/Button';
 
 const PaymentAlertBanner = () => {
@@ -46,46 +45,52 @@ const PaymentAlertBanner = () => {
     const isAwaitingVerification = activeMilestone.statusDisplay === 'Verifying';
 
     return (
-        <div className={`${isAwaitingVerification ? 'bg-slate-900' : 'bg-red-600'} text-white py-4 px-6 md:px-10 flex flex-col md:flex-row items-center justify-between gap-4 animate-in relative z-[60] shadow-premium border-b border-white/10`}>
-            <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isAwaitingVerification ? 'bg-brand-gold text-slate-900' : 'bg-white text-red-600 shadow-lg'}`}>
-                    {isAwaitingVerification ? <ClockIcon className="w-6 h-6 animate-spin-slow" /> : <AlertTriangleIcon className="w-6 h-6" />}
+        <div className="p-4 md:p-6 bg-page-bg relative z-[60]">
+            <div className={`max-w-6xl mx-auto rounded-[32px] overflow-hidden shadow-premium animate-reveal ${isAwaitingVerification ? 'bg-slate-900' : 'bg-gradient-to-r from-red-600 to-red-500'} p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5`}>
+                <div className="flex items-center gap-6">
+                    <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center flex-shrink-0 ${isAwaitingVerification ? 'bg-brand-gold text-slate-900' : 'bg-white text-red-600 shadow-xl'}`}>
+                        {isAwaitingVerification ? <ClockIcon className="w-8 h-8 animate-spin-slow" /> : <AlertTriangleIcon className="w-8 h-8" />}
+                    </div>
+                    <div>
+                        <h3 className="text-xl md:text-2xl font-display font-black uppercase tracking-tight text-white">
+                            {isAwaitingVerification ? 'AWAITING VERIFICATION' : 'IMMEDIATE ACTION REQUIRED'}
+                        </h3>
+                        <p className="text-xs font-medium text-white/70 uppercase tracking-widest mt-1.5 font-sans">
+                            {isAwaitingVerification 
+                                ? 'Project team is confirming your payment. access will be restored soon.' 
+                                : `MANDATORY SETTLEMENT: ${activeMilestone.title}`}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="text-sm font-black uppercase tracking-[3px]">
-                        {isAwaitingVerification ? 'Awaiting Verification' : 'Immediate Action Required'}
-                    </h3>
-                    <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">
-                        {isAwaitingVerification 
-                            ? 'Project Team is confirming your settlement. Full access restored shortly.' 
-                            : `Mandatory Settlement: ${activeMilestone.title}`}
-                    </p>
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-                {isAwaitingVerification ? (
-                   <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10">
-                        <CheckCircleIcon className="w-4 h-4 text-brand-gold" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-gold">Notification Sent</span>
-                   </div>
-                ) : (
-                    <>
-                        <Button 
-                            onClick={handleMarkAsPaid} 
-                            disabled={isVerifying}
-                            variant="secondary" 
-                            className="!bg-white/10 !text-white !border-white/20 !rounded-full !px-6 !py-2 !text-[10px] !font-black uppercase tracking-widest hover:!bg-white/20"
-                        >
-                            I Paid
-                        </Button>
-                        <Link to="/customer/dashboard">
-                            <Button className="!bg-white !text-red-600 hover:!bg-slate-50 !rounded-full !px-8 !py-2.5 !text-[10px] !font-black uppercase tracking-widest shadow-lg">
-                                Pay Now
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                    {isAwaitingVerification ? (
+                       <div className="flex items-center gap-3 bg-white/10 px-8 py-4 rounded-2xl border border-white/10 backdrop-blur-md">
+                            <CheckCircleIcon className="w-5 h-5 text-brand-gold" />
+                            <span className="text-[11px] font-black uppercase tracking-[2px] text-brand-gold">Notification Sent</span>
+                       </div>
+                    ) : (
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <div className="flex-1 flex flex-col justify-center items-center sm:items-end px-6">
+                                <p className="text-[10px] font-bold text-white/50 uppercase tracking-[2px]">DUE AMOUNT</p>
+                                <p className="text-2xl font-display font-black text-white">₹{activeMilestone.amountDisplay.toLocaleString()}</p>
+                            </div>
+                            <Button 
+                                onClick={handleMarkAsPaid} 
+                                disabled={isVerifying}
+                                variant="secondary" 
+                                className="!bg-white/10 !text-white !border-white/20 !rounded-full !px-8 !py-4 !text-[11px] !font-black uppercase tracking-widest hover:!bg-white/20 transition-all"
+                            >
+                                I Paid
                             </Button>
-                        </Link>
-                    </>
-                )}
+                            <Link to="/customer/dashboard" className="w-full sm:w-auto">
+                                <Button className="!w-full !bg-white !text-red-600 hover:!bg-slate-50 !rounded-full !px-10 !py-4 !text-[11px] !font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+                                    Pay Now
+                                </Button>
+                            </Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -144,7 +149,7 @@ const DashboardLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
             isSidebarCollapsed={isSidebarCollapsed}
             />
             
-            <main className="p-4 md:p-8 flex-1 overflow-y-auto pb-24 md:pb-8">
+            <main className="p-4 md:p-8 flex-1 overflow-y-auto pb-24 md:pb-8 no-scrollbar">
             <div className="max-w-6xl mx-auto w-full animate-in">
                 {children}
             </div>
