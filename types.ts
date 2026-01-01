@@ -145,7 +145,8 @@ export interface Product {
   imageUrl: string;
   cost: number;
   quantity: number;
-  status: 'Pending' | 'Ordered' | 'Delivered';
+  status: 'Pending' | 'Ordered' | 'Delivered' | 'Approved_For_Payment';
+  auditStatus?: 'Awaiting_Audit' | 'Audited' | 'Rejected';
 }
 
 export interface Task {
@@ -225,6 +226,9 @@ export interface Expense {
     description: string;
     amount: number;
     date: string;
+    category: 'Material' | 'Labor' | 'Site_Consumable' | 'Travel' | 'Other';
+    receiptUrl?: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
 }
 
 export interface FinalGalleryImage {
