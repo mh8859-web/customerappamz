@@ -9,7 +9,8 @@ import {
     BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, 
     SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon, 
     LockIcon, PackageIcon, ClockIcon, MapPinIcon, MessageSquareIcon,
-    ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon, BuildingIcon
+    ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon, BuildingIcon,
+    XMarkIcon
 } from '../components/icons';
 import { UserRole, Milestone, Design, Project } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -76,22 +77,15 @@ const ProjectDetails: React.FC = () => {
         return project.isPaymentAlertActive === true;
     }, [project, user]);
 
-    // THE COMMENCEMENT OVERRIDE:
-    // If the project status is 'Active' but we want the DESIGNER to trigger the 45-day countdown specifically,
-    // we check if they've pushed the "START" signal yet. 
-    // We treat 'progress === 0' as the "not yet physically started" state.
     const needsCommencement = useMemo(() => {
         if (!project || !user) return false;
-        // Only the assigned designer can start the 45-day clock.
-        // It shows if the project is Active but progress is at 0 (initial state).
-        return user.role === 'Designer' && project.designerId === user.id && project.progress === 0;
+        return user.role === 'Designer' && project.designerId === user.id && (!project.startDate || project.progress === 0);
     }, [project, user]);
 
     const [timeLeft, setTimeLeft] = useState({ d: 45, h: 0, m: 0, s: 0 });
 
     const calculateTimeRemaining = useCallback(() => {
-        // If not started or completed, keep it at 45 days flat.
-        if (!project || !project.startDate || project.progress === 0 || project.status === 'Completed') {
+        if (!project || !project.startDate || project.status === 'Completed' || (project.progress === 0 && user?.role !== 'Designer')) {
             setTimeLeft({ d: 45, h: 0, m: 0, s: 0 });
             return;
         }
@@ -103,11 +97,7 @@ const ProjectDetails: React.FC = () => {
         
         let distance = deadlineTime - now;
 
-        // FORCE CAP: Never show more than 45 days. 
-        // This fixes the "74 days" bug caused by future-dated start dates.
-        if (distance > fortyFiveDaysInMs) {
-            distance = fortyFiveDaysInMs;
-        }
+        if (distance > fortyFiveDaysInMs) distance = fortyFiveDaysInMs;
 
         if (distance <= 0) {
             setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
@@ -120,7 +110,7 @@ const ProjectDetails: React.FC = () => {
             m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
             s: Math.floor((distance % (1000 * 60)) / 1000)
         });
-    }, [project]);
+    }, [project, user]);
 
     useEffect(() => {
         calculateTimeRemaining();
@@ -133,13 +123,12 @@ const ProjectDetails: React.FC = () => {
         setIsStartingProject(true);
         const startTime = new Date().toISOString();
         try {
-            // Optimistically update local project to trigger timer immediately starting from 45 days
             setLocalProject({
                 ...project,
                 status: 'Active',
                 startDate: startTime,
                 stage: 'Design',
-                progress: 1 // Moving progress to 1 signals the clock is running
+                progress: 1 
             });
 
             await updateRecord('projects', project.id, {
@@ -151,9 +140,34 @@ const ProjectDetails: React.FC = () => {
             await refetchData();
         } catch (err) {
             setLocalProject(null);
-            alert("Commencement signal failed. Check network link.");
+            alert("Activation Error.");
         } finally {
             setIsStartingProject(false);
+        }
+    };
+
+    const handleDesignStatus = async (designId: string, status: 'Approved' | 'Rejected') => {
+        setRefreshing(true);
+        try {
+            const { error } = await updateRecord('designs', designId, {
+                approved: status === 'Approved',
+                submitted_for_review: false
+            });
+
+            if (error) throw error;
+
+            await createRecord('messages', {
+                chat_id: project!.id,
+                body: `DESIGN SYSTEM: Client has ${status.toUpperCase()} version v${designs.find(d => d.id === designId)?.version}.`,
+                sender_id: user!.id,
+                is_system_message: true
+            });
+
+            await refetchData();
+        } catch (err) {
+            alert("Status Sync Failed.");
+        } finally {
+            setRefreshing(false);
         }
     };
 
@@ -163,7 +177,7 @@ const ProjectDetails: React.FC = () => {
         try {
             const url = await uploadProjectFile(project.id, file);
             if (!url) {
-                alert("CRITICAL ERROR: Cloud upload failed.");
+                alert("Upload failed.");
                 return;
             }
 
@@ -179,7 +193,7 @@ const ProjectDetails: React.FC = () => {
             });
 
             if (dbError) {
-                alert(`DATABASE ERROR: Ensure 'designs' table exists.`);
+                alert(`DB Error.`);
             } else {
                 await refetchData();
                 setUploadModalOpen(false);
@@ -199,7 +213,7 @@ const ProjectDetails: React.FC = () => {
             </div>
             <h2 className="text-4xl font-display font-black text-slate-900 uppercase tracking-tighter">Vault Restricted</h2>
             <p className="text-slate-500 mt-4 max-w-md mx-auto font-medium leading-relaxed uppercase tracking-widest text-[10px]">
-                Technical access to the project interface has been restricted by Accounts HQ pending milestone settlement.
+                Technical access has been restricted pending milestone settlement.
             </p>
             <Button onClick={() => navigate('/customer/dashboard')} variant="secondary" className="mt-10 !rounded-full !px-12 uppercase font-black text-[11px] tracking-widest">Return to Base</Button>
         </div>
@@ -225,7 +239,6 @@ const ProjectDetails: React.FC = () => {
                 />
             )}
 
-            {/* DESIGNER ACTIVATION OVERLAY */}
             {needsCommencement && (
                 <div className="fixed inset-0 z-[10000] bg-slate-900/95 backdrop-blur-3xl flex items-center justify-center p-6">
                     <div className="max-w-xl w-full text-center space-y-12 animate-reveal">
@@ -234,16 +247,15 @@ const ProjectDetails: React.FC = () => {
                         </div>
                         <div className="space-y-4">
                             <h2 className="text-5xl font-display font-black text-white uppercase leading-none">COMMENCE <span className="text-brand-gold">45-DAY</span> MISSION?</h2>
-                            <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">The countdown starts the moment you authorize commencement.</p>
+                            <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">The countdown starts for the client the moment you authorize.</p>
                         </div>
                         <Button 
                             onClick={handleStartProject} 
                             disabled={isStartingProject} 
-                            className="!w-full !py-10 !rounded-[40px] !bg-brand-gold !text-slate-900 !text-2xl font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-105 active:scale-95 transition-all"
+                            className="!w-full !py-10 !rounded-[40px] !bg-brand-gold !text-slate-900 !text-2xl font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-105 transition-all"
                         >
                             {isStartingProject ? 'STARTING...' : 'YES, START 45-DAY CLOCK'}
                         </Button>
-                        <p className="text-[10px] text-white/30 uppercase tracking-[5px] font-black">Contractual Agreement & Performance Commitment</p>
                     </div>
                 </div>
             )}
@@ -255,17 +267,17 @@ const ProjectDetails: React.FC = () => {
                 </div>
 
                 <div className="relative group">
-                    <div className="absolute inset-0 bg-brand-gold/10 blur-[40px] rounded-full animate-pulse group-hover:bg-brand-gold/20 transition-all"></div>
+                    <div className="absolute inset-0 bg-brand-gold/10 blur-[40px] rounded-full animate-pulse"></div>
                     <Card className="luxury-glass !p-8 sm:!p-10 rounded-[40px] border-brand-gold/20 min-w-[340px] sm:min-w-[480px] relative z-10 shadow-premium overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-brand-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
                         <div className="flex justify-between items-center mb-8">
                             <div className="flex items-center gap-3">
                                 <div className={`w-2.5 h-2.5 rounded-full ${project.progress > 0 ? 'bg-brand-gold animate-pulse' : 'bg-slate-300'} shadow-[0_0_8px_rgba(212,175,55,1)]`}></div>
                                 <span className="text-[11px] font-black text-brand-gold uppercase tracking-[5px]">
-                                    {project.progress > 0 ? '45-Day Commitment Live' : 'Mission Pending Start'}
+                                    {project.progress > 0 ? '45-Day Performance Live' : 'Mission Pending'}
                                 </span>
                             </div>
-                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">STRICT CLOCK</div>
+                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">STRICT PERFORMANCE</div>
                         </div>
                         <div className="flex justify-around items-center">
                             {[
@@ -353,18 +365,40 @@ const ProjectDetails: React.FC = () => {
                                     <Card key={design.id} className="p-0 overflow-hidden rounded-[32px] group border-slate-100 hover:border-brand-gold/30 transition-all bg-white shadow-premium">
                                         <div className="aspect-video relative overflow-hidden bg-slate-100">
                                             <img src={design.fileUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
-                                            <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                                                 <Button onClick={() => setSelectedDesign(design)} variant="secondary" className="!bg-white !text-slate-900 !rounded-full !text-[10px] font-black uppercase">Inspect Detail</Button>
                                             </div>
                                             <div className="absolute top-4 right-4"><span className="px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[9px] font-black uppercase">v{design.version}</span></div>
                                         </div>
                                         <div className="p-6">
                                             <p className="text-sm text-slate-600 font-medium italic">"{design.notes}"</p>
-                                            <div className="mt-6 flex justify-between items-center">
-                                                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${design.approved ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
-                                                    {design.approved ? 'Approved' : 'Review Pending'}
-                                                </span>
-                                                <p className="text-[9px] font-bold text-slate-300 uppercase">{design.comments?.length || 0} Comments</p>
+                                            
+                                            <div className="mt-8 pt-6 border-t border-slate-50 flex flex-col gap-4">
+                                                <div className="flex justify-between items-center">
+                                                    <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${design.approved ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                        {design.approved ? 'Approved' : 'Review Pending'}
+                                                    </span>
+                                                    <p className="text-[9px] font-bold text-slate-300 uppercase">{design.comments?.length || 0} Comments</p>
+                                                </div>
+
+                                                {user.role === 'Customer' && design.submittedForReview && !design.approved && (
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <button 
+                                                            onClick={() => handleDesignStatus(design.id, 'Approved')}
+                                                            disabled={refreshing}
+                                                            className="py-3 bg-slate-900 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <CheckCircleIcon className="w-4 h-4 text-brand-gold" /> Approve Finish
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => handleDesignStatus(design.id, 'Rejected')}
+                                                            disabled={refreshing}
+                                                            className="py-3 bg-slate-50 text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-slate-100 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <XMarkIcon className="w-4 h-4" /> Request Revision
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </Card>
@@ -448,73 +482,6 @@ const ProjectDetails: React.FC = () => {
                                 {siteHistory.length === 0 && <p className="text-center text-slate-300 font-black uppercase text-[10px] tracking-[5px] py-20">Full site history sync complete.</p>}
                             </div>
                          </div>
-                    )}
-
-                    {activeTab === 'Expenses' && (
-                        <div className="space-y-8">
-                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Project P&L (Expenses)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {projectExpenses.map(e => (
-                                    <div key={e.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between shadow-soft">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
-                                                <DollarSignIcon className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <p className="font-black text-slate-900 uppercase text-sm">{e.description}</p>
-                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">{e.category} &bull; {new Date(e.date).toLocaleDateString()}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-lg font-display font-black text-red-500">₹{e.amount.toLocaleString()}</p>
-                                            <span className="text-[9px] font-black uppercase text-slate-300">{e.status}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                                {projectExpenses.length === 0 && <div className="col-span-full py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No project-specific expenses logged.</div>}
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'Financial Ledger' && (
-                        <Card className="luxury-glass !p-10 rounded-[40px] bg-white border-slate-100 shadow-premium">
-                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Receivables Sentinel</h3>
-                             <div className="space-y-6">
-                                {projectMilestones.map(m => (
-                                    <div key={m.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-[28px] border border-slate-100">
-                                        <div>
-                                            <p className="font-black text-slate-900 uppercase tracking-tight text-sm">{m.title}</p>
-                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Valuation: ₹{m.amountDisplay.toLocaleString()}</p>
-                                        </div>
-                                        <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${m.statusDisplay === 'Paid' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-white text-slate-400 border-slate-200'}`}>
-                                            {m.statusDisplay}
-                                        </div>
-                                    </div>
-                                ))}
-                             </div>
-                        </Card>
-                    )}
-
-                    {activeTab === 'Sourcing' && (
-                        <div className="space-y-8">
-                            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Project BOM (Bill of Materials)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {products.filter(p => p.projectId === project.id).map(prod => (
-                                    <Card key={prod.id} className="bg-white border-slate-100 rounded-[32px] p-6 group hover:border-brand-gold/30 transition-all shadow-soft">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400"><PackageIcon className="w-6 h-6" /></div>
-                                            <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest">{prod.status}</span>
-                                        </div>
-                                        <h4 className="text-lg font-black text-slate-900 uppercase leading-tight">{prod.name}</h4>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-widest">Vendor: {prod.supplier}</p>
-                                        <div className="mt-6 flex justify-between items-end">
-                                            <p className="text-sm font-black text-brand-blue">Qty: {prod.quantity}</p>
-                                            <p className="text-xl font-display font-black text-slate-900">₹{(prod.cost * prod.quantity).toLocaleString()}</p>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        </div>
                     )}
 
                     {activeTab === 'Milestones' && (
