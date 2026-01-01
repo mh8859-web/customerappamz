@@ -77,7 +77,7 @@ const SalaryAllocation: React.FC = () => {
             <div className="p-20 text-center space-y-6">
                 <AlertTriangleIcon className="w-16 h-16 text-brand-gold mx-auto animate-bounce" />
                 <h2 className="text-2xl font-display font-black text-slate-900 uppercase">Schema Initialization Required</h2>
-                <p className="text-slate-500 max-w-md mx-auto font-medium">The Salary Allocation table does not exist in your database yet. Please go to <strong>Admin Settings > Danger Zone</strong> and run the <strong>Master SQL</strong> script to initialize all features.</p>
+                <p className="text-slate-500 max-w-md mx-auto font-medium">The Salary Allocation table does not exist in your database yet. Please go to <strong>Admin Settings &gt; Danger Zone</strong> and run the <strong>Master SQL</strong> script to initialize all features.</p>
                 <Button onClick={() => window.location.reload()} variant="secondary" className="!rounded-full">Check Connection Again</Button>
             </div>
         );
