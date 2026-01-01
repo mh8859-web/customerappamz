@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
-import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon, MegaphoneIcon, XMarkIcon } from '../../components/icons';
+import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon, MegaphoneIcon, XMarkIcon, RefreshIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import AddMilestoneModal from '../../components/admin/AddMilestoneModal';
 
@@ -26,7 +26,6 @@ const ProjectPayDetails: React.FC = () => {
         
         setIsSyncing(true);
         try {
-            // Set the alert flag and point to the specific milestone
             const { error } = await updateRecord('projects', project.id, { 
                 is_payment_alert_active: true,
                 requested_milestone_id: milestoneId,
@@ -45,7 +44,7 @@ const ProjectPayDetails: React.FC = () => {
             await refetchData();
         } catch (err: any) {
             console.error("Critical Failure:", err);
-            alert(`Sync Error: ${err.message}. If requested_milestone_id column is missing, run SQL provided in Settings.`);
+            alert(`Sync Error: ${err.message}.`);
         } finally {
             setIsSyncing(false);
         }
@@ -76,7 +75,6 @@ const ProjectPayDetails: React.FC = () => {
                 paid_date_display: new Date().toISOString()
             });
             
-            // Automatically clear the lockout if this was the requested milestone
             if (project?.requestedMilestoneId === milestoneId) {
                 await updateRecord('projects', project.id, { 
                     is_payment_alert_active: false,
@@ -87,6 +85,32 @@ const ProjectPayDetails: React.FC = () => {
             await refetchData();
         } catch (err) {
             console.error("Payment sync fault", err);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleRevertPayment = async (milestoneId: string, title: string) => {
+        if (isSyncing) return;
+        if (!window.confirm(`ACCIDENTAL SYNC: Revert "${title}" to UNPAID status?`)) return;
+
+        setIsSyncing(true);
+        try {
+            await updateRecord('milestones', milestoneId, {
+                status_display: 'Pending',
+                paid_date_display: null
+            });
+            
+            await createRecord('messages', {
+                chat_id: project!.id,
+                body: `SYSTEM AUDIT: Settlement for "${title}" has been reverted to Pending due to administrative sync adjustment.`,
+                sender_id: '786786',
+                is_system_message: true
+            });
+
+            await refetchData();
+        } catch (err) {
+            console.error("Reversal sync fault", err);
         } finally {
             setIsSyncing(false);
         }
@@ -191,7 +215,7 @@ const ProjectPayDetails: React.FC = () => {
                                                 </td>
                                                 <td className="px-12 py-8 text-right">
                                                     <div className="flex justify-end gap-3 items-center">
-                                                        {m.statusDisplay !== 'Paid' && (
+                                                        {m.statusDisplay !== 'Paid' ? (
                                                             <>
                                                                 <button 
                                                                     onClick={() => handleRequestMilestone(m.id, m.title)}
@@ -209,10 +233,19 @@ const ProjectPayDetails: React.FC = () => {
                                                                     Mark Paid
                                                                 </Button>
                                                             </>
-                                                        )}
-                                                        {m.statusDisplay === 'Paid' && (
-                                                            <div className="flex items-center justify-end gap-2 text-accent-success font-black uppercase tracking-widest text-[10px]">
-                                                                <CheckCircleIcon className="w-5 h-5" /> VERIFIED
+                                                        ) : (
+                                                            <div className="flex items-center justify-end gap-4">
+                                                                <div className="flex items-center gap-2 text-accent-success font-black uppercase tracking-widest text-[10px]">
+                                                                    <CheckCircleIcon className="w-5 h-5" /> VERIFIED
+                                                                </div>
+                                                                <button 
+                                                                    onClick={() => handleRevertPayment(m.id, m.title)}
+                                                                    disabled={isSyncing}
+                                                                    className="p-2.5 bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
+                                                                    title="Accidental Sync? Undo Payment"
+                                                                >
+                                                                    <RefreshIcon className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                                                                </button>
                                                             </div>
                                                         )}
                                                     </div>
