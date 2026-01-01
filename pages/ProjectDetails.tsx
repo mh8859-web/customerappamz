@@ -76,20 +76,26 @@ const ProjectDetails: React.FC = () => {
         return project.isPaymentAlertActive === true;
     }, [project, user]);
 
-    const needsActivation = useMemo(() => {
+    // THE COMMENCEMENT OVERRIDE:
+    // If the project status is 'Active' but we want the DESIGNER to trigger the 45-day countdown specifically,
+    // we check if they've pushed the "START" signal yet. 
+    // We treat 'progress === 0' as the "not yet physically started" state.
+    const needsCommencement = useMemo(() => {
         if (!project || !user) return false;
-        return user.role === 'Designer' && project.designerId === user.id && !project.startDate;
+        // Only the assigned designer can start the 45-day clock.
+        // It shows if the project is Active but progress is at 0 (initial state).
+        return user.role === 'Designer' && project.designerId === user.id && project.progress === 0;
     }, [project, user]);
 
     const [timeLeft, setTimeLeft] = useState({ d: 45, h: 0, m: 0, s: 0 });
 
     const calculateTimeRemaining = useCallback(() => {
-        if (!project || !project.startDate || project.status === 'Completed') {
+        // If not started or completed, keep it at 45 days flat.
+        if (!project || !project.startDate || project.progress === 0 || project.status === 'Completed') {
             setTimeLeft({ d: 45, h: 0, m: 0, s: 0 });
             return;
         }
         
-        // --- STRICT PERFORMANCE TIMER ---
         const startTime = new Date(project.startDate).getTime();
         const fortyFiveDaysInMs = 45 * 24 * 60 * 60 * 1000;
         const deadlineTime = startTime + fortyFiveDaysInMs; 
@@ -97,7 +103,8 @@ const ProjectDetails: React.FC = () => {
         
         let distance = deadlineTime - now;
 
-        // Ensure we never show more than 45 days even if server clock is slightly ahead
+        // FORCE CAP: Never show more than 45 days. 
+        // This fixes the "74 days" bug caused by future-dated start dates.
         if (distance > fortyFiveDaysInMs) {
             distance = fortyFiveDaysInMs;
         }
@@ -119,31 +126,31 @@ const ProjectDetails: React.FC = () => {
         calculateTimeRemaining();
         const timer = setInterval(calculateTimeRemaining, 1000);
         return () => clearInterval(timer);
-    }, [project?.startDate, calculateTimeRemaining]);
+    }, [project?.startDate, project?.progress, calculateTimeRemaining]);
 
     const handleStartProject = async () => {
         if (!project || isStartingProject) return;
         setIsStartingProject(true);
         const startTime = new Date().toISOString();
         try {
-            // Optimistically update local project to trigger timer immediately
+            // Optimistically update local project to trigger timer immediately starting from 45 days
             setLocalProject({
                 ...project,
                 status: 'Active',
                 startDate: startTime,
                 stage: 'Design',
-                progress: 0
+                progress: 1 // Moving progress to 1 signals the clock is running
             });
 
             await updateRecord('projects', project.id, {
                 status: 'Active',
                 start_date: startTime,
                 stage: 'Design',
-                progress: 0
+                progress: 1 
             });
             await refetchData();
         } catch (err) {
-            setLocalProject(null); // Rollback on error
+            setLocalProject(null);
             alert("Commencement signal failed. Check network link.");
         } finally {
             setIsStartingProject(false);
@@ -156,7 +163,7 @@ const ProjectDetails: React.FC = () => {
         try {
             const url = await uploadProjectFile(project.id, file);
             if (!url) {
-                alert("CRITICAL ERROR: Cloud upload failed. Check Supabase Storage bucket 'amaz-storage' permissions.");
+                alert("CRITICAL ERROR: Cloud upload failed.");
                 return;
             }
 
@@ -172,8 +179,7 @@ const ProjectDetails: React.FC = () => {
             });
 
             if (dbError) {
-                alert(`DATABASE ERROR: Could not create design record. Ensure 'designs' table exists.`);
-                console.error(dbError);
+                alert(`DATABASE ERROR: Ensure 'designs' table exists.`);
             } else {
                 await refetchData();
                 setUploadModalOpen(false);
@@ -193,8 +199,7 @@ const ProjectDetails: React.FC = () => {
             </div>
             <h2 className="text-4xl font-display font-black text-slate-900 uppercase tracking-tighter">Vault Restricted</h2>
             <p className="text-slate-500 mt-4 max-w-md mx-auto font-medium leading-relaxed uppercase tracking-widest text-[10px]">
-                Technical access to the project interface has been restricted by Accounts HQ pending milestone settlement. 
-                Please refer to the payment alerts in your main dashboard to restore access.
+                Technical access to the project interface has been restricted by Accounts HQ pending milestone settlement.
             </p>
             <Button onClick={() => navigate('/customer/dashboard')} variant="secondary" className="mt-10 !rounded-full !px-12 uppercase font-black text-[11px] tracking-widest">Return to Base</Button>
         </div>
@@ -220,12 +225,25 @@ const ProjectDetails: React.FC = () => {
                 />
             )}
 
-            {needsActivation && (
-                <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 backdrop-blur-2xl">
-                    <div className="max-w-xl w-full text-center space-y-12">
-                        <h2 className="text-5xl font-display font-black text-white uppercase leading-none">Initiate <span className="text-brand-gold">45-Day</span> Commitment?</h2>
-                        <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">The countdown starts the moment you authorize commencement.</p>
-                        <Button onClick={handleStartProject} disabled={isStartingProject} className="!w-full !py-8 !rounded-full !bg-brand-gold !text-slate-900 !text-xl font-black uppercase tracking-[4px] shadow-gold-glow">Yes, Activate 45-Day Terminal</Button>
+            {/* DESIGNER ACTIVATION OVERLAY */}
+            {needsCommencement && (
+                <div className="fixed inset-0 z-[10000] bg-slate-900/95 backdrop-blur-3xl flex items-center justify-center p-6">
+                    <div className="max-w-xl w-full text-center space-y-12 animate-reveal">
+                        <div className="w-24 h-24 bg-brand-gold rounded-[32px] flex items-center justify-center mx-auto shadow-gold-glow animate-bounce-slow">
+                            <ZapIcon className="w-12 h-12 text-slate-900" />
+                        </div>
+                        <div className="space-y-4">
+                            <h2 className="text-5xl font-display font-black text-white uppercase leading-none">COMMENCE <span className="text-brand-gold">45-DAY</span> MISSION?</h2>
+                            <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">The countdown starts the moment you authorize commencement.</p>
+                        </div>
+                        <Button 
+                            onClick={handleStartProject} 
+                            disabled={isStartingProject} 
+                            className="!w-full !py-10 !rounded-[40px] !bg-brand-gold !text-slate-900 !text-2xl font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-105 active:scale-95 transition-all"
+                        >
+                            {isStartingProject ? 'STARTING...' : 'YES, START 45-DAY CLOCK'}
+                        </Button>
+                        <p className="text-[10px] text-white/30 uppercase tracking-[5px] font-black">Contractual Agreement & Performance Commitment</p>
                     </div>
                 </div>
             )}
@@ -242,12 +260,12 @@ const ProjectDetails: React.FC = () => {
                         <div className="absolute top-0 left-0 w-full h-1 bg-brand-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
                         <div className="flex justify-between items-center mb-8">
                             <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full bg-brand-gold animate-pulse shadow-[0_0_8px_rgba(212,175,55,1)]"></div>
+                                <div className={`w-2.5 h-2.5 rounded-full ${project.progress > 0 ? 'bg-brand-gold animate-pulse' : 'bg-slate-300'} shadow-[0_0_8px_rgba(212,175,55,1)]`}></div>
                                 <span className="text-[11px] font-black text-brand-gold uppercase tracking-[5px]">
-                                    45-Day Commitment Live
+                                    {project.progress > 0 ? '45-Day Commitment Live' : 'Mission Pending Start'}
                                 </span>
                             </div>
-                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">MECHANICAL SYNC</div>
+                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">STRICT CLOCK</div>
                         </div>
                         <div className="flex justify-around items-center">
                             {[
