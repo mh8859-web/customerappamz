@@ -78,15 +78,16 @@ const ProjectDetails: React.FC = () => {
 
     const projectDesigns = useMemo(() => designs.filter(d => d.projectId === projectId), [designs, projectId]);
 
-    // --- REAL-TIME TIMER LOGIC ---
+    // --- REAL-TIME TIMER LOGIC (STRICT 45 DAYS) ---
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0, total: 0 });
 
     useEffect(() => {
         if (!project || project.status === 'Completed') return;
 
         const timer = setInterval(() => {
-            const deliveryTarget = new Date(project.startDate);
-            deliveryTarget.setDate(deliveryTarget.getDate() + 45);
+            const projectStart = new Date(project.startDate);
+            // TARGET IS STRICTLY 45 DAYS FROM START
+            const deliveryTarget = new Date(projectStart.getTime() + (45 * 24 * 60 * 60 * 1000));
             
             const now = new Date().getTime();
             const distance = deliveryTarget.getTime() - now;
@@ -137,14 +138,12 @@ const ProjectDetails: React.FC = () => {
         if (!project || !user) return;
         
         try {
-            // 1. Cloud Storage Upload
             const url = await uploadProjectFile(project.id, file);
             if (!url) {
-                alert("Storage service failed to receive the visual asset. Please check your connection.");
+                alert("Storage service failed to receive the visual asset.");
                 return;
             }
 
-            // 2. Database Record Creation
             const { error } = await createRecord('designs', {
                 project_id: project.id,
                 file_url: url,
@@ -162,9 +161,8 @@ const ProjectDetails: React.FC = () => {
                 return;
             }
 
-            // 3. Refresh and Notify
             await refetchData();
-            alert("Visual asset successfully synchronized with project timeline.");
+            alert("Visual asset successfully synchronized.");
         } catch (err: any) {
             console.error("Upload process crash:", err);
             alert("A critical system error occurred during synchronization.");
@@ -189,7 +187,7 @@ const ProjectDetails: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-12">
-            {viewerAsset && <HDViewer isOpen={!!viewerAsset} onClose={() => setViewerAsset(null)} url={viewerAsset.url} title={viewerAsset.title} />}
+            {viewerAsset && <HDViewer isOpen={!!viewerAsset} onClose={() => setViewerAsset(null)} url={viewerAsset.url} title={viewerAsset.name} />}
             
             {/* Project Header Area */}
             <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-8">
@@ -222,48 +220,51 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Live Delivery Timer - High Octane UI */}
-                <Card className="!p-0 overflow-hidden bg-slate-900 border-none shadow-gold-glow w-full xl:w-[420px] rounded-[40px] group animate-in slide-in-from-right duration-700">
-                    <div className="relative p-8">
-                        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-gold/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-brand-gold/20 transition-all duration-1000"></div>
-                        
-                        <div className="relative z-10 flex flex-col gap-6">
+                {/* LUXURY WHITE TIMER CARD (As Requested) */}
+                <Card className="!p-0 overflow-hidden bg-white border-none shadow-premium w-full xl:w-[460px] rounded-[48px] group animate-in slide-in-from-right duration-700 relative">
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-gold/40 to-transparent"></div>
+                    
+                    <div className="relative z-10 p-10 flex flex-col gap-8">
+                        <div className="flex justify-between items-start">
                             <div>
-                                <p className="text-[9px] font-black text-brand-gold uppercase tracking-[5px] mb-2 opacity-80">STRICT DELIVERY COMMITMENT</p>
-                                <h3 className="text-xs font-black text-white/90 uppercase leading-relaxed tracking-widest">YOUR DREAM HOME WILL BE DELIVERED TO YOU IN</h3>
+                                <p className="text-[10px] font-black text-brand-gold uppercase tracking-[5px] mb-2">STRICT DELIVERY COMMITMENT</p>
+                                <h3 className="text-[11px] font-black text-slate-400 uppercase leading-relaxed tracking-widest">REAL-TIME PROJECT READINESS IN</h3>
                             </div>
-                            
-                            <div className="grid grid-cols-4 gap-3">
-                                {[
-                                    { v: timeLeft.d, l: 'Days' },
-                                    { v: timeLeft.h, l: 'Hrs' },
-                                    { v: timeLeft.m, l: 'Min' },
-                                    { v: timeLeft.s, l: 'Sec' }
-                                ].map((unit, i) => (
-                                    <div key={unit.l} className="flex flex-col items-center">
-                                        <div className="text-4xl font-display font-black text-white tracking-tighter tabular-nums drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                                            {unit.v.toString().padStart(2, '0')}
-                                        </div>
-                                        <span className="text-[8px] font-black text-brand-gold uppercase tracking-widest mt-1 opacity-60">
-                                            {unit.l}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                                <div className="w-10 h-10 rounded-xl bg-brand-gold/10 flex items-center justify-center">
-                                    <ZapIcon className="w-5 h-5 text-brand-gold animate-pulse" />
-                                </div>
-                                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none">Real-time Project Synchronization Active</p>
+                            <div className="w-10 h-10 rounded-2xl bg-brand-gold/10 flex items-center justify-center">
+                                <ZapIcon className="w-5 h-5 text-brand-gold animate-pulse" />
                             </div>
                         </div>
-                    </div>
-                    <div className="h-2 w-full bg-white/5">
-                        <div 
-                            className="h-full bg-gradient-to-r from-brand-gold via-white to-brand-gold shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all duration-1000" 
-                            style={{ width: `${Math.max(2, Math.min(100, (timeLeft.d / 45) * 100))}%` }}
-                        ></div>
+                        
+                        <div className="grid grid-cols-4 gap-4">
+                            {[
+                                { v: timeLeft.d, l: 'DAYS' },
+                                { v: timeLeft.h, l: 'HRS' },
+                                { v: timeLeft.m, l: 'MIN' },
+                                { v: timeLeft.s, l: 'SEC' }
+                            ].map((unit, i) => (
+                                <div key={unit.l} className="flex flex-col items-center">
+                                    <div className="text-[44px] font-display font-black text-slate-900 tracking-tighter tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.05)] relative">
+                                        {unit.v.toString().padStart(2, '0')}
+                                        <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/0 to-slate-100/30 rounded-lg -z-10"></div>
+                                    </div>
+                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-2 border-t border-slate-100 pt-1.5 w-full text-center">
+                                        {unit.l}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-6 border-t border-slate-50 opacity-40">
+                             <img 
+                                src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
+                                alt="AMAZ" 
+                                className="h-4 grayscale" 
+                             />
+                             <div className="h-3 w-px bg-slate-200"></div>
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Verified 45-Day Performance SLA</p>
+                        </div>
                     </div>
                 </Card>
             </div>
@@ -399,7 +400,7 @@ const ProjectDetails: React.FC = () => {
                                         <img src={design.fileUrl} className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105" alt="Render" />
                                         <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center">
                                             <Button 
-                                                onClick={() => setViewerAsset({ url: design.fileUrl, title: `v${design.version} Design Render` })}
+                                                onClick={() => setViewerAsset({ url: design.fileUrl, name: `v${design.version} Design Render` })}
                                                 className="!rounded-full !px-8 !py-3 !bg-white !text-slate-900 !text-[10px] uppercase font-black tracking-widest shadow-premium"
                                             >
                                                 <EyeIcon className="w-4 h-4 mr-2" /> Inspect Design
