@@ -198,7 +198,7 @@ const ProjectHeadDashboard: React.FC = () => {
                                     </div>
                                 );
                             })}
-                            <Button onClick={() => navigate('/accounts/dashboard?tab=gp')} variant="secondary" className="w-full !mt-8 !rounded-full !py-3 !text-[9px] font-black uppercase tracking-widest border-slate-100">Audit Detailed Ledgers</Button>
+                            <button onClick={() => navigate('/admin/overview')} className="w-full !mt-8 text-[9px] font-black uppercase tracking-widest text-brand-blue hover:underline">Full Analytics &rarr;</button>
                         </div>
                     </Card>
 
@@ -210,7 +210,7 @@ const ProjectHeadDashboard: React.FC = () => {
                                 return (
                                     <div key={designer.id} className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-50">
                                         <UserNameDisplay user={designer} showAvatar={true} imageSize="w-8 h-8" textClassName="font-bold text-slate-900 text-xs" />
-                                        <span className="text-[10px] font-black text-brand-blue bg-brand-blue/5 px-2 py-1 rounded uppercase tracking-widest">{projectCount} Pockets</span>
+                                        <span className="text-[10px] font-black text-brand-blue bg-brand-blue/5 px-2 py-1 rounded uppercase tracking-widest">{projectCount} Projects</span>
                                     </div>
                                 );
                             })}
