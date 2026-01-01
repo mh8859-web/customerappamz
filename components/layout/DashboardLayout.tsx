@@ -18,6 +18,7 @@ const PaymentAlertBanner = () => {
 
     const overdueMilestone = useMemo(() => {
         if (!activeProject) return null;
+        // Find if any milestone marked "Completed" (Invoiced) is not yet "Paid"
         return milestones.find(m => m.projectId === activeProject.id && m.statusDisplay === 'Completed');
     }, [activeProject, milestones]);
 
@@ -29,10 +30,10 @@ const PaymentAlertBanner = () => {
         <div className="bg-red-600 text-white py-3 px-6 flex items-center justify-between animate-pulse-slow relative z-[60] shadow-lg">
             <div className="flex items-center gap-3">
                 <AlertTriangleIcon className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-[3px]">Financial Nudge: Mandatory Payment Milestone Pending Settlement</span>
+                <span className="text-[11px] font-black uppercase tracking-[3px]">Mandatory Settlement Required: Project Phase On Hold</span>
             </div>
             <Link to="/customer/dashboard" className="bg-white text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-                Resolve Now
+                View Invoice
             </Link>
         </div>
     );
@@ -49,7 +50,7 @@ const MobileDock = () => {
     ];
 
     return (
-        <div className="md:hidden mobile-dock">
+        <div className="md:hidden mobile-dock border-t border-slate-100 bg-white/95 backdrop-blur-md h-20 flex justify-around items-center px-4 fixed bottom-0 left-0 right-0 z-40 shadow-[0_-10px_25px_-12px_rgba(0,0,0,0.08)]">
             {links.map(link => {
                 const isActive = link.to === '/' ? location.pathname.includes('/dashboard') || location.pathname === '/' : location.pathname.startsWith(link.to);
                 return (

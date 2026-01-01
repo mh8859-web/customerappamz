@@ -12,22 +12,17 @@ export interface User {
   userId: string;
 }
 
-export interface CurrentWork {
-  id: string;
-  designerId: string;
-  content: string;
-  imageUrl?: string;
-  createdAt: string;
+export interface SalaryLog {
+    id: string;
+    userId: string;
+    month: string; // "YYYY-MM"
+    baseAmount: number;
+    incentives: number;
+    deductions: number;
+    totalAmount: number;
+    status: 'Pending' | 'Processed';
+    processedAt?: string;
 }
-
-export type ProjectStage =
-  | 'design_phase'
-  | 'awaiting_updated_quote'
-  | 'material_selection'
-  | 'execution'
-  | 'awaiting_client_completion_approval'
-  | 'awaiting_admin_completion_approval'
-  | 'completed';
 
 export interface Project {
   id: string;
@@ -48,6 +43,15 @@ export interface Project {
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
 }
+
+export type ProjectStage =
+  | 'design_phase'
+  | 'awaiting_updated_quote'
+  | 'material_selection'
+  | 'execution'
+  | 'awaiting_client_completion_approval'
+  | 'awaiting_admin_completion_approval'
+  | 'completed';
 
 export interface Quote {
   id: string;
@@ -110,14 +114,6 @@ export interface ProjectUpdate {
   authorId: string;
   message: string;
   createdAt: string;
-}
-
-export interface UnifiedUpdate {
-    id: string;
-    type: string;
-    author: User | undefined;
-    content: string;
-    timestamp: string;
 }
 
 export interface ActivityLog {
@@ -278,4 +274,12 @@ export interface FeedComment {
     authorId: string;
     content: string;
     createdAt: string;
+}
+
+export interface CurrentWork {
+  id: string;
+  designerId: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: string;
 }

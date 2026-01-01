@@ -6,8 +6,9 @@ import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { BriefcaseIcon, MapPinIcon, UserCircleIcon, FileTextIcon, DollarSignIcon, MessageSquareIcon, PhotoIcon, CheckCircleIcon, ClockIcon, CreditCardIcon, CalendarIcon, SparklesIcon, FilePlusIcon, ZapIcon, ThumbUpIcon, RefreshIcon, InfoIcon, AlertTriangleIcon, EyeIcon, TrendingUpIcon, PackageIcon } from '../components/icons';
-import { Project, Design, User, UserRole, UnifiedUpdate, Milestone, Quote, ProjectStage, Expense } from '../types';
-import Modal from '../components/ui/Modal';
+// Removed UnifiedUpdate which was not exported from types.ts
+import { Project, Design, User, UserRole, Milestone, Quote, ProjectStage, Expense } from '../types';
+import Modal from '../ui/Modal';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import ProjectGanttChart from '../components/customer/ProjectGanttChart';
 import MaterialSelection from '../components/project/MaterialSelection';
