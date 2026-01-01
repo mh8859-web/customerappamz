@@ -7,7 +7,8 @@ import {
   ClockIcon, PieChartIcon, MessageSquareIcon, LayoutGridIcon, 
   CreditCardIcon, ClipboardIcon, CalendarIcon, LifeBuoyIcon,
   ChevronDoubleLeftIcon, PhotoIcon, DownloadIcon, UserCircleIcon, 
-  TrendingUpIcon, InfoIcon, ZapIcon, DollarSignIcon, PackageIcon
+  TrendingUpIcon, InfoIcon, ZapIcon, DollarSignIcon, PackageIcon,
+  AlertTriangleIcon, ShieldCheckIcon
 } from '../icons';
 
 interface SidebarProps {
@@ -44,15 +45,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Messages' },
           { to: '/admin/track-pay', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Track Pay' },
-          { to: '/project-wall', icon: <PhotoIcon className="w-5 h-5" />, label: 'Project Wall' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
           { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'User Management' },
-          { to: '/admin/salary-allocation', icon: <DollarSignIcon className="w-5 h-5" />, label: 'Salary Allocation' },
           { to: '/admin/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
           { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financial Reports' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Downloads' },
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
-          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Support Tickets' },
         ],
         secondary: [
           { to: '/admin/settings', icon: <SettingsIcon className="w-5 h-5" />, label: 'Settings' },
@@ -61,13 +58,15 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       },
       'Project Head': {
         main: [
-          { to: '/project-head/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Management HQ' },
-          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
+          { to: '/project-head/dashboard', icon: <LayoutGridIcon className="w-5 h-5" />, label: 'Command Center' },
+          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Active Portfolios' },
+          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Site Feed' },
+          { to: '/project-head/dashboard?tab=approvals', icon: <ShieldCheckIcon className="w-5 h-5" />, label: 'Material Queue' },
+          { to: '/project-head/dashboard?tab=ledger', icon: <DollarSignIcon className="w-5 h-5" />, label: 'Budget Sentinel' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Global Channel' },
-          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Portfolios' },
           { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Portfolio Stats' },
           { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Margin Analytics' },
-          { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My HQ Profile' },
+          { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'HQ Profile' },
         ],
         secondary: [
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'System Intel' },
@@ -76,16 +75,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       Accounts: {
         main: [
           { to: '/accounts/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Nerve Center' },
-          { to: '/accounts/dashboard?tab=sentinel', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Project Collections' },
-          { to: '/accounts/dashboard?tab=payroll', icon: <UsersIcon className="w-5 h-5" />, label: 'Payroll & Salaries' },
-          { to: '/accounts/dashboard?tab=audit', icon: <PackageIcon className="w-5 h-5" />, label: 'Audit & Payables' },
-          { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Margin Analytics' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Tax Vault (GST)' },
+          { to: '/accounts/dashboard?tab=sentinel', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Collection' },
+          { to: '/accounts/dashboard?tab=payroll', icon: <UsersIcon className="w-5 h-5" />, label: 'Payroll' },
+          { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financials' },
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Profile' },
-          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Help Desk' },
         ],
         secondary: [
-          { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'System Compliance' },
+          { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'Compliance' },
         ]
       },
       Designer: {
@@ -95,12 +91,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'My Designs' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Team Chat' },
           { to: '/designer/task-board', icon: <LayoutGridIcon className="w-5 h-5" />, label: 'Task Board' },
-          { to: '/designer/daily-work', icon: <ClipboardIcon className="w-5 h-5" />, label: 'Work Diary' },
-          { to: '/designer/my-attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
-          { to: '/designer/leave', icon: <CalendarIcon className="w-5 h-5" />, label: 'Leave' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Downloads' },
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
-          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Support' },
         ],
         secondary: [
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
@@ -112,9 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'History' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Messages' },
           { to: '/customer/billing', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Billing' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Downloads' },
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
-          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Help & Support' },
         ],
         secondary: [
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
@@ -153,8 +142,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
-                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard' || item.to === '/admin/track-pay' || item.to === '/project-head/dashboard'} 
-                key={item.to} 
+                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard' || item.to === '/project-head/dashboard'} 
+                key={item.label} 
                 to={item.to} 
                 className={getNavLinkClass} 
                 onClick={() => setSidebarOpen(false)}
@@ -183,7 +172,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
             {navItems.secondary.map(item => (
               <NavLink 
                 end 
-                key={item.to} 
+                key={item.label} 
                 to={item.to} 
                 className={getNavLinkClass} 
                 onClick={() => setSidebarOpen(false)}
