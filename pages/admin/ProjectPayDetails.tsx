@@ -26,11 +26,10 @@ const ProjectPayDetails: React.FC = () => {
         
         setIsSyncing(true);
         try {
-            // Set the alert flag and point to the specific milestone
             const { error } = await updateRecord('projects', project.id, { 
                 is_payment_alert_active: true,
                 requested_milestone_id: milestoneId,
-                friendly_reminder_milestone_id: null, // Clear friendly if going to hard lock
+                friendly_reminder_milestone_id: null,
                 updated_at: new Date().toISOString()
             });
             
@@ -58,12 +57,12 @@ const ProjectPayDetails: React.FC = () => {
         try {
             await updateRecord('projects', project.id, {
                 friendly_reminder_milestone_id: milestoneId,
-                is_payment_alert_active: false // Ensure it's not locked if we are sending a friendly nudge
+                is_payment_alert_active: false
             });
             
             await createRecord('messages', {
                 chat_id: project.id,
-                body: `FRIENDLY REMINDER: Payment for "${title}" is now due. Please process this to maintain the current project speed.`,
+                body: `FRIENDLY REMINDER: Payment for "${title}" is now due. Please process this to maintain project momentum.`,
                 sender_id: '786786',
                 is_system_message: true
             });
@@ -89,9 +88,9 @@ const ProjectPayDetails: React.FC = () => {
         }
     }
 
-    const handleMarkAsPaid = async (milestoneId: string) => {
+    const handleMarkAsPaid = async (milestoneId: string, title: string) => {
         if (isSyncing) return;
-        if (!window.confirm("CONFIRM SETTLEMENT: Verify this payment receipt?")) return;
+        if (!window.confirm(`CONFIRM SETTLEMENT: Has payment for "${title}" been received and verified?`)) return;
         
         setIsSyncing(true);
         try {
@@ -100,7 +99,7 @@ const ProjectPayDetails: React.FC = () => {
                 paid_date_display: new Date().toISOString()
             });
             
-            // Automatically clear alerts if this was the requested/nudged milestone
+            // Automatically clear dashboard lockout if this milestone was the cause
             if (project?.requestedMilestoneId === milestoneId || project?.friendlyReminderMilestoneId === milestoneId) {
                 await updateRecord('projects', project.id, { 
                     is_payment_alert_active: false,
@@ -117,9 +116,9 @@ const ProjectPayDetails: React.FC = () => {
         }
     };
 
-    const handleRevertPayment = async (milestoneId: string, title: string) => {
+    const handleRevertToUnpaid = async (milestoneId: string, title: string) => {
         if (isSyncing) return;
-        if (!window.confirm(`ACCIDENTAL SYNC: Revert "${title}" to UNPAID status?`)) return;
+        if (!window.confirm(`REVERT TO UNPAID: Reset "${title}" to Pending status? This will allow you to request payment again.`)) return;
 
         setIsSyncing(true);
         try {
@@ -130,7 +129,7 @@ const ProjectPayDetails: React.FC = () => {
             
             await createRecord('messages', {
                 chat_id: project!.id,
-                body: `SYSTEM AUDIT: Settlement for "${title}" has been reverted to Pending due to administrative sync adjustment.`,
+                body: `SYSTEM UPDATE: Status of "${title}" has been reset to Pending for administrative correction.`,
                 sender_id: '786786',
                 is_system_message: true
             });
@@ -155,7 +154,7 @@ const ProjectPayDetails: React.FC = () => {
         await refetchData();
     };
 
-    if (loading || !project) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[6px] text-xs font-display">Opening Financial Terminal...</div>;
+    if (loading || !project) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[6px] text-xs font-display">Syncing Ledger...</div>;
 
     const totalPaid = pMilestones.filter(m => m.statusDisplay === 'Paid').reduce((s, m) => s + m.amountDisplay, 0);
 
@@ -208,7 +207,7 @@ const ProjectPayDetails: React.FC = () => {
                 <div className="lg:col-span-8 space-y-10">
                     <Card className="luxury-glass !p-0 overflow-hidden !rounded-[48px] border-slate-100 shadow-premium">
                         <div className="bg-slate-50/80 px-12 py-8 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-[4px]">Project Milestones</h2>
+                            <h2 className="text-xs font-extrabold text-slate-900 uppercase tracking-[4px]">Milestone Ledger</h2>
                             <Button onClick={() => setMilestoneModalOpen(true)} variant="secondary" className="!rounded-full !px-6 !py-2 !text-[10px] uppercase font-black tracking-widest">
                                 + Add Manually
                             </Button>
@@ -220,13 +219,15 @@ const ProjectPayDetails: React.FC = () => {
                                         <th className="px-12 py-6 text-[10px] font-black uppercase tracking-[3px]">Stage Identity</th>
                                         <th className="px-12 py-6 text-[10px] font-black uppercase tracking-[3px]">Allocation</th>
                                         <th className="px-12 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">Status</th>
-                                        <th className="px-12 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Control</th>
+                                        <th className="px-12 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Control Hub</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
                                     {pMilestones.map(m => {
                                         const isBlocked = project.requestedMilestoneId === m.id && project.isPaymentAlertActive;
                                         const isNudged = project.friendlyReminderMilestoneId === m.id;
+                                        const isVerifying = m.statusDisplay === 'Verifying';
+                                        
                                         return (
                                             <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-12 py-8 font-extrabold text-slate-900 uppercase tracking-wide text-sm font-display">{m.title}</td>
@@ -245,40 +246,42 @@ const ProjectPayDetails: React.FC = () => {
                                                     <div className="flex justify-end gap-3 items-center">
                                                         {m.statusDisplay !== 'Paid' ? (
                                                             <>
-                                                                <button 
-                                                                    onClick={() => handleFriendlyNudge(m.id, m.title)}
-                                                                    disabled={isSyncing || isNudged}
-                                                                    className={`p-3 rounded-xl transition-all ${isNudged ? 'bg-brand-gold text-slate-900 animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-brand-gold hover:bg-brand-gold/10'}`}
-                                                                    title="Send Friendly Nudge"
-                                                                >
-                                                                    <BellIcon className="w-5 h-5" />
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => handleRequestMilestone(m.id, m.title)}
-                                                                    disabled={isSyncing || isBlocked}
-                                                                    className={`p-3 rounded-xl transition-all ${isBlocked ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
-                                                                    title="Trigger Block Blocker"
-                                                                >
-                                                                    <MegaphoneIcon className="w-5 h-5" />
-                                                                </button>
+                                                                <div className="flex gap-2 mr-4 border-r border-slate-100 pr-4">
+                                                                    <button 
+                                                                        onClick={() => handleFriendlyNudge(m.id, m.title)}
+                                                                        disabled={isSyncing || isNudged}
+                                                                        className={`p-3 rounded-xl transition-all ${isNudged ? 'bg-brand-gold text-slate-900 animate-pulse' : 'bg-slate-50 text-slate-300 hover:text-brand-gold hover:bg-brand-gold/10'}`}
+                                                                        title="Send Gentle Reminder"
+                                                                    >
+                                                                        <BellIcon className="w-5 h-5" />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleRequestMilestone(m.id, m.title)}
+                                                                        disabled={isSyncing || isBlocked}
+                                                                        className={`p-3 rounded-xl transition-all ${isBlocked ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50'}`}
+                                                                        title="Mandatory Block Dashboard"
+                                                                    >
+                                                                        <MegaphoneIcon className="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
                                                                 <Button 
-                                                                    onClick={() => handleMarkAsPaid(m.id)}
+                                                                    onClick={() => handleMarkAsPaid(m.id, m.title)}
                                                                     disabled={isSyncing}
-                                                                    className="!rounded-full !px-8 !py-2.5 !text-[10px] font-extrabold uppercase tracking-[2px] font-display !bg-slate-900 !text-white"
+                                                                    className={`!rounded-full !px-8 !py-3 !text-[10px] font-black uppercase tracking-[3px] font-display shadow-premium transition-all ${isVerifying ? '!bg-brand-gold !text-slate-900 animate-bounce' : '!bg-slate-900 !text-white'}`}
                                                                 >
-                                                                    Mark Paid
+                                                                    {isVerifying ? 'VERIFY PAYMENT' : 'MARK PAID'}
                                                                 </Button>
                                                             </>
                                                         ) : (
-                                                            <div className="flex items-center justify-end gap-4">
+                                                            <div className="flex items-center justify-end gap-5">
                                                                 <div className="flex items-center gap-2 text-accent-success font-black uppercase tracking-widest text-[10px]">
                                                                     <CheckCircleIcon className="w-5 h-5" /> VERIFIED
                                                                 </div>
                                                                 <button 
-                                                                    onClick={() => handleRevertPayment(m.id, m.title)}
+                                                                    onClick={() => handleRevertToUnpaid(m.id, m.title)}
                                                                     disabled={isSyncing}
-                                                                    className="p-2.5 bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border border-transparent hover:border-red-100"
-                                                                    title="Accidental Sync? Undo Payment"
+                                                                    className="p-3 bg-slate-50 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-slate-100 hover:border-red-200"
+                                                                    title="Accidental Mark? Retrive Unpaid Status"
                                                                 >
                                                                     <RefreshIcon className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                                                                 </button>
@@ -291,7 +294,7 @@ const ProjectPayDetails: React.FC = () => {
                                     })}
                                     {pMilestones.length === 0 && (
                                         <tr>
-                                            <td colSpan={4} className="p-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">No milestones defined for this ledger.</td>
+                                            <td colSpan={4} className="p-32 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">Awaiting milestone distribution for this project.</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -302,10 +305,10 @@ const ProjectPayDetails: React.FC = () => {
 
                 <div className="lg:col-span-4 space-y-10">
                     <Card className="luxury-glass border-slate-100 !p-12 !rounded-[48px] shadow-premium bg-white">
-                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[6px] mb-10">CAPITAL SUMMARY</h3>
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[6px] mb-10">FINANCIAL SUMMARY</h3>
                         <div className="space-y-8">
                             <div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">NET PORTFOLIO VALUE</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">PROJECT VALUATION</p>
                                 <p className="text-4xl font-display font-extrabold text-slate-900 mt-2 tracking-tighter leading-none">₹{(project.budgetDisplay/100000).toFixed(2)}L</p>
                             </div>
                             <div className="pt-8 border-t border-slate-100">
