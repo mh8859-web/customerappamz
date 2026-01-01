@@ -1,7 +1,8 @@
 {
-  "name": "AMAZ-CUS-DES",
-  "description": "My amaz app for amaz members and clients.",
+  "name": "AMAZ-PM-CORE",
+  "description": "Live High-Fidelity Interior Project Management System.",
   "requestFramePermissions": [
-    "geolocation"
+    "geolocation",
+    "camera"
   ]
 }

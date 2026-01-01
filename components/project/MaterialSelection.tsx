@@ -282,7 +282,7 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
         setIsCompleting(true);
         try {
             const { error } = await updateRecord('projects', projectId, { 
-                stage: 'execution',
+                stage: 'Site Work', // Fix comparison error: use capitalized name from ProjectStage enum
                 progress: Math.max(currentProject.progress, 45)
             });
 
@@ -311,7 +311,8 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
 
     if (loading) return <div className="p-24 text-center text-slate-400 font-black uppercase tracking-[6px] animate-pulse">Scanning Material Archive...</div>;
 
-    const canComplete = !isClient && currentProject?.stage === 'material_selection';
+    // Fix comparison error: 'material_selection' -> 'Material Ordering'
+    const canComplete = !isClient && currentProject?.stage === 'Material Ordering';
 
     return (
         <div className="space-y-10 animate-in">

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Project, Milestone } from '../../types';
@@ -50,7 +51,8 @@ const CustomerDashboard: React.FC = () => {
 
     const completedProject = useMemo(() => {
         if (!user) return null;
-        return projects.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'completed');
+        // Fix comparison error: 'completed' -> 'Completed'
+        return projects.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'Completed');
     }, [user, projects]);
     
     const latestAnnouncement = announcements

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import {
@@ -76,9 +77,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         switch (user.role) {
             case 'Admin':
             case 'Sub-Admin':
+            case 'Project Head':
                 return activeProjects;
             case 'Designer':
-                return activeProjects.filter(p => p.designerId === user.id);
+            case 'Site Head':
+            case 'Production Head':
+                return activeProjects.filter(p => p.designerId === user.id || p.adminId === user.id);
             case 'Customer':
                 return activeProjects.filter(p => p.customerId === user.id);
             default:
@@ -142,14 +146,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 designerId: p.designer_id, 
                 adminId: p.admin_id, 
                 budgetDisplay: p.budget_display, 
+                budgetApproved: p.budget_approved,
                 areaSqft: p.area_sqft, 
                 startDate: p.start_date, 
                 createdAt: p.created_at, 
                 updatedAt: p.updated_at, 
                 revenueDisplay: p.revenue_display,
                 isPaymentAlertActive: p.is_payment_alert_active === true,
+                isDelayed: p.is_delayed === true,
                 requestedMilestoneId: p.requested_milestone_id,
-                // NEW: Friendly nudge reference
                 friendlyReminderMilestoneId: p.friendly_reminder_milestone_id 
             })));
             setTasks(mapToCamelCase(dataMap.tasks, t => ({ ...t, projectId: t.project_id, assigneeId: t.assignee_id, dueDate: t.due_date })));

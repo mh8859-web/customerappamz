@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -56,7 +57,8 @@ const SiteUpdateModule: React.FC<SiteUpdateModuleProps> = ({ projectId, onSucces
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <select value={stage} onChange={e => setStage(e.target.value as any)} className={inputClasses}>
-                    {PROJECT_STAGES.filter(s => s !== 'completed').map(s => (
+                    {/* Fix comparison error: 'completed' -> 'Completed' */}
+                    {PROJECT_STAGES.filter(s => s !== 'Completed').map(s => (
                         <option key={s} value={s}>{STAGE_DISPLAY_NAMES[s]}</option>
                     ))}
                 </select>

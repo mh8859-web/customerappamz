@@ -12,17 +12,15 @@ export interface User {
   userId: string;
 }
 
+// STRICT ENUM AS REQUESTED
 export type ProjectStage =
-  | 'design'
-  | 'design_phase'
-  | 'material_selection'
-  | 'material_ordering'
-  | 'production'
-  | 'site_work'
-  | 'execution'
-  | 'installation'
-  | 'handover'
-  | 'completed';
+  | 'Design'
+  | 'Material Ordering'
+  | 'Production'
+  | 'Site Work'
+  | 'Installation'
+  | 'Handover'
+  | 'Completed';
 
 export interface Project {
   id: string;
@@ -33,7 +31,7 @@ export interface Project {
   adminId: string;
   address: string;
   budgetDisplay: number;
-  budgetApproved: number; // For spend tracking
+  budgetApproved: number; // For Budget Sentinel
   areaSqft: number;
   startDate: string;
   createdAt: string;
@@ -43,7 +41,7 @@ export interface Project {
   status: 'Active' | 'Completed' | 'Archived';
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
-  isDelayed?: boolean; // For red badge tracking
+  isDelayed?: boolean; // Red badge trigger
   requestedMilestoneId?: string;
   friendlyReminderMilestoneId?: string;
 }
@@ -54,7 +52,7 @@ export interface SiteUpdate {
   supervisorId: string;
   notes: string;
   imageUrl?: string;
-  videoUrl?: string;
+  videoUrl?: string; // Max 30 sec as requested
   stage: ProjectStage;
   createdAt: string;
 }
@@ -93,12 +91,29 @@ export interface Expense {
     status: 'Pending' | 'Approved' | 'Rejected';
 }
 
-export interface UserSalaryConfig {
-    id: string;
-    userId: string;
-    payType: 'Monthly' | 'Daily';
-    baseAmount: number;
-    updatedAt: string;
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  body: string;
+  isSystemMessage?: boolean;
+  createdAt: string;
+  attachments?: {
+    url: string;
+    type: 'image' | 'video' | 'file';
+    name: string;
+  }[];
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueDate: string;
+  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
+  isApproved?: boolean; // Task & Approval System
 }
 
 export interface CurrentWork {
@@ -119,7 +134,7 @@ export interface Design {
   uploadedBy: string;
   submittedForReview: boolean;
   approved: boolean;
-  comments: Comment[];
+  comments: any[];
 }
 
 export interface AttendanceLog {
@@ -142,8 +157,23 @@ export interface LeaveRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
-// --- Added missing interfaces based on errors ---
+export interface Quote {
+  id: string;
+  projectId: string;
+  version: string;
+  fileUrl: string;
+  uploadedBy: string;
+  createdAt: string;
+}
 
+export interface FinalGalleryImage {
+  id: string;
+  projectId: string;
+  url: string;
+  caption: string;
+}
+
+// Added missing type definitions
 export interface WorkLog {
   id: string;
   designerId: string;
@@ -153,28 +183,11 @@ export interface WorkLog {
   hoursSpent: number;
 }
 
-export interface Message {
-  id: string;
-  chatId: string;
-  senderId: string;
-  body: string;
-  isSystemMessage?: boolean;
-  createdAt: string;
-  attachments?: {
-    url: string;
-    type: 'image' | 'video' | 'file';
-    name: string;
-  }[];
-}
-
 export interface ProjectTemplate {
   id: string;
   name: string;
   description: string;
-  milestones: {
-    title: string;
-    amountPercentage: number;
-  }[];
+  milestones: { title: string; amountPercentage: number }[];
 }
 
 export interface Comment {
@@ -198,18 +211,9 @@ export interface Product {
   status: 'Pending' | 'Ordered' | 'Delivered';
 }
 
-export interface Task {
-  id: string;
-  projectId: string;
-  title: string;
-  description: string;
-  assigneeId: string;
-  dueDate: string;
-  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
-}
+export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
 
 export type PostVisibility = 'everyone' | 'team_only' | 'project_members';
-export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
 
 export interface Post {
   id: string;
@@ -240,15 +244,6 @@ export interface FeedComment {
   createdAt: string;
 }
 
-export interface Quote {
-  id: string;
-  projectId: string;
-  version: string;
-  fileUrl: string;
-  uploadedBy: string;
-  createdAt: string;
-}
-
 export interface ActivityLog {
   id: string;
   projectId?: string;
@@ -261,8 +256,8 @@ export interface SiteVisit {
   id: string;
   projectId: string;
   scheduledAt: string;
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
   requestedBy: string;
+  status: 'Scheduled' | 'Completed' | 'Cancelled';
 }
 
 export interface SupportTicket {
@@ -283,19 +278,20 @@ export interface ProjectUpdate {
   createdAt: string;
 }
 
-export interface FinalGalleryImage {
-  id: string;
-  projectId: string;
-  url: string;
-  caption: string;
-}
-
 export interface Announcement {
   id: string;
   authorId: string;
   content: string;
-  target: 'All' | 'Customers' | 'Designers';
+  target: 'All' | 'Designers' | 'Customers';
   createdAt: string;
+}
+
+export interface UserSalaryConfig {
+  id: string;
+  userId: string;
+  payType: 'Monthly' | 'Daily';
+  baseAmount: number;
+  updatedAt: string;
 }
 
 export interface Material {
