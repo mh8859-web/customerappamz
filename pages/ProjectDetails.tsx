@@ -71,50 +71,44 @@ const ProjectDetails: React.FC = () => {
     const [isUploadQuoteModalOpen, setUploadQuoteModalOpen] = useState(false);
     const [isAddMilestoneModalOpen, setAddMilestoneModalOpen] = useState(false);
     const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
-    const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
     const [isApproveSubmitting, setIsApproveSubmitting] = useState(false);
-    const [isResettingPlan, setIsResettingPlan] = useState(false);
     const [viewerAsset, setViewerAsset] = useState<{ url: string; title: string } | null>(null);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
-    
-    // Countdown Logic
-    const countdown = useMemo(() => {
-        if (!project) return { days: 0, text: '' };
-        
-        // Target is Start Date + 45 Days
-        const deliveryTarget = new Date(project.startDate);
-        deliveryTarget.setDate(deliveryTarget.getDate() + 45);
-        
-        const now = new Date();
-        const diffTime = deliveryTarget.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (project.stage === 'completed') return { days: 0, text: 'PROJECT DELIVERED' };
-        
-        const remaining = Math.max(0, diffDays);
-        return { 
-            days: remaining, 
-            text: remaining === 1 ? 'DAY REMAINING' : 'DAYS REMAINING'
-        };
+
+    // --- REAL-TIME TIMER LOGIC ---
+    const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0, total: 0 });
+
+    useEffect(() => {
+        if (!project || project.status === 'Completed') return;
+
+        const timer = setInterval(() => {
+            const deliveryTarget = new Date(project.startDate);
+            deliveryTarget.setDate(deliveryTarget.getDate() + 45);
+            
+            const now = new Date().getTime();
+            const distance = deliveryTarget.getTime() - now;
+
+            if (distance < 0) {
+                setTimeLeft({ d: 0, h: 0, m: 0, s: 0, total: 0 });
+                clearInterval(timer);
+            } else {
+                setTimeLeft({
+                    d: Math.floor(distance / (1000 * 60 * 60 * 24)),
+                    h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                    m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+                    s: Math.floor((distance % (1000 * 60)) / 1000),
+                    total: distance
+                });
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
     }, [project]);
 
     const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
     const projectQuotes = useMemo(() => quotes.filter(q => q.projectId === projectId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [quotes, projectId]);
     const latestQuote = projectQuotes[0];
-
-    const financialStats = useMemo(() => {
-        const baseBudget = project?.budgetDisplay || 0;
-        const total = projectMilestones.length > 0 
-            ? projectMilestones.reduce((sum, m) => sum + m.amountDisplay, 0)
-            : baseBudget;
-            
-        const settled = projectMilestones.filter(m => m.statusDisplay === 'Paid').reduce((sum, m) => sum + m.amountDisplay, 0);
-        const outstanding = total - settled;
-        const invoiced = projectMilestones.filter(m => m.statusDisplay === 'Completed').reduce((sum, m) => sum + m.amountDisplay, 0);
-        const progress = total > 0 ? (settled / total) * 100 : 0;
-        return { total, settled, outstanding, invoiced, progress };
-    }, [projectMilestones, project]);
 
     const handleApproveQuote = async () => {
         if (!project || isApproveSubmitting) return;
@@ -131,17 +125,10 @@ const ProjectDetails: React.FC = () => {
             });
             await refetchData();
         } catch (err) {
-            alert("Approval sync failed. Check connection.");
+            alert("Approval sync failed.");
         } finally {
             setIsApproveSubmitting(false);
         }
-    };
-
-    const handleUpdateMilestoneStatus = async (mId: string, status: string) => {
-        const updates: any = { status_display: status };
-        if (status === 'Paid') updates.paid_date_display = new Date().toISOString();
-        const { error } = await updateRecord('milestones', mId, updates);
-        if (!error) await refetchData();
     };
 
     const unifiedUpdateFeed = useMemo(() => {
@@ -174,53 +161,68 @@ const ProjectDetails: React.FC = () => {
                     <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase leading-tight">{project.title}</h1>
                     
                     <div className="mt-6 flex flex-wrap items-center gap-y-4 gap-x-8">
-                        <div className="flex items-center gap-3">
-                            <UserNameDisplay user={customer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-10 h-10" />
-                            <div className="h-6 w-px bg-slate-200"></div>
+                        <div className="flex items-center gap-4">
+                            <UserNameDisplay user={customer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-12 h-12" />
+                            <div className="h-8 w-px bg-slate-200"></div>
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Created On</span>
-                                <span className="text-[11px] font-bold text-slate-700">
-                                    {new Date(project.createdAt).toLocaleDateString()} {new Date(project.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-[4px] text-slate-400 mb-0.5">Project Registered</span>
+                                <div className="flex items-center gap-2">
+                                    <CalendarIcon className="w-3 h-3 text-brand-gold" />
+                                    <span className="text-[11px] font-black text-slate-800 uppercase">
+                                        {new Date(project.createdAt).toLocaleDateString()} @ {new Date(project.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         
-                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Project ID</span>
+                        <div className="flex items-center gap-2 px-5 py-2.5 bg-white shadow-soft rounded-full border border-slate-100">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">ID Key</span>
                             <span className="text-[10px] font-mono font-bold text-brand-blue">{project.id.slice(0, 12)}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Delivery Countdown Timer - Luxury UI */}
-                <Card className="!p-0 overflow-hidden bg-slate-900 border-none shadow-gold-glow w-full xl:w-96 rounded-[32px] group animate-in slide-in-from-right duration-700">
-                    <div className="relative p-6">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-gold/20 transition-all duration-700"></div>
+                {/* Live Delivery Timer - High Octane UI */}
+                <Card className="!p-0 overflow-hidden bg-slate-900 border-none shadow-gold-glow w-full xl:w-[420px] rounded-[40px] group animate-in slide-in-from-right duration-700">
+                    <div className="relative p-8">
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-gold/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-brand-gold/20 transition-all duration-1000"></div>
                         
-                        <div className="relative z-10 flex items-center justify-between gap-6">
-                            <div className="flex-1">
-                                <p className="text-[9px] font-black text-brand-gold uppercase tracking-[4px] mb-2 opacity-80">COMMITMENT TIMELINE</p>
-                                <h3 className="text-sm font-black text-white uppercase leading-tight tracking-wide">YOUR DREAM HOME WILL BE DELIVERED TO YOU IN</h3>
-                                
-                                <div className="mt-4 flex items-end gap-2">
-                                    <span className="text-5xl font-display font-black text-white tracking-tighter tabular-nums drop-shadow-lg">
-                                        {countdown.days}
-                                    </span>
-                                    <span className="text-[10px] font-black text-brand-gold uppercase tracking-widest mb-1.5 animate-pulse">
-                                        {countdown.text}
-                                    </span>
-                                </div>
+                        <div className="relative z-10 flex flex-col gap-6">
+                            <div>
+                                <p className="text-[9px] font-black text-brand-gold uppercase tracking-[5px] mb-2 opacity-80">STRICT DELIVERY COMMITMENT</p>
+                                <h3 className="text-xs font-black text-white/90 uppercase leading-relaxed tracking-widest">YOUR DREAM HOME WILL BE DELIVERED TO YOU IN</h3>
                             </div>
                             
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
-                                <ClockIcon className="w-8 h-8 text-brand-gold animate-float" />
+                            <div className="grid grid-cols-4 gap-3">
+                                {[
+                                    { v: timeLeft.d, l: 'Days' },
+                                    { v: timeLeft.h, l: 'Hrs' },
+                                    { v: timeLeft.m, l: 'Min' },
+                                    { v: timeLeft.s, l: 'Sec' }
+                                ].map((unit, i) => (
+                                    <div key={unit.l} className="flex flex-col items-center">
+                                        <div className="text-4xl font-display font-black text-white tracking-tighter tabular-nums drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                                            {unit.v.toString().padStart(2, '0')}
+                                        </div>
+                                        <span className="text-[8px] font-black text-brand-gold uppercase tracking-widest mt-1 opacity-60">
+                                            {unit.l}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center gap-3 pt-4 border-t border-white/5">
+                                <div className="w-10 h-10 rounded-xl bg-brand-gold/10 flex items-center justify-center">
+                                    <ZapIcon className="w-5 h-5 text-brand-gold animate-pulse" />
+                                </div>
+                                <p className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none">Real-time Project Synchronization Active</p>
                             </div>
                         </div>
                     </div>
-                    <div className="h-1.5 w-full bg-white/5">
+                    <div className="h-2 w-full bg-white/5">
                         <div 
-                            className="h-full bg-gradient-to-r from-brand-gold to-white shadow-[0_0_10px_rgba(212,175,55,0.5)] transition-all duration-1000" 
-                            style={{ width: `${Math.min(100, (countdown.days / 45) * 100)}%` }}
+                            className="h-full bg-gradient-to-r from-brand-gold via-white to-brand-gold shadow-[0_0_20px_rgba(212,175,55,0.4)] transition-all duration-1000" 
+                            style={{ width: `${Math.max(2, Math.min(100, (timeLeft.d / 45) * 100))}%` }}
                         ></div>
                     </div>
                 </Card>
