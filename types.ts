@@ -46,6 +46,7 @@ export interface Project {
   progress: number;
   status: 'Active' | 'Completed' | 'Archived';
   stage: ProjectStage;
+  isPaymentAlertActive?: boolean;
 }
 
 export interface Quote {

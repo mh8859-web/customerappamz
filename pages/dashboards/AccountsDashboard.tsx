@@ -5,8 +5,7 @@ import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
-// Added missing PackageIcon and XMarkIcon to icons import
-import { DollarSignIcon, CreditCardIcon, PieChartIcon, ClockIcon, ZapIcon, CheckCircleIcon, AlertTriangleIcon, TrendingUpIcon, FileTextIcon, UserGroupIcon, PackageIcon, XMarkIcon } from '../../components/icons';
+import { DollarSignIcon, CreditCardIcon, PieChartIcon, ClockIcon, ZapIcon, CheckCircleIcon, AlertTriangleIcon, TrendingUpIcon, FileTextIcon, UserGroupIcon, PackageIcon, XMarkIcon, MegaphoneIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import { Project, Milestone, Expense, Product } from '../../types';
 
@@ -27,6 +26,7 @@ const AccountsDashboard: React.FC = () => {
     const { projects, milestones, expenses, products, workLogs, refetchData, loading } = useData();
     const { findUserById, loading: usersLoading } = useUsers();
     const [activeSection, setActiveSection] = useState<'sentinel' | 'audit' | 'aging' | 'gp'>('sentinel');
+    const [pushingAlertId, setPushingAlertId] = useState<string | null>(null);
     
     const isLoading = loading || usersLoading;
 
@@ -49,6 +49,33 @@ const AccountsDashboard: React.FC = () => {
         return { totalAR, totalPaid, totalExpenses, pendingPayables, avgMargin };
     }, [milestones, expenses, projects]);
 
+    const handlePushPaymentAlert = async (projectId: string, milestoneTitle: string) => {
+        if (!window.confirm(`Trigger high-priority payment alert for this project? This will display a mandatory warning on the client's dashboard.`)) return;
+        
+        setPushingAlertId(projectId);
+        try {
+            // 1. Enable project-wide warning banner
+            await updateRecord('projects', projectId, {
+                is_payment_alert_active: true
+            });
+            
+            // 2. Send high-priority chat nudge
+            await createRecord('messages', {
+                chat_id: projectId,
+                body: `URGENT PAYMENT NOTICE: Milestone "${milestoneTitle}" is overdue. Please clear the dues immediately to prevent procurement and site delays. Access to certain project tech resources may be limited until settlement.`,
+                sender_id: '786786',
+                is_system_message: true
+            });
+            
+            await refetchData();
+            alert("Nudge sent. Client will now see a persistent dashboard alert.");
+        } catch (e) {
+            alert("Failed to trigger alert system.");
+        } finally {
+            setPushingAlertId(null);
+        }
+    };
+
     const handleVerifyPayment = async (m: Milestone) => {
         if (!window.confirm(`Verify and settle payment of ₹${m.amountDisplay.toLocaleString()} for ${m.title}?`)) return;
         
@@ -58,9 +85,14 @@ const AccountsDashboard: React.FC = () => {
                 paid_date_display: new Date().toISOString(),
             });
             
+            // Auto-clear the alert banner if this was the last pending one (optional logic, but good UX)
+            await updateRecord('projects', m.projectId, {
+                is_payment_alert_active: false
+            });
+            
             await createRecord('messages', {
                 chat_id: m.projectId,
-                body: `FINANCIAL NOC: Payment for "${m.title}" has been verified and cleared by Accounts. Procurement for the next phase is now authorized.`,
+                body: `FINANCIAL NOC: Payment for "${m.title}" has been verified and cleared by Accounts. Procurement for the next phase is now authorized. All dashboard alerts have been lifted.`,
                 sender_id: '786786', // System ID
                 is_system_message: true
             });
@@ -129,6 +161,7 @@ const AccountsDashboard: React.FC = () => {
                                         <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">40% Material</th>
                                         <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">45% Install</th>
                                         <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-center">5% NOC</th>
+                                        <th className="px-8 py-6 text-[10px] font-black uppercase tracking-[3px] text-right">Compliance</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
@@ -140,6 +173,8 @@ const AccountsDashboard: React.FC = () => {
                                             pMilestones.find(m => m.title.includes('45%')),
                                             pMilestones.find(m => m.title.includes('5%'))
                                         ];
+                                        
+                                        const nextActionable = steps.find(s => s?.statusDisplay === 'Completed');
 
                                         return (
                                             <tr key={project.id} className="hover:bg-slate-50/50 transition-colors">
@@ -166,6 +201,18 @@ const AccountsDashboard: React.FC = () => {
                                                         ) : <span className="text-[10px] text-slate-200">--</span>}
                                                     </td>
                                                 ))}
+                                                <td className="px-8 py-6 text-right">
+                                                    {nextActionable && (
+                                                        <button 
+                                                            disabled={pushingAlertId === project.id}
+                                                            onClick={() => handlePushPaymentAlert(project.id, nextActionable.title)}
+                                                            className={`p-3 rounded-xl transition-all ${project.isPaymentAlertActive ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500'}`}
+                                                            title="Push Payment Alert to Client"
+                                                        >
+                                                            <MegaphoneIcon className="w-5 h-5" />
+                                                        </button>
+                                                    )}
+                                                </td>
                                             </tr>
                                         );
                                     })}

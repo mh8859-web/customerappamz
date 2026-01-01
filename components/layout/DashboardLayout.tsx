@@ -1,8 +1,42 @@
-import React, { useState, ReactNode } from 'react';
+
+import React, { useState, ReactNode, useMemo } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { HomeIcon, BriefcaseIcon, MessageSquareIcon, UserCircleIcon } from '../icons';
-import { NavLink, useLocation } from 'react-router-dom';
+import { HomeIcon, BriefcaseIcon, MessageSquareIcon, UserCircleIcon, AlertTriangleIcon } from '../icons';
+import { NavLink, useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
+
+const PaymentAlertBanner = () => {
+    const { user } = useAuth();
+    const { projects, milestones } = useData();
+
+    const activeProject = useMemo(() => {
+        if (!user || user.role !== 'Customer') return null;
+        return projects.find(p => p.customerId === user.id && p.status === 'Active');
+    }, [user, projects]);
+
+    const overdueMilestone = useMemo(() => {
+        if (!activeProject) return null;
+        return milestones.find(m => m.projectId === activeProject.id && m.statusDisplay === 'Completed');
+    }, [activeProject, milestones]);
+
+    const showAlert = activeProject?.isPaymentAlertActive || !!overdueMilestone;
+
+    if (!showAlert) return null;
+
+    return (
+        <div className="bg-red-600 text-white py-3 px-6 flex items-center justify-between animate-pulse-slow relative z-[60] shadow-lg">
+            <div className="flex items-center gap-3">
+                <AlertTriangleIcon className="w-5 h-5" />
+                <span className="text-[11px] font-black uppercase tracking-[3px]">Financial Nudge: Mandatory Payment Milestone Pending Settlement</span>
+            </div>
+            <Link to="/customer/dashboard" className="bg-white text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
+                Resolve Now
+            </Link>
+        </div>
+    );
+};
 
 const MobileDock = () => {
     const location = useLocation();
@@ -40,28 +74,31 @@ const DashboardLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen bg-page-bg text-text-primary overflow-hidden">
-      <Sidebar 
-        sidebarOpen={sidebarOpen} 
-        setSidebarOpen={setSidebarOpen} 
-        isCollapsed={isSidebarCollapsed}
-        toggleCollapsed={() => setSidebarCollapsed(!isSidebarCollapsed)}
-      />
-
-      <div className="flex flex-col flex-1 relative overflow-hidden">
-        <Header 
-          setSidebarOpen={setSidebarOpen} 
-          toggleSidebarCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)}
-          isSidebarCollapsed={isSidebarCollapsed}
+    <div className="flex flex-col h-screen bg-page-bg text-text-primary overflow-hidden">
+      <PaymentAlertBanner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar 
+            sidebarOpen={sidebarOpen} 
+            setSidebarOpen={setSidebarOpen} 
+            isCollapsed={isSidebarCollapsed}
+            toggleCollapsed={() => setSidebarCollapsed(!isSidebarCollapsed)}
         />
-        
-        <main className="p-4 md:p-8 flex-1 overflow-y-auto pb-24 md:pb-8">
-          <div className="max-w-6xl mx-auto w-full animate-in">
-            {children}
-          </div>
-        </main>
 
-        <MobileDock />
+        <div className="flex flex-col flex-1 relative overflow-hidden">
+            <Header 
+            setSidebarOpen={setSidebarOpen} 
+            toggleSidebarCollapse={() => setSidebarCollapsed(!isSidebarCollapsed)}
+            isSidebarCollapsed={isSidebarCollapsed}
+            />
+            
+            <main className="p-4 md:p-8 flex-1 overflow-y-auto pb-24 md:pb-8">
+            <div className="max-w-6xl mx-auto w-full animate-in">
+                {children}
+            </div>
+            </main>
+
+            <MobileDock />
+        </div>
       </div>
     </div>
   );

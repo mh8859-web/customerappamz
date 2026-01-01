@@ -6,7 +6,7 @@ import Card from '../../components/ui/Card';
 import PaymentModal from '../../components/customer/PaymentReminderModal';
 import TestimonialFlow from '../../components/dashboard/TestimonialFlow';
 // Added missing SparklesIcon and CheckCircleIcon imports
-import { DownloadIcon, MegaphoneIcon, CreditCardIcon, AlertTriangleIcon, FileTextIcon, SparklesIcon, CheckCircleIcon } from '../../components/icons';
+import { DownloadIcon, MegaphoneIcon, CreditCardIcon, AlertTriangleIcon, FileTextIcon, SparklesIcon, CheckCircleIcon, ZapIcon } from '../../components/icons';
 import Button from '../../components/ui/Button';
 import { Link } from 'react-router-dom';
 import { useUsers } from '../../context/UserContext';
@@ -109,6 +109,12 @@ const CustomerDashboard: React.FC = () => {
                                 <div>
                                     <h3 className="text-3xl font-black uppercase tracking-tight leading-none">Immediate Action Required</h3>
                                     <p className="text-sm font-black text-white/80 uppercase tracking-[3px] mt-3">MANDATORY SETTLEMENT: {overdueMilestone.title}</p>
+                                    {project.isPaymentAlertActive && (
+                                        <div className="mt-4 flex items-center gap-2 bg-black/20 backdrop-blur-md px-4 py-2 rounded-xl w-fit border border-white/10">
+                                            <ZapIcon className="w-4 h-4 text-brand-gold" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">High-Priority Nudge from Accounts</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="flex flex-col md:flex-row items-center gap-10">
