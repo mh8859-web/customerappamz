@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
@@ -16,7 +17,7 @@ const badgeUrlMap: Record<UserRole, string> = {
   'Sub-Admin': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
-  Accounts: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
+  Accounts: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   'Project Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   'Production Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
   'Site Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454354/customer1_ihbcst.svg',
@@ -27,13 +28,12 @@ const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     'Sub-Admin': { title: 'Admin', text: 'Privileged oversight access.' },
     Designer: { title: 'Lead Designer', text: 'Creative project lead.' },
     Customer: { title: 'Client', text: 'Verified project owner.' },
-    Accounts: { title: 'Auditor', text: 'Finance department.' },
+    Accounts: { title: 'Financial Auditor', text: 'Official accounts & audit department.' },
     'Project Head': { title: 'Director', text: 'Strategic oversight.' },
     'Production Head': { title: 'Prod Lead', text: 'Manufacturing lead.' },
     'Site Head': { title: 'Supervisor', text: 'Execution supervisor.' },
 };
 
-// --- FIX: Finished truncated component and added default export to resolve "Module has no default export" errors ---
 const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '', textClassName = '', showAvatar = false, imageSize = 'w-7 h-7' }) => {
   const [isPopoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);

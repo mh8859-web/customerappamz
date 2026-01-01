@@ -78,7 +78,7 @@ const ProjectDetails: React.FC = () => {
 
     const projectDesigns = useMemo(() => designs.filter(d => d.projectId === projectId), [designs, projectId]);
 
-    // --- REAL-TIME TIMER LOGIC (STRICT 45 DAYS) ---
+    // --- REAL-TIME TIMER LOGIC (STRICT 45 DAYS MAXIMUM) ---
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0, total: 0 });
 
     useEffect(() => {
@@ -86,22 +86,37 @@ const ProjectDetails: React.FC = () => {
 
         const timer = setInterval(() => {
             const projectStart = new Date(project.startDate);
-            // TARGET IS STRICTLY 45 DAYS FROM START
-            const deliveryTarget = new Date(projectStart.getTime() + (45 * 24 * 60 * 60 * 1000));
+            const now = new Date();
             
-            const now = new Date().getTime();
-            const distance = deliveryTarget.getTime() - now;
+            // LOGIC FIX: The 45-day commitment starts from the Start Date. 
+            // If today is BEFORE the start date, we simply show the full 45 days.
+            // If today is AFTER the start date, we subtract the elapsed time from 45 days.
+            
+            let distance: number;
+            const commitmentDuration = 45 * 24 * 60 * 60 * 1000;
+            
+            if (now.getTime() < projectStart.getTime()) {
+                // Project hasn't started yet, show full commitment
+                distance = commitmentDuration;
+            } else {
+                // Project is in progress, show remaining time of the 45-day window
+                const deliveryTarget = new Date(projectStart.getTime() + commitmentDuration);
+                distance = deliveryTarget.getTime() - now.getTime();
+            }
 
             if (distance < 0) {
                 setTimeLeft({ d: 0, h: 0, m: 0, s: 0, total: 0 });
                 clearInterval(timer);
             } else {
+                // Ensure we never show more than 45 days
+                const cappedDistance = Math.min(distance, commitmentDuration);
+                
                 setTimeLeft({
-                    d: Math.floor(distance / (1000 * 60 * 60 * 24)),
-                    h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-                    m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-                    s: Math.floor((distance % (1000 * 60)) / 1000),
-                    total: distance
+                    d: Math.floor(cappedDistance / (1000 * 60 * 60 * 24)),
+                    h: Math.floor((cappedDistance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                    m: Math.floor((cappedDistance % (1000 * 60 * 60)) / (1000 * 60)),
+                    s: Math.floor((cappedDistance % (1000 * 60)) / 1000),
+                    total: cappedDistance
                 });
             }
         }, 1000);
@@ -220,9 +235,8 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 </div>
 
-                {/* LUXURY WHITE TIMER CARD (As Requested) */}
-                <Card className="!p-0 overflow-hidden bg-white border-none shadow-premium w-full xl:w-[460px] rounded-[48px] group animate-in slide-in-from-right duration-700 relative">
-                    {/* Decorative Elements */}
+                {/* LUXURY WHITE TIMER CARD - High Contrast Updates */}
+                <Card className="!p-0 overflow-hidden bg-white border-2 border-slate-50 shadow-premium w-full xl:w-[460px] rounded-[48px] group animate-in slide-in-from-right duration-700 relative">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                     <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-brand-gold/40 to-transparent"></div>
                     
@@ -230,7 +244,7 @@ const ProjectDetails: React.FC = () => {
                         <div className="flex justify-between items-start">
                             <div>
                                 <p className="text-[10px] font-black text-brand-gold uppercase tracking-[5px] mb-2">STRICT DELIVERY COMMITMENT</p>
-                                <h3 className="text-[11px] font-black text-slate-400 uppercase leading-relaxed tracking-widest">REAL-TIME PROJECT READINESS IN</h3>
+                                <h3 className="text-[11px] font-black text-slate-500 uppercase leading-relaxed tracking-widest">REAL-TIME PROJECT READINESS IN</h3>
                             </div>
                             <div className="w-10 h-10 rounded-2xl bg-brand-gold/10 flex items-center justify-center">
                                 <ZapIcon className="w-5 h-5 text-brand-gold animate-pulse" />
@@ -245,22 +259,21 @@ const ProjectDetails: React.FC = () => {
                                 { v: timeLeft.s, l: 'SEC' }
                             ].map((unit, i) => (
                                 <div key={unit.l} className="flex flex-col items-center">
-                                    <div className="text-[44px] font-display font-black text-slate-900 tracking-tighter tabular-nums drop-shadow-[0_2px_4px_rgba(0,0,0,0.05)] relative">
+                                    <div className="text-[44px] font-display font-black text-slate-900 tracking-tighter tabular-nums drop-shadow-sm leading-none">
                                         {unit.v.toString().padStart(2, '0')}
-                                        <div className="absolute inset-0 bg-gradient-to-b from-white/0 via-white/0 to-slate-100/30 rounded-lg -z-10"></div>
                                     </div>
-                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mt-2 border-t border-slate-100 pt-1.5 w-full text-center">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-3 border-t border-slate-100 pt-2 w-full text-center">
                                         {unit.l}
                                     </span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="flex items-center gap-3 pt-6 border-t border-slate-50 opacity-40">
+                        <div className="flex items-center gap-3 pt-6 border-t border-slate-50">
                              <img 
                                 src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
                                 alt="AMAZ" 
-                                className="h-4 grayscale" 
+                                className="h-4 grayscale opacity-40" 
                              />
                              <div className="h-3 w-px bg-slate-200"></div>
                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Verified 45-Day Performance SLA</p>

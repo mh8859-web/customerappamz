@@ -58,6 +58,19 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About' },
         ]
       },
+      Accounts: {
+        main: [
+          { to: '/accounts/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Accounts HQ' },
+          { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Project Profitability' },
+          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Project Archive' },
+          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Ledger Assets' },
+          { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Profile' },
+          { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Help Desk' },
+        ],
+        secondary: [
+          { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'About System' },
+        ]
+      },
       Designer: {
         main: [
           { to: '/designer/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Workspace' },
