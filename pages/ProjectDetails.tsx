@@ -77,6 +77,28 @@ const ProjectDetails: React.FC = () => {
     const [viewerAsset, setViewerAsset] = useState<{ url: string; title: string } | null>(null);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
+    
+    // Countdown Logic
+    const countdown = useMemo(() => {
+        if (!project) return { days: 0, text: '' };
+        
+        // Target is Start Date + 45 Days
+        const deliveryTarget = new Date(project.startDate);
+        deliveryTarget.setDate(deliveryTarget.getDate() + 45);
+        
+        const now = new Date();
+        const diffTime = deliveryTarget.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (project.stage === 'completed') return { days: 0, text: 'PROJECT DELIVERED' };
+        
+        const remaining = Math.max(0, diffDays);
+        return { 
+            days: remaining, 
+            text: remaining === 1 ? 'DAY REMAINING' : 'DAYS REMAINING'
+        };
+    }, [project]);
+
     const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
     const projectQuotes = useMemo(() => quotes.filter(q => q.projectId === projectId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [quotes, projectId]);
     const latestQuote = projectQuotes[0];
@@ -142,51 +164,105 @@ const ProjectDetails: React.FC = () => {
         <div className="space-y-8 pb-12">
             {viewerAsset && <HDViewer isOpen={!!viewerAsset} onClose={() => setViewerAsset(null)} url={viewerAsset.url} title={viewerAsset.title} />}
             
-            <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
-                <div>
-                    <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase">{project.title}</h1>
-                    <div className="mt-4 flex items-center gap-6">
-                        <UserNameDisplay user={customer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-8 h-8" />
-                        <div className="h-4 w-px bg-slate-200"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Project ID: {project.id.slice(0, 8)}</span>
+            {/* Project Header Area */}
+            <div className="flex flex-col xl:flex-row justify-between xl:items-start gap-8">
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="h-1 w-8 bg-brand-gold rounded-full"></div>
+                        <span className="text-[10px] font-black uppercase tracking-[4px] text-slate-400">Archival Registry</span>
+                    </div>
+                    <h1 className="text-5xl font-display font-black text-slate-900 tracking-tight uppercase leading-tight">{project.title}</h1>
+                    
+                    <div className="mt-6 flex flex-wrap items-center gap-y-4 gap-x-8">
+                        <div className="flex items-center gap-3">
+                            <UserNameDisplay user={customer} showAvatar={true} textClassName="font-bold text-sm text-slate-900" imageSize="w-10 h-10" />
+                            <div className="h-6 w-px bg-slate-200"></div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Created On</span>
+                                <span className="text-[11px] font-bold text-slate-700">
+                                    {new Date(project.createdAt).toLocaleDateString()} {new Date(project.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full border border-slate-200">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Project ID</span>
+                            <span className="text-[10px] font-mono font-bold text-brand-blue">{project.id.slice(0, 12)}</span>
+                        </div>
                     </div>
                 </div>
-                <Button variant="secondary" onClick={() => navigate('/chat/' + project.id)} className="!rounded-full !px-8 h-14 shadow-premium border-slate-200">
-                    <MessageSquareIcon className="w-5 h-5 mr-3" /> Communication Portal
-                </Button>
+
+                {/* Delivery Countdown Timer - Luxury UI */}
+                <Card className="!p-0 overflow-hidden bg-slate-900 border-none shadow-gold-glow w-full xl:w-96 rounded-[32px] group animate-in slide-in-from-right duration-700">
+                    <div className="relative p-6">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-gold/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-gold/20 transition-all duration-700"></div>
+                        
+                        <div className="relative z-10 flex items-center justify-between gap-6">
+                            <div className="flex-1">
+                                <p className="text-[9px] font-black text-brand-gold uppercase tracking-[4px] mb-2 opacity-80">COMMITMENT TIMELINE</p>
+                                <h3 className="text-sm font-black text-white uppercase leading-tight tracking-wide">YOUR DREAM HOME WILL BE DELIVERED TO YOU IN</h3>
+                                
+                                <div className="mt-4 flex items-end gap-2">
+                                    <span className="text-5xl font-display font-black text-white tracking-tighter tabular-nums drop-shadow-lg">
+                                        {countdown.days}
+                                    </span>
+                                    <span className="text-[10px] font-black text-brand-gold uppercase tracking-widest mb-1.5 animate-pulse">
+                                        {countdown.text}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                <ClockIcon className="w-8 h-8 text-brand-gold animate-float" />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="h-1.5 w-full bg-white/5">
+                        <div 
+                            className="h-full bg-gradient-to-r from-brand-gold to-white shadow-[0_0_10px_rgba(212,175,55,0.5)] transition-all duration-1000" 
+                            style={{ width: `${Math.min(100, (countdown.days / 45) * 100)}%` }}
+                        ></div>
+                    </div>
+                </Card>
             </div>
 
             <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
 
             <div className="space-y-8">
-                <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit overflow-x-auto max-w-full no-scrollbar">
-                    {tabs.map(tab => {
-                        const isPhaseTab = tab === phaseTab;
-                        return (
-                            <button 
-                                key={tab} 
-                                onClick={() => setActiveTab(tab)} 
-                                className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all relative ${
-                                    activeTab === tab 
-                                        ? 'bg-white text-brand-blue shadow-card' 
-                                        : isPhaseTab 
-                                            ? 'text-brand-blue bg-blue-50/50 border border-brand-blue/10 animate-pulse-fast' 
-                                            : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
-                                {tab}
-                                {isPhaseTab && (
-                                    <div className="absolute -top-1 -right-1 flex items-center justify-center">
-                                        <span className="relative flex h-3 w-3">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-gold"></span>
-                                        </span>
-                                    </div>
-                                )}
-                            </button>
-                        );
-                    })}
-                </nav>
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <nav className="flex gap-2 bg-slate-100/50 p-1.5 rounded-[22px] w-fit overflow-x-auto max-w-full no-scrollbar">
+                        {tabs.map(tab => {
+                            const isPhaseTab = tab === phaseTab;
+                            return (
+                                <button 
+                                    key={tab} 
+                                    onClick={() => setActiveTab(tab)} 
+                                    className={`px-8 py-3.5 rounded-[18px] text-[11px] font-black uppercase tracking-[2px] transition-all relative ${
+                                        activeTab === tab 
+                                            ? 'bg-white text-brand-blue shadow-card' 
+                                            : isPhaseTab 
+                                                ? 'text-brand-blue bg-blue-50/50 border border-brand-blue/10 animate-pulse-fast' 
+                                                : 'text-slate-400 hover:text-slate-600'
+                                    }`}
+                                >
+                                    {tab}
+                                    {isPhaseTab && (
+                                        <div className="absolute -top-1 -right-1 flex items-center justify-center">
+                                            <span className="relative flex h-3 w-3">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-gold"></span>
+                                            </span>
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </nav>
+                    
+                    <Button variant="secondary" onClick={() => navigate('/chat/' + project.id)} className="!rounded-full !px-8 h-14 shadow-premium border-slate-200 w-full md:w-auto">
+                        <MessageSquareIcon className="w-5 h-5 mr-3" /> Communication Portal
+                    </Button>
+                </div>
 
                 <div className="min-h-[500px] animate-in">
                     {activeTab === 'Live Updates' && (
