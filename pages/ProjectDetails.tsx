@@ -8,17 +8,20 @@ import { useAuth } from '../context/AuthContext';
 import { 
     BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, 
     SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon, 
-    LockIcon, PackageIcon, ClockIcon, MapPinIcon 
+    LockIcon, PackageIcon, ClockIcon, MapPinIcon, MessageSquareIcon,
+    ArrowPathIcon, ChevronRightIcon
 } from '../components/icons';
-import { UserRole, Milestone } from '../types';
+import { UserRole, Milestone, Design } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import MaterialSelection from '../components/project/MaterialSelection';
 import SiteUpdateModule from '../components/project/SiteUpdateModule';
 import MaterialRequestModule from '../components/project/MaterialRequestModule';
+import UploadDesignModal from '../components/design/UploadDesignModal';
+import DesignAnnotationModal from '../components/design/DesignAnnotationModal';
 import { useUsers } from '../context/UserContext';
 import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
-import { updateRecord, createRecord } from '../services/api';
+import { updateRecord, createRecord, uploadProjectFile } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Materials', 'Docs', 'Milestones'],
@@ -36,10 +39,12 @@ const ProjectDetails: React.FC = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { findUserById, loading: usersLoading } = useUsers();
-    const { projects, designs, milestones, expenses, products, refetchData, loading: dataLoading } = useData();
+    const { projects, designs, milestones, expenses, products, quotes, refetchData, loading: dataLoading } = useData();
     
     const [activeTab, setActiveTab] = useState('');
     const [isStartingProject, setIsStartingProject] = useState(false);
+    const [isUploadModalOpen, setUploadModalOpen] = useState(false);
+    const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
 
@@ -105,6 +110,24 @@ const ProjectDetails: React.FC = () => {
         }
     };
 
+    const handleUploadDesign = async (file: File, notes: string, type: 'image' | 'gltf') => {
+        if (!project || !user) return;
+        const url = await uploadProjectFile(project.id, file);
+        if (url) {
+            const nextVersion = designs.filter(d => d.projectId === project.id).length + 1;
+            await createRecord('designs', {
+                project_id: project.id,
+                file_url: url,
+                notes,
+                version: nextVersion,
+                type,
+                uploaded_by: user.id,
+                submitted_for_review: true,
+            });
+            await refetchData();
+        }
+    };
+
     if (usersLoading || dataLoading) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[8px] text-xs font-display">Syncing Portfolio Data...</div>;
     if (!project || !user) return <div className="text-center p-20 font-display font-black text-slate-400 uppercase">Registry Not Found</div>;
 
@@ -112,9 +135,22 @@ const ProjectDetails: React.FC = () => {
 
     const tabs = TABS[user.role] || [];
     const designer = findUserById(project.designerId);
+    const projectDesigns = designs.filter(d => d.projectId === project.id).sort((a,b) => b.version - a.version);
+    const projectQuotes = quotes.filter(q => q.projectId === project.id);
 
     return (
         <div className="space-y-12 pb-24">
+            <UploadDesignModal isOpen={isUploadModalOpen} onClose={() => setUploadModalOpen(false)} onUpload={handleUploadDesign} />
+            {selectedDesign && (
+                <DesignAnnotationModal 
+                    isOpen={!!selectedDesign} 
+                    onClose={() => setSelectedDesign(null)} 
+                    design={selectedDesign} 
+                    currentUser={user}
+                    onSave={() => refetchData()}
+                />
+            )}
+
             {needsActivation && (
                 <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 backdrop-blur-2xl">
                     <div className="max-w-xl w-full text-center space-y-12">
@@ -177,6 +213,96 @@ const ProjectDetails: React.FC = () => {
                         </div>
                     )}
                     
+                    {activeTab === 'Designs' && (
+                        <div className="space-y-10">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Design Iterations</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[4px] mt-2">High-Fidelity Visual Archive</p>
+                                </div>
+                                {user.role === 'Designer' && (
+                                    <Button onClick={() => setUploadModalOpen(true)} className="!rounded-full !px-8 shadow-button">
+                                        <FilePlusIcon className="w-5 h-5 mr-2" /> Upload New Version
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                {projectDesigns.map(design => (
+                                    <Card key={design.id} className="p-0 overflow-hidden rounded-[32px] group border-slate-100 hover:border-brand-gold/30 transition-all bg-white">
+                                        <div className="aspect-video relative overflow-hidden bg-slate-100">
+                                            <img src={design.fileUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
+                                            <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Button onClick={() => setSelectedDesign(design)} variant="secondary" className="!bg-white !text-slate-900 !rounded-full !text-[10px] font-black uppercase">Inspect Detail</Button>
+                                            </div>
+                                            <div className="absolute top-4 right-4"><span className="px-3 py-1 bg-white/90 backdrop-blur rounded-full text-[9px] font-black uppercase">v{design.version}</span></div>
+                                        </div>
+                                        <div className="p-6">
+                                            <p className="text-sm text-slate-600 font-medium italic">"{design.notes}"</p>
+                                            <div className="mt-6 flex justify-between items-center">
+                                                <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${design.approved ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                    {design.approved ? 'Approved' : 'Review Pending'}
+                                                </span>
+                                                <p className="text-[9px] font-bold text-slate-300 uppercase">{design.comments?.length || 0} Comments</p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                                {projectDesigns.length === 0 && <div className="col-span-full py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No designs uploaded yet.</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'Feedback' && (
+                        <div className="space-y-8">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Client Review Feed</h3>
+                            <div className="space-y-4">
+                                {projectDesigns.flatMap(d => d.comments).length > 0 ? (
+                                    projectDesigns.flatMap(d => (d.comments || []).map((c: any) => (
+                                        <Card key={c.id} className="luxury-glass !p-6 rounded-[24px] border-slate-100">
+                                            <div className="flex gap-4">
+                                                <img src={findUserById(c.authorId)?.avatarUrl} className="w-10 h-10 rounded-full object-cover" alt="" />
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <UserNameDisplay user={findUserById(c.authorId)} textClassName="font-black text-slate-900 text-sm" />
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase">On v{d.version}</span>
+                                                    </div>
+                                                    <p className="text-slate-600 mt-2 text-sm leading-relaxed">{c.text}</p>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    )))
+                                ) : (
+                                    <div className="py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">Awaiting client feedback loop.</div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'Docs' && (
+                        <div className="space-y-8">
+                            <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Technical Repository</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {projectQuotes.map(q => (
+                                    <div key={q.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between group hover:border-brand-gold/30 transition-all">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-gold group-hover:text-white transition-all">
+                                                <FileTextIcon className="w-6 h-6" />
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-slate-900 uppercase tracking-tight text-sm">{q.version} Specification</p>
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Uploaded {new Date(q.createdAt).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                        <a href={q.fileUrl} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 rounded-xl hover:bg-brand-blue hover:text-white transition-all">
+                                            <DownloadIcon className="w-5 h-5" />
+                                        </a>
+                                    </div>
+                                ))}
+                                {projectQuotes.length === 0 && <div className="col-span-full py-20 text-center text-slate-300 font-black uppercase tracking-widest text-xs">No technical documents found.</div>}
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'Materials' && <MaterialSelection projectId={project.id} isClient={user.role === 'Customer'} onUpdate={refetchData} />}
                     
                     {activeTab === 'Execution Log' && (
