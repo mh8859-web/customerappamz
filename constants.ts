@@ -4,60 +4,81 @@ import { ProjectStage } from './types';
 export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts', 'Project Head', 'Production Head', 'Site Head'];
 
 export const PROJECT_STAGES: ProjectStage[] = [
+  'design',
   'design_phase',
-  'awaiting_updated_quote',
   'material_selection',
+  'material_ordering',
+  'production',
+  'site_work',
   'execution',
-  'awaiting_client_completion_approval',
-  'awaiting_admin_completion_approval',
+  'installation',
+  'handover',
   'completed'
 ];
 
 export const STAGE_DISPLAY_NAMES: Record<ProjectStage, string> = {
-    design_phase: 'Design Phase',
-    awaiting_updated_quote: 'Quotation Review',
+    design: 'Design Phase',
+    design_phase: 'Initial Design',
     material_selection: 'Material Selection',
-    execution: 'Execution Phase',
-    awaiting_client_completion_approval: 'Quality Audit',
-    awaiting_admin_completion_approval: 'Admin Handover',
+    material_ordering: 'Material Ordering',
+    production: 'Production Phase',
+    site_work: 'Site Execution',
+    execution: 'In Execution',
+    installation: 'Installation',
+    handover: 'Final Handover',
     completed: 'Project Complete',
 };
 
 export const STAGE_DESCRIPTIONS: Record<ProjectStage, { title: string; note: string; action: string }> = {
-    design_phase: {
+    design: {
         title: "Blueprint & Visualization",
-        note: "Our designers are currently crafting your 2D layouts and high-fidelity 3D renders.",
-        action: "Finalizing architectural flow and aesthetic direction."
+        note: "Crafting architectural layouts and high-fidelity renders.",
+        action: "Finalizing aesthetic direction."
     },
-    awaiting_updated_quote: {
-        title: "Commercial Finalization",
-        note: "We are calculating the exact investment based on your finalized design blueprints.",
-        action: "Bill of Quantities (BOQ) generation and price locking."
+    design_phase: {
+        title: "Design Initialization",
+        note: "Starting the visual journey of your dream space.",
+        action: "Setting project boundaries."
     },
     material_selection: {
-        title: "Tactile Experience",
-        note: "Time to select physical swatches, board finishes, and hardware components.",
-        action: "Approval of laminates, stones, and textures at the studio."
+        title: "Palette & Finishes",
+        note: "Choosing the tactile elements that define your home.",
+        action: "Approving textures and boards."
+    },
+    material_ordering: {
+        title: "Sourcing & Logistics",
+        note: "Procuring raw materials and modular components.",
+        action: "Inventory verification and vendor lock."
+    },
+    production: {
+        title: "Factory Processing",
+        note: "Custom elements are now in production at the modular facility.",
+        action: "Quality checks on raw finishes."
+    },
+    site_work: {
+        title: "On-Site Execution",
+        note: "Civil work and site preparation is active.",
+        action: "Daily supervisor site updates."
     },
     execution: {
-        title: "On-Site Transformation",
-        note: "The heavy lifting begins. Civil work and modular installation are now active on-site.",
-        action: "Daily site updates and supervisor inspections."
+        title: "Active Implementation",
+        note: "Transforming designs into reality on ground.",
+        action: "Monitoring precision on-site."
     },
-    awaiting_client_completion_approval: {
-        title: "Final Walkthrough",
-        note: "The project is reaching its peak. We need you to verify the finishing quality.",
-        action: "Creation of the final punch-list and quality clearance."
+    installation: {
+        title: "Final Assembly",
+        note: "Modular components are being installed on-site.",
+        action: "Snag list generation and fitment check."
     },
-    awaiting_admin_completion_approval: {
-        title: "Regulatory Handover",
-        note: "Internal audit for warranty documentation and final project closure.",
-        action: "Verifying all systems and issuing completion certificates."
+    handover: {
+        title: "Quality Audit",
+        note: "Final cleaning and management handover verification.",
+        action: "Issuing completion certificate."
     },
     completed: {
         title: "Welcome Home",
-        note: "Congratulations! Your vision has been fully realized and the keys are yours.",
-        action: "Move-in ready status and maintenance guide issue."
+        note: "Vision fully realized. Keys handed to client.",
+        action: "Project archived."
     }
 };
 

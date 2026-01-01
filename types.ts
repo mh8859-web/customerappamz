@@ -1,3 +1,4 @@
+
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts' | 'Project Head' | 'Production Head' | 'Site Head';
 
 export interface User {
@@ -11,25 +12,17 @@ export interface User {
   userId: string;
 }
 
-export interface UserSalaryConfig {
-    id: string;
-    userId: string;
-    payType: 'Monthly' | 'Daily';
-    baseAmount: number;
-    updatedAt: string;
-}
-
-export interface SalaryLog {
-    id: string;
-    userId: string;
-    month: string; // "YYYY-MM"
-    baseAmount: number;
-    incentives: number;
-    deductions: number;
-    totalAmount: number;
-    status: 'Pending' | 'Processed';
-    processedAt?: string;
-}
+export type ProjectStage =
+  | 'design'
+  | 'design_phase'
+  | 'material_selection'
+  | 'material_ordering'
+  | 'production'
+  | 'site_work'
+  | 'execution'
+  | 'installation'
+  | 'handover'
+  | 'completed';
 
 export interface Project {
   id: string;
@@ -40,6 +33,7 @@ export interface Project {
   adminId: string;
   address: string;
   budgetDisplay: number;
+  budgetApproved: number; // For spend tracking
   areaSqft: number;
   startDate: string;
   createdAt: string;
@@ -49,25 +43,32 @@ export interface Project {
   status: 'Active' | 'Completed' | 'Archived';
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
+  isDelayed?: boolean; // For red badge tracking
   requestedMilestoneId?: string;
   friendlyReminderMilestoneId?: string;
 }
 
-export type ProjectStage =
-  | 'design_phase'
-  | 'awaiting_updated_quote'
-  | 'material_selection'
-  | 'execution'
-  | 'awaiting_client_completion_approval'
-  | 'awaiting_admin_completion_approval'
-  | 'completed';
-
-export interface Quote {
+export interface SiteUpdate {
   id: string;
   projectId: string;
-  version: string;
-  fileUrl: string;
-  uploadedBy: string;
+  supervisorId: string;
+  notes: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  stage: ProjectStage;
+  createdAt: string;
+}
+
+export interface MaterialRequest {
+  id: string;
+  projectId: string;
+  requesterId: string;
+  materialName: string;
+  quantity: string;
+  vendor: string;
+  deliveryDate: string;
+  status: 'Requested' | 'Approved' | 'Rejected' | 'Delivered';
+  approvedBy?: string;
   createdAt: string;
 }
 
@@ -81,25 +82,31 @@ export interface Milestone {
   paidDateDisplay?: string;
 }
 
-export interface Material {
+export interface Expense {
     id: string;
     projectId: string;
-    category: string;
-    name: string;
-    brand: string;
-    imageUrl: string;
+    description: string;
+    amount: number;
+    date: string;
+    category: 'Material' | 'Labor' | 'Site_Consumable' | 'Travel' | 'Other';
+    receiptUrl?: string;
     status: 'Pending' | 'Approved' | 'Rejected';
-    notes?: string;
 }
 
-export interface Comment {
+export interface UserSalaryConfig {
     id: string;
-    authorId: string;
-    createdAt: string;
-    status: 'Open' | 'Resolved';
-    x: number;
-    y: number;
-    text: string;
+    userId: string;
+    payType: 'Monthly' | 'Daily';
+    baseAmount: number;
+    updatedAt: string;
+}
+
+export interface CurrentWork {
+  id: string;
+  designerId: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: string;
 }
 
 export interface Design {
@@ -113,55 +120,6 @@ export interface Design {
   submittedForReview: boolean;
   approved: boolean;
   comments: Comment[];
-  approvedBy?: string;
-  approvedAt?: string;
-}
-
-export interface ProjectUpdate {
-  id: string;
-  projectId: string;
-  authorId: string;
-  message: string;
-  createdAt: string;
-}
-
-export interface ActivityLog {
-  id: string;
-  projectId: string;
-  actorId: string;
-  action: string;
-  details: string;
-  createdAt: string;
-}
-
-export interface WorkLog {
-  id: string;
-  designerId: string;
-  projectId: string;
-  date: string;
-  tasksCompleted: string;
-  hoursSpent: number;
-}
-
-export interface Product {
-  id: string;
-  projectId: string;
-  name: string;
-  supplier: string;
-  imageUrl: string;
-  cost: number;
-  quantity: number;
-  status: 'Pending' | 'Ordered' | 'Delivered' | 'Approved_For_Payment';
-  auditStatus?: 'Awaiting_Audit' | 'Audited' | 'Rejected';
-}
-
-export interface Task {
-  id: string;
-  projectId: string;
-  assigneeId: string;
-  title: string;
-  dueDate: string;
-  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
 }
 
 export interface AttendanceLog {
@@ -184,6 +142,31 @@ export interface LeaveRequest {
   status: 'Pending' | 'Approved' | 'Rejected';
 }
 
+// --- Added missing interfaces based on errors ---
+
+export interface WorkLog {
+  id: string;
+  designerId: string;
+  projectId: string;
+  date: string;
+  tasksCompleted: string;
+  hoursSpent: number;
+}
+
+export interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  body: string;
+  isSystemMessage?: boolean;
+  createdAt: string;
+  attachments?: {
+    url: string;
+    type: 'image' | 'video' | 'file';
+    name: string;
+  }[];
+}
+
 export interface ProjectTemplate {
   id: string;
   name: string;
@@ -194,101 +177,134 @@ export interface ProjectTemplate {
   }[];
 }
 
-export interface Message {
+export interface Comment {
   id: string;
-  chatId: string;
-  senderId: string;
-  body: string;
-  attachments: {
-    url: string;
-    type: 'image' | 'video' | 'file';
-    name: string;
-  }[] | null;
+  authorId: string;
+  text: string;
+  x: number;
+  y: number;
   createdAt: string;
-  isSystemMessage?: boolean;
+  status: 'Open' | 'Resolved';
+}
+
+export interface Product {
+  id: string;
+  projectId: string;
+  name: string;
+  supplier: string;
+  imageUrl: string;
+  cost: number;
+  quantity: number;
+  status: 'Pending' | 'Ordered' | 'Delivered';
+}
+
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  dueDate: string;
+  status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
+}
+
+export type PostVisibility = 'everyone' | 'team_only' | 'project_members';
+export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
+
+export interface Post {
+  id: string;
+  authorId: string;
+  content: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  beforeMediaUrl?: string;
+  reactions: { userId: string; type: ReactionType }[];
+  isPinned: boolean;
+  projectId?: string;
+  postType: 'standard' | 'showcase' | 'before_after';
+  showcaseDetails?: {
+    style: string;
+    materials: string;
+    palette: string;
+  };
+  tags: string[];
+  visibility: PostVisibility;
+  createdAt: string;
+}
+
+export interface FeedComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface Quote {
+  id: string;
+  projectId: string;
+  version: string;
+  fileUrl: string;
+  uploadedBy: string;
+  createdAt: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  projectId?: string;
+  actorId: string;
+  action: string;
+  createdAt: string;
 }
 
 export interface SiteVisit {
   id: string;
   projectId: string;
   scheduledAt: string;
-  requestedBy: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
+  requestedBy: string;
 }
 
 export interface SupportTicket {
-    id: string;
-    submittedBy: string;
-    projectId: string;
-    subject: string;
-    message: string;
-    status: 'Open' | 'In Progress' | 'Closed';
-    createdAt: string;
+  id: string;
+  submittedBy: string;
+  projectId: string;
+  subject: string;
+  message: string;
+  status: 'Open' | 'Closed';
+  createdAt: string;
 }
 
-export interface Expense {
-    id: string;
-    projectId: string;
-    description: string;
-    amount: number;
-    date: string;
-    category: 'Material' | 'Labor' | 'Site_Consumable' | 'Travel' | 'Other';
-    receiptUrl?: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
+export interface ProjectUpdate {
+  id: string;
+  projectId: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
 }
 
 export interface FinalGalleryImage {
-    id: string;
-    projectId: string;
-    url: string;
-    caption: string;
+  id: string;
+  projectId: string;
+  url: string;
+  caption: string;
 }
 
 export interface Announcement {
-    id: string;
-    authorId: string;
-    content: string;
-    target: 'All' | 'Designers' | 'Customers';
-    createdAt: string;
-}
-
-export type ReactionType = 'love' | 'idea' | 'thought' | 'kudos';
-
-export type PostVisibility = 'everyone' | 'team_only' | 'project_members';
-
-export interface Post {
-    id: string;
-    authorId: string;
-    content: string;
-    mediaUrl?: string;
-    mediaType?: 'image' | 'video';
-    beforeMediaUrl?: string;
-    reactions: { userId: string; type: ReactionType }[];
-    isPinned: boolean;
-    projectId?: string;
-    postType: 'standard' | 'showcase' | 'before_after';
-    showcaseDetails?: {
-        style: string;
-        materials: string;
-        palette: string;
-    };
-    tags: string[];
-    visibility: PostVisibility;
-    createdAt: string;
-}
-
-export interface FeedComment {
-    id: string;
-    postId: string;
-    authorId: string;
-    content: string;
-    createdAt: string;
-}
-
-export interface CurrentWork {
   id: string;
-  designerId: string;
+  authorId: string;
   content: string;
-  imageUrl?: string;
+  target: 'All' | 'Customers' | 'Designers';
+  createdAt: string;
+}
+
+export interface Material {
+  id: string;
+  projectId: string;
+  name: string;
+  category: string;
+  brand: string;
+  imageUrl: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
   createdAt: string;
 }

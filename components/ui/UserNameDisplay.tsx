@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { User, UserRole } from '../../types';
-import { AMAZ_SUPPORT_USER_ID } from '../../constants';
 
 interface UserNameDisplayProps {
   user: User | undefined;
@@ -17,7 +16,8 @@ const badgeUrlMap: Record<UserRole, string> = {
   Designer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   Customer: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760346718/download_thps2y.svg',
   Accounts: 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
-  'Project Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
+  // PROJECT HEAD: Grey Employee Badge as requested
+  'Project Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg', 
   'Production Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
   'Site Head': 'https://res.cloudinary.com/dzvmyhpff/image/upload/v1760454350/designers_kux2yk.svg',
 };
@@ -27,7 +27,7 @@ const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     'Sub-Admin': { title: 'Admin', text: 'Privileged oversight access.' },
     Designer: { title: 'Lead Designer', text: 'Creative project lead.' },
     Customer: { title: 'Client', text: 'Verified project owner.' },
-    Accounts: { title: 'Financial Auditor', text: 'Official accounts & audit department.' },
+    Accounts: { title: 'Financial Auditor', text: 'Official accounts department.' },
     'Project Head': { title: 'PROJECT HEAD', text: 'Portfolio Strategy & Team Lead.' },
     'Production Head': { title: 'Production Head', text: 'Manufacturing & Sourcing lead.' },
     'Site Head': { title: 'Site Head', text: 'Execution & Operations supervisor.' },
@@ -49,6 +49,8 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
 
   if (!user) return <span className="text-slate-400 italic">Unknown Entity</span>;
 
+  // Visual logic for grey badge: If role is Project Head, use a CSS filter to desaturate the icon
+  const isPH = user.role === 'Project Head';
   const badgeUrl = badgeUrlMap[user.role] || badgeUrlMap.Customer;
   const details = roleDetails[user.role] || roleDetails.Customer;
 
@@ -64,7 +66,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
       
       <div className="flex items-center gap-1.5 cursor-pointer group" onClick={() => setPopoverOpen(!isPopoverOpen)}>
         <span className={`${textClassName} group-hover:text-brand-blue transition-colors`}>{user.fullName}</span>
-        <img src={badgeUrl} alt="Verified" className="w-3.5 h-3.5" />
+        <img src={badgeUrl} alt="Verified" className={`w-3.5 h-3.5 ${isPH ? 'grayscale opacity-70' : ''}`} />
       </div>
 
       {isPopoverOpen && (
@@ -77,7 +79,7 @@ const UserNameDisplay: React.FC<UserNameDisplayProps> = ({ user, className = '',
                 />
                 <div>
                     <p className="text-sm font-bold text-slate-900">{user.fullName}</p>
-                    <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest">{user.role}</p>
+                    <p className={`text-[10px] font-black uppercase tracking-widest ${isPH ? 'text-slate-500' : 'text-brand-blue'}`}>{user.role}</p>
                 </div>
             </div>
             <div className="space-y-2">
