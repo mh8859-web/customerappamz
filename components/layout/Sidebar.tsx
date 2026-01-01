@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -44,6 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Overview' },
           { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Messages' },
+          { to: '/admin/track-pay', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Track Pay' },
           { to: '/project-wall', icon: <PhotoIcon className="w-5 h-5" />, label: 'Project Wall' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
           { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'User Management' },
@@ -139,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
-                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard'} 
+                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard' || item.to === '/admin/track-pay'} 
                 key={item.to} 
                 to={item.to} 
                 className={getNavLinkClass} 

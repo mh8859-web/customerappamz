@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { updateRecord, createRecord } from '../../services/api';
 import Button from '../ui/Button';
+import PaymentBlocker from '../customer/PaymentBlocker';
 
 const PaymentAlertBanner = () => {
     const { user } = useAuth();
@@ -143,6 +144,9 @@ const DashboardLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-page-bg text-text-primary overflow-hidden">
+      {/* Global Security Blocker */}
+      <PaymentBlocker />
+      
       <Sidebar 
           sidebarOpen={sidebarOpen} 
           setSidebarOpen={setSidebarOpen} 
