@@ -5,7 +5,7 @@ import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
-import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon } from '../../components/icons';
+import { DollarSignIcon, CheckCircleIcon, ZapIcon, AlertTriangleIcon, CreditCardIcon, UserIcon, MapPinIcon, MegaphoneIcon, XMarkIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
 import AddMilestoneModal from '../../components/admin/AddMilestoneModal';
 
@@ -21,49 +21,49 @@ const ProjectPayDetails: React.FC = () => {
     const pMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId), [milestones, projectId]);
     const customer = useMemo(() => project ? findUserById(project.customerId) : null, [project, findUserById]);
 
-    const handleToggleLock = async () => {
+    const handleRequestMilestone = async (milestoneId: string, title: string) => {
         if (!project || isSyncing) return;
-        
-        // Use mapped state correctly
-        const currentLockState = !!project.isPaymentAlertActive;
-        const nextState = !currentLockState;
-        
-        console.log(`[SENTINEL] Project: ${project.title} | ID: ${project.id}`);
-        console.log(`[SENTINEL] Toggling Lock: ${currentLockState} -> ${nextState}`);
         
         setIsSyncing(true);
         try {
-            // Update the database using snake_case field name
+            // Set the alert flag and point to the specific milestone
             const { error } = await updateRecord('projects', project.id, { 
-                is_payment_alert_active: nextState,
+                is_payment_alert_active: true,
+                requested_milestone_id: milestoneId,
                 updated_at: new Date().toISOString()
             });
             
-            if (error) {
-                console.error("[DB ERROR]", error);
-                alert(`Sync Error: ${error.message}. If column is missing, run SQL provided in Admin Settings.`);
-                return;
-            }
+            if (error) throw error;
             
-            // Log the action in the project chat for transparency
             await createRecord('messages', {
                 chat_id: project.id,
-                body: nextState 
-                    ? "BLOCKER ACTIVATED: Project dashboard access restricted pending payment release. Secure settlement required."
-                    : "BLOCKER DEACTIVATED: Full access restored by Administration.",
+                body: `SETTLEMENT REQUIRED: Access restricted. Action requested for milestone "${title}".`,
                 sender_id: '786786',
                 is_system_message: true
             });
             
-            // Refresh global data context to update all UI components
             await refetchData();
-        } catch (err) {
+        } catch (err: any) {
             console.error("Critical Failure:", err);
-            alert("A system error occurred while toggling the lock.");
+            alert(`Sync Error: ${err.message}. If requested_milestone_id column is missing, run SQL provided in Settings.`);
         } finally {
             setIsSyncing(false);
         }
     };
+
+    const handleClearLock = async () => {
+        if (!project || isSyncing) return;
+        setIsSyncing(true);
+        try {
+            await updateRecord('projects', project.id, { 
+                is_payment_alert_active: false,
+                requested_milestone_id: null 
+            });
+            await refetchData();
+        } finally {
+            setIsSyncing(false);
+        }
+    }
 
     const handleMarkAsPaid = async (milestoneId: string) => {
         if (isSyncing) return;
@@ -76,9 +76,12 @@ const ProjectPayDetails: React.FC = () => {
                 paid_date_display: new Date().toISOString()
             });
             
-            // Automatically clear the lockout if it was active
-            if (project?.isPaymentAlertActive) {
-                await updateRecord('projects', project.id, { is_payment_alert_active: false });
+            // Automatically clear the lockout if this was the requested milestone
+            if (project?.requestedMilestoneId === milestoneId) {
+                await updateRecord('projects', project.id, { 
+                    is_payment_alert_active: false,
+                    requested_milestone_id: null 
+                });
             }
             
             await refetchData();
@@ -135,16 +138,18 @@ const ProjectPayDetails: React.FC = () => {
                     <div className="text-right">
                         <p className={`text-[10px] font-black uppercase tracking-[4px] ${project.isPaymentAlertActive ? 'text-white/60' : 'text-slate-400'}`}>BLOCKER SENTINEL</p>
                         <p className={`text-sm font-extrabold uppercase tracking-widest mt-1.5 ${project.isPaymentAlertActive ? 'text-white' : 'text-slate-900'}`}>
-                            {project.isPaymentAlertActive ? 'LOCK ACTIVE' : 'REGISTRY OPEN'}
+                            {project.isPaymentAlertActive ? 'VAULT RESTRICTED' : 'REGISTRY OPEN'}
                         </p>
                     </div>
-                    <Button 
-                        onClick={handleToggleLock}
-                        disabled={isSyncing}
-                        className={`!rounded-full !px-12 !py-5 !text-[11px] font-extrabold uppercase tracking-[3px] shadow-xl transition-all hover:scale-[1.03] active:scale-95 font-display ${project.isPaymentAlertActive ? '!bg-white !text-red-600' : '!bg-brand-gold !text-slate-900 shadow-gold-glow'}`}
-                    >
-                        {isSyncing ? 'SYNCING...' : project.isPaymentAlertActive ? 'CLOSE REQUEST' : 'REQUEST PAYMENT'}
-                    </Button>
+                    {project.isPaymentAlertActive && (
+                        <Button 
+                            onClick={handleClearLock}
+                            disabled={isSyncing}
+                            className="!rounded-full !px-8 !py-4 !text-[10px] font-black uppercase tracking-[2px] !bg-white !text-red-600 shadow-xl"
+                        >
+                            CLOSE LOCK
+                        </Button>
+                    )}
                 </div>
             </header>
 
@@ -168,38 +173,53 @@ const ProjectPayDetails: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 bg-white">
-                                    {pMilestones.map(m => (
-                                        <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-12 py-8 font-extrabold text-slate-900 uppercase tracking-wide text-sm font-display">{m.title}</td>
-                                            <td className="px-12 py-8 font-display font-extrabold text-slate-900 text-lg">₹{m.amountDisplay.toLocaleString()}</td>
-                                            <td className="px-12 py-8 text-center">
-                                                <span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[2px] border ${
-                                                    m.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' :
-                                                    m.statusDisplay === 'Verifying' ? 'bg-brand-gold/10 text-brand-gold border-brand-gold/20' :
-                                                    m.statusDisplay === 'Completed' ? 'bg-brand-blue/5 text-brand-blue border-brand-blue/20' :
-                                                    'bg-slate-50 text-slate-400 border-slate-200'
-                                                }`}>
-                                                    {m.statusDisplay}
-                                                </span>
-                                            </td>
-                                            <td className="px-12 py-8 text-right">
-                                                {m.statusDisplay !== 'Paid' && (
-                                                    <Button 
-                                                        onClick={() => handleMarkAsPaid(m.id)}
-                                                        disabled={isSyncing}
-                                                        className="!rounded-full !px-8 !py-2.5 !text-[10px] font-extrabold uppercase tracking-[2px] ml-auto font-display !bg-slate-900 !text-white"
-                                                    >
-                                                        Mark Paid
-                                                    </Button>
-                                                )}
-                                                {m.statusDisplay === 'Paid' && (
-                                                    <div className="flex items-center justify-end gap-2 text-accent-success font-black uppercase tracking-widest text-[10px]">
-                                                        <CheckCircleIcon className="w-5 h-5" /> VERIFIED
+                                    {pMilestones.map(m => {
+                                        const isRequested = project.requestedMilestoneId === m.id;
+                                        return (
+                                            <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-12 py-8 font-extrabold text-slate-900 uppercase tracking-wide text-sm font-display">{m.title}</td>
+                                                <td className="px-12 py-8 font-display font-extrabold text-slate-900 text-lg">₹{m.amountDisplay.toLocaleString()}</td>
+                                                <td className="px-12 py-8 text-center">
+                                                    <span className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-[2px] border ${
+                                                        m.statusDisplay === 'Paid' ? 'bg-accent-success/5 text-accent-success border-accent-success/20' :
+                                                        m.statusDisplay === 'Verifying' ? 'bg-brand-gold/10 text-brand-gold border-brand-gold/20' :
+                                                        m.statusDisplay === 'Completed' ? 'bg-brand-blue/5 text-brand-blue border-brand-blue/20' :
+                                                        'bg-slate-50 text-slate-400 border-slate-200'
+                                                    }`}>
+                                                        {m.statusDisplay}
+                                                    </span>
+                                                </td>
+                                                <td className="px-12 py-8 text-right">
+                                                    <div className="flex justify-end gap-3 items-center">
+                                                        {m.statusDisplay !== 'Paid' && (
+                                                            <>
+                                                                <button 
+                                                                    onClick={() => handleRequestMilestone(m.id, m.title)}
+                                                                    disabled={isSyncing || isRequested}
+                                                                    className={`p-3 rounded-xl transition-all ${isRequested ? 'bg-red-500 text-white animate-pulse' : 'bg-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                                                                    title="Trigger Blocker for this Milestone"
+                                                                >
+                                                                    <MegaphoneIcon className="w-5 h-5" />
+                                                                </button>
+                                                                <Button 
+                                                                    onClick={() => handleMarkAsPaid(m.id)}
+                                                                    disabled={isSyncing}
+                                                                    className="!rounded-full !px-8 !py-2.5 !text-[10px] font-extrabold uppercase tracking-[2px] font-display !bg-slate-900 !text-white"
+                                                                >
+                                                                    Mark Paid
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {m.statusDisplay === 'Paid' && (
+                                                            <div className="flex items-center justify-end gap-2 text-accent-success font-black uppercase tracking-widest text-[10px]">
+                                                                <CheckCircleIcon className="w-5 h-5" /> VERIFIED
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                     {pMilestones.length === 0 && (
                                         <tr>
                                             <td colSpan={4} className="p-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">No milestones defined for this ledger.</td>

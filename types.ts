@@ -49,6 +49,7 @@ export interface Project {
   status: 'Active' | 'Completed' | 'Archived';
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
+  requestedMilestoneId?: string;
 }
 
 export type ProjectStage =
