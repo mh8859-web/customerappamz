@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon } from '../components/icons';
+import { BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon } from '../components/icons';
 import { UserRole, Milestone } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import MaterialSelection from '../components/project/MaterialSelection';
@@ -14,7 +14,7 @@ import UserNameDisplay from '../components/ui/UserNameDisplay';
 import { useData } from '../context/DataContext';
 import UploadQuoteModal from '../components/admin/UploadQuoteModal';
 import Modal from '../components/ui/Modal';
-import { createRecord, uploadProjectFile, deleteProject, deleteRecord } from '../services/api';
+import { createRecord, uploadProjectFile, deleteProject, deleteRecord, updateRecord } from '../services/api';
 
 const TABS: Record<UserRole, string[]> = {
     Customer: ['Live Updates', 'Designs', 'Timeline', 'Materials', 'Quotes & Docs', 'Milestones'],
@@ -37,38 +37,81 @@ const ProjectDetails: React.FC = () => {
     const [activeTab, setActiveTab] = useState('Live Updates');
     const [isUploadQuoteModalOpen, setUploadQuoteModalOpen] = useState(false);
     const [isCommitmentModalOpen, setCommitmentModalOpen] = useState(false);
+    const [isStartingProject, setIsStartingProject] = useState(false);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
-    const projectMilestones = useMemo(() => milestones.filter(m => m.projectId === projectId).sort((a,b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()), [milestones, projectId]);
     
+    // Check if project needs activation (Designer role, project status not fully Active/Started)
+    const needsActivation = useMemo(() => {
+        if (!project || !user) return false;
+        // If designer is assigned but project has no real startDate or is in a 'Draft'/'Pending' state
+        return user.role === 'Designer' && project.designerId === user.id && (!project.startDate || project.status === 'Archived');
+    }, [project, user]);
+
     const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
 
     const calculateTimeRemaining = useCallback(() => {
-        if (!project || project.status === 'Completed') return;
+        if (!project || !project.startDate) return;
         
-        const projectStart = new Date(project.startDate);
-        projectStart.setHours(0, 0, 0, 0); 
-
+        // Accurate Start Time from Database
+        const startTime = new Date(project.startDate).getTime();
         const commitmentMs = 45 * 24 * 60 * 60 * 1000;
-        const deadlineTime = projectStart.getTime() + commitmentMs;
+        const deadlineTime = startTime + commitmentMs;
         const now = new Date().getTime();
         
-        let distance = deadlineTime - now;
-        const finalDistance = Math.min(commitmentMs, Math.max(0, distance));
+        const distance = deadlineTime - now;
+        
+        // If time is up or project is completed, stop at zero
+        if (distance <= 0 || project.status === 'Completed') {
+            setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+            return;
+        }
         
         setTimeLeft({
-            d: Math.floor(finalDistance / (1000 * 60 * 60 * 24)),
-            h: Math.floor((finalDistance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-            m: Math.floor((finalDistance % (1000 * 60 * 60)) / (1000 * 60)),
-            s: Math.floor((finalDistance % (1000 * 60)) / 1000)
+            d: Math.floor(distance / (1000 * 60 * 60 * 24)),
+            h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            m: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+            s: Math.floor((distance % (1000 * 60)) / 1000)
         });
     }, [project]);
 
     useEffect(() => {
-        calculateTimeRemaining();
-        const timer = setInterval(calculateTimeRemaining, 1000);
-        return () => clearInterval(timer);
-    }, [calculateTimeRemaining]);
+        if (project?.startDate) {
+            calculateTimeRemaining();
+            const timer = setInterval(calculateTimeRemaining, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [project?.startDate, calculateTimeRemaining]);
+
+    const handleStartProject = async () => {
+        if (!project || isStartingProject) return;
+        setIsStartingProject(true);
+        
+        try {
+            const now = new Date().toISOString();
+            // Update project to be officially Active and set the start date to NOW
+            await updateRecord('projects', project.id, {
+                status: 'Active',
+                start_date: now,
+                stage: 'design_phase',
+                progress: 0
+            });
+
+            // Notify Client via System Message
+            await createRecord('messages', {
+                chat_id: project.id,
+                body: "OFFICIAL COMMENCEMENT: Your 45-day precision timeline has started now. We are fully committed to provide you a great experience. This is your life's best moment so we make every process amazing so we are on time.",
+                sender_id: '786786', // System Admin ID
+                is_system_message: true
+            });
+
+            await refetchData();
+        } catch (err) {
+            alert("Error starting project. Please check connection.");
+        } finally {
+            setIsStartingProject(false);
+        }
+    };
 
     const handleDeleteProject = async () => {
         if (!project || user?.role !== 'Admin') return;
@@ -90,6 +133,38 @@ const ProjectDetails: React.FC = () => {
 
     return (
         <>
+            {/* MANDATORY START POPUP FOR DESIGNERS */}
+            {needsActivation && (
+                <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6">
+                    <div className="max-w-xl w-full text-center space-y-10 animate-in">
+                        <img 
+                            src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
+                            alt="AMAZ" 
+                            className="h-12 mx-auto" 
+                        />
+                        <div className="space-y-4">
+                            <h2 className="text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">
+                                ARE YOU READY TO <span className="text-brand-gold">START</span> PROJECT?
+                            </h2>
+                            <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">Architectural Commitment Interface</p>
+                        </div>
+                        <div className="bg-white/5 p-8 rounded-[40px] border border-white/10">
+                            <p className="text-slate-300 text-sm font-medium leading-relaxed italic">
+                                "Once selected, the 45-day countdown begins immediately. Accurate time tracking will be visible to the client. Ensure all initial site inspections are completed."
+                            </p>
+                        </div>
+                        <Button 
+                            onClick={handleStartProject}
+                            disabled={isStartingProject}
+                            className="!w-full !py-6 !rounded-full !bg-brand-gold !text-slate-900 !text-lg !font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-[1.02] active:scale-95 transition-all"
+                        >
+                            {isStartingProject ? 'INITIALIZING PRECISION TIMER...' : 'YES, START PROJECT NOW'}
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* TOUCH TIMER COMMITMENT MODAL */}
             <Modal 
                 isOpen={isCommitmentModalOpen} 
                 onClose={() => setCommitmentModalOpen(false)} 
