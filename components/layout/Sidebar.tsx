@@ -47,6 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/project-wall', icon: <PhotoIcon className="w-5 h-5" />, label: 'Project Wall' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
           { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'User Management' },
+          { to: '/admin/salary-allocation', icon: <DollarSignIcon className="w-5 h-5" />, label: 'Salary Allocation' },
           { to: '/admin/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
           { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financial Reports' },
           { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Downloads' },
@@ -138,7 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
-                end={item.to === '/accounts/dashboard'} 
+                end={item.to === '/accounts/dashboard' || item.to === '/admin/dashboard'} 
                 key={item.to} 
                 to={item.to} 
                 className={getNavLinkClass} 

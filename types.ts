@@ -12,6 +12,14 @@ export interface User {
   userId: string;
 }
 
+export interface UserSalaryConfig {
+    id: string;
+    userId: string;
+    payType: 'Monthly' | 'Daily';
+    baseAmount: number;
+    updatedAt: string;
+}
+
 export interface SalaryLog {
     id: string;
     userId: string;

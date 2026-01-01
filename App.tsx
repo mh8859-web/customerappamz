@@ -14,6 +14,7 @@ import SiteHeadDashboard from "./pages/dashboards/SiteHeadDashboard";
 import ProjectDetails from "./pages/ProjectDetails";
 import ProjectsList from "./pages/ProjectsList";
 import UserManagement from "./pages/admin/UserManagement";
+import SalaryAllocation from "./pages/admin/SalaryAllocation";
 import AttendanceLogs from "./pages/admin/AttendanceLogs";
 import LeaveManagement from "./pages/designer/LeaveManagement";
 import SupportPage from "./pages/shared/SupportPage";
@@ -127,6 +128,7 @@ const App: React.FC = () => {
             <Route path="admin/attendance" element={<AttendanceLogs />} />
             <Route path="admin/reports" element={<FinancialReports />} />
             <Route path="admin/users" element={<UserManagement />} />
+            <Route path="admin/salary-allocation" element={<SalaryAllocation />} />
             <Route path="admin/work-tracking" element={<WorkTracking />} />
             <Route element={<RoleBasedRoutes allowedRoles={["Admin"]} />}>
               <Route path="admin/settings" element={<AdminSettings />} />

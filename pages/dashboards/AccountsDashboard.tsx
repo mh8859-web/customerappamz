@@ -6,9 +6,10 @@ import Button from '../../components/ui/Button';
 import { useData } from '../../context/DataContext';
 import { useUsers } from '../../context/UserContext';
 import { updateRecord, createRecord } from '../../services/api';
+import { supabase } from '../../services/supabaseClient';
 import { DollarSignIcon, CreditCardIcon, PieChartIcon, ClockIcon, ZapIcon, CheckCircleIcon, AlertTriangleIcon, TrendingUpIcon, FileTextIcon, UserGroupIcon, PackageIcon, XMarkIcon, MegaphoneIcon, ChevronDownIcon } from '../../components/icons';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
-import { Project, Milestone, Expense, Product, AttendanceLog, User } from '../../types';
+import { Project, Milestone, Expense, Product, AttendanceLog, User, UserSalaryConfig } from '../../types';
 
 const FinancialStat: React.FC<{ title: string; value: string; subValue?: string; icon: React.ReactNode; color: string }> = ({ title, value, subValue, icon, color }) => (
     <Card className="!p-8 luxury-glass border-slate-100 flex items-start gap-6 shadow-premium group hover:border-brand-gold/20 transition-all">
@@ -29,6 +30,23 @@ const AccountsDashboard: React.FC = () => {
     const { users, findUserById, loading: usersLoading } = useUsers();
     const [activeSection, setActiveSection] = useState<'sentinel' | 'audit' | 'payroll' | 'gp'>('sentinel');
     const [pushingAlertId, setPushingAlertId] = useState<string | null>(null);
+    const [salaryConfigs, setSalaryConfigs] = useState<UserSalaryConfig[]>([]);
+
+    useEffect(() => {
+        const fetchConfigs = async () => {
+            const { data } = await supabase.from('user_salary_configs').select('*');
+            if (data) {
+                setSalaryConfigs(data.map(c => ({
+                    id: c.id,
+                    userId: c.user_id,
+                    payType: c.pay_type,
+                    baseAmount: c.base_amount,
+                    updatedAt: c.updated_at
+                })));
+            }
+        };
+        fetchConfigs();
+    }, [loading]);
 
     // Sync active tab with URL query parameter
     useEffect(() => {
@@ -60,14 +78,21 @@ const AccountsDashboard: React.FC = () => {
         return { totalAR, totalPaid, totalExpenses, pendingPayables, avgMargin };
     }, [milestones, expenses, projects]);
 
-    const designersPayroll = useMemo(() => {
-        const designers = users.filter(u => u.role === 'Designer');
-        return designers.map(d => {
-            const logs = attendanceLogs.filter(l => l.designerId === d.id);
+    const staffPayroll = useMemo(() => {
+        const staff = users.filter(u => u.role !== 'Customer');
+        return staff.map(s => {
+            const config = salaryConfigs.find(c => c.userId === s.id);
+            const logs = attendanceLogs.filter(l => l.designerId === s.id);
             const daysWorked = new Set(logs.map(l => new Date(l.clockIn).toDateString())).size;
-            return { ...d, daysWorked };
+            
+            let payout = 0;
+            if (config) {
+                payout = config.payType === 'Daily' ? daysWorked * config.baseAmount : config.baseAmount;
+            }
+
+            return { ...s, daysWorked, payout, config };
         });
-    }, [users, attendanceLogs]);
+    }, [users, attendanceLogs, salaryConfigs]);
 
     const handlePushPaymentAlert = async (projectId: string, milestoneTitle: string) => {
         if (!window.confirm(`Trigger high-priority payment alert for this project? This will display a persistent warning on the client's app.`)) return;
@@ -105,10 +130,9 @@ const AccountsDashboard: React.FC = () => {
         await refetchData();
     };
 
-    const handleProcessSalary = (designer: User, days: number) => {
-        const amount = days * 1000; // Standard base calculation
-        if (window.confirm(`Process salary payout of ₹${amount.toLocaleString()} for ${designer.fullName}? (${days} working days log identified)`)) {
-            alert(`Salary disbursed for ${designer.fullName}. Digital receipt generated.`);
+    const handleProcessSalary = (member: User, amount: number) => {
+        if (window.confirm(`Process salary payout of ₹${amount.toLocaleString()} for ${member.fullName}? Digital ledger will be updated.`)) {
+            alert(`Salary disbursed for ${member.fullName}. Receipt generated.`);
         }
     };
 
@@ -144,7 +168,7 @@ const AccountsDashboard: React.FC = () => {
                 <FinancialStat title="Avg. Project GP" value={`${finStats.avgMargin.toFixed(1)}%`} subValue="Margin Efficiency" icon={<PieChartIcon className="w-7 h-7" />} color="#2563EB" />
             </div>
 
-            {/* Sub-Navigation Tabs (Visible on dashboard) */}
+            {/* Sub-Navigation Tabs */}
             <div className="flex bg-slate-100/50 p-1.5 rounded-[24px] w-fit gap-2 overflow-x-auto max-w-full no-scrollbar">
                 <button onClick={() => setActiveSection('sentinel')} className={`px-8 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'sentinel' ? 'bg-white text-brand-blue shadow-card' : 'text-slate-400 hover:text-slate-600'}`}>10/40/45 Sentinel</button>
                 <button onClick={() => setActiveSection('audit')} className={`px-8 py-3 rounded-[18px] text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeSection === 'audit' ? 'bg-white text-brand-blue shadow-card' : 'text-slate-400 hover:text-slate-600'}`}>Vendor Audit <span className="ml-2 bg-brand-gold text-slate-900 px-1.5 py-0.5 rounded-full text-[9px]">{auditQueue.length}</span></button>
@@ -232,30 +256,33 @@ const AccountsDashboard: React.FC = () => {
                                     <tr>
                                         <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[3px]">Member Identity</th>
                                         <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[3px] text-center">Verified Attendance</th>
-                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[3px] text-center">Base Remuneration</th>
+                                        <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[3px] text-center">Calculated Payout</th>
                                         <th className="px-8 py-4 text-[10px] font-black uppercase tracking-[3px] text-right">Payout Management</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {designersPayroll.map(d => (
-                                        <tr key={d.id} className="hover:bg-slate-50/50 transition-colors">
+                                    {staffPayroll.map(s => (
+                                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-8 py-6">
-                                                <UserNameDisplay user={d} showAvatar={true} textClassName="font-black text-slate-900 uppercase tracking-wide" imageSize="w-10 h-10" />
+                                                <UserNameDisplay user={s} showAvatar={true} textClassName="font-black text-slate-900 uppercase tracking-wide" imageSize="w-10 h-10" />
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-12">
+                                                    {s.config ? `${s.config.payType}: ₹${s.config.baseAmount}` : 'Unconfigured'}
+                                                </span>
                                             </td>
                                             <td className="px-8 py-6 text-center">
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-xl font-display font-black text-brand-blue tabular-nums">{d.daysWorked}</span>
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Days Logged</span>
+                                                    <span className="text-xl font-display font-black text-brand-blue tabular-nums">{s.daysWorked}</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Verified Days</span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-center">
                                                 <div className="flex flex-col items-center">
-                                                    <span className="text-sm font-display font-black text-slate-900 tabular-nums">₹{(d.daysWorked * 1000).toLocaleString()}</span>
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Auto Calculated</span>
+                                                    <span className="text-sm font-display font-black text-slate-900 tabular-nums">₹{s.payout.toLocaleString()}</span>
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Net Disburse</span>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <Button onClick={() => handleProcessSalary(d, d.daysWorked)} className="!rounded-full !px-8 !py-3 !bg-slate-900 !text-[10px] font-black uppercase tracking-widest shadow-button hover:scale-105 transition-transform">Disburse Payout</Button>
+                                                <Button onClick={() => handleProcessSalary(s, s.payout)} className="!rounded-full !px-8 !py-3 !bg-slate-900 !text-[10px] font-black uppercase tracking-widest shadow-button hover:scale-105 transition-transform">Disburse Payout</Button>
                                             </td>
                                         </tr>
                                     ))}
