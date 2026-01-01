@@ -1,40 +1,92 @@
-
 import React, { useState, ReactNode, useMemo } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import { HomeIcon, BriefcaseIcon, MessageSquareIcon, UserCircleIcon, AlertTriangleIcon } from '../icons';
+import { HomeIcon, BriefcaseIcon, MessageSquareIcon, UserCircleIcon, AlertTriangleIcon, ClockIcon, CheckCircleIcon } from '../icons';
 import { NavLink, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { updateRecord, createRecord } from '../../services/api';
+// --- FIX: Added missing Button import ---
+import Button from '../ui/Button';
 
 const PaymentAlertBanner = () => {
     const { user } = useAuth();
-    const { projects, milestones } = useData();
+    const { projects, milestones, refetchData } = useData();
+    const [isVerifying, setIsVerifying] = useState(false);
 
     const activeProject = useMemo(() => {
         if (!user || user.role !== 'Customer') return null;
         return projects.find(p => p.customerId === user.id && p.status === 'Active');
     }, [user, projects]);
 
-    const overdueMilestone = useMemo(() => {
+    const activeMilestone = useMemo(() => {
         if (!activeProject) return null;
-        // Find if any milestone marked "Completed" (Invoiced) is not yet "Paid"
-        return milestones.find(m => m.projectId === activeProject.id && m.statusDisplay === 'Completed');
+        return milestones.find(m => m.projectId === activeProject.id && (m.statusDisplay === 'Completed' || m.statusDisplay === 'Verifying'));
     }, [activeProject, milestones]);
 
-    const showAlert = activeProject?.isPaymentAlertActive || !!overdueMilestone;
+    const handleMarkAsPaid = async () => {
+        if (!activeMilestone || isVerifying) return;
+        setIsVerifying(true);
+        try {
+            await updateRecord('milestones', activeMilestone.id, { status_display: 'Verifying' });
+            await createRecord('messages', {
+                chat_id: activeProject!.id,
+                body: `PAYMENT NOTIFICATION: Client has marked milestone "${activeMilestone.title}" as settled. Awaiting verification from Accounts.`,
+                sender_id: user!.id,
+                is_system_message: true
+            });
+            await refetchData();
+        } finally {
+            setIsVerifying(false);
+        }
+    };
 
-    if (!showAlert) return null;
+    if (!activeMilestone) return null;
+
+    const isAwaitingVerification = activeMilestone.statusDisplay === 'Verifying';
 
     return (
-        <div className="bg-red-600 text-white py-3 px-6 flex items-center justify-between animate-pulse-slow relative z-[60] shadow-lg">
-            <div className="flex items-center gap-3">
-                <AlertTriangleIcon className="w-5 h-5" />
-                <span className="text-[11px] font-black uppercase tracking-[3px]">Mandatory Settlement Required: Project Phase On Hold</span>
+        <div className={`${isAwaitingVerification ? 'bg-slate-900' : 'bg-red-600'} text-white py-4 px-6 md:px-10 flex flex-col md:flex-row items-center justify-between gap-4 animate-in relative z-[60] shadow-premium border-b border-white/10`}>
+            <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isAwaitingVerification ? 'bg-brand-gold text-slate-900' : 'bg-white text-red-600 shadow-lg'}`}>
+                    {isAwaitingVerification ? <ClockIcon className="w-6 h-6 animate-spin-slow" /> : <AlertTriangleIcon className="w-6 h-6" />}
+                </div>
+                <div>
+                    <h3 className="text-sm font-black uppercase tracking-[3px]">
+                        {isAwaitingVerification ? 'Awaiting Verification' : 'Immediate Action Required'}
+                    </h3>
+                    <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mt-1">
+                        {isAwaitingVerification 
+                            ? 'Project Team is confirming your settlement. Full access restored shortly.' 
+                            : `Mandatory Settlement: ${activeMilestone.title}`}
+                    </p>
+                </div>
             </div>
-            <Link to="/customer/dashboard" className="bg-white text-red-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors">
-                View Invoice
-            </Link>
+            
+            <div className="flex items-center gap-3">
+                {isAwaitingVerification ? (
+                   <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10">
+                        <CheckCircleIcon className="w-4 h-4 text-brand-gold" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-brand-gold">Notification Sent</span>
+                   </div>
+                ) : (
+                    <>
+                        <Button 
+                            onClick={handleMarkAsPaid} 
+                            disabled={isVerifying}
+                            variant="secondary" 
+                            className="!bg-white/10 !text-white !border-white/20 !rounded-full !px-6 !py-2 !text-[10px] !font-black uppercase tracking-widest hover:!bg-white/20"
+                        >
+                            I Paid
+                        </Button>
+                        <Link to="/customer/dashboard">
+                            <Button className="!bg-white !text-red-600 hover:!bg-slate-50 !rounded-full !px-8 !py-2.5 !text-[10px] !font-black uppercase tracking-widest shadow-lg">
+                                Pay Now
+                            </Button>
+                        </Link>
+                    </>
+                )}
+            </div>
         </div>
     );
 };

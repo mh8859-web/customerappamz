@@ -1,4 +1,3 @@
-
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts' | 'Project Head' | 'Production Head' | 'Site Head';
 
 export interface User {
@@ -76,7 +75,7 @@ export interface Milestone {
   title: string;
   amountDisplay: number;
   dueDate: string;
-  statusDisplay: 'Pending' | 'Completed' | 'Paid';
+  statusDisplay: 'Pending' | 'Completed' | 'Verifying' | 'Paid';
   paidDateDisplay?: string;
 }
 
@@ -171,7 +170,7 @@ export interface AttendanceLog {
   duration: string;
   location: string;
   ipAddress: string;
-  workSummary: string;
+  work_summary: string;
 }
 
 export interface LeaveRequest {

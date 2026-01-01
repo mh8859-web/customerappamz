@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Card from '../components/ui/Card';
 import { STAGE_DISPLAY_NAMES } from '../constants';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
-import { BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon } from '../components/icons';
+import { BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon, LockIcon } from '../components/icons';
 import { UserRole, Milestone } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
 import MaterialSelection from '../components/project/MaterialSelection';
@@ -40,11 +39,14 @@ const ProjectDetails: React.FC = () => {
     const [isStartingProject, setIsStartingProject] = useState(false);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
-    
-    // Check if project needs activation (Designer role, project status not fully Active/Started)
+
+    const isLocked = useMemo(() => {
+        if (!project || !user || user.role !== 'Customer') return false;
+        return milestones.some(m => m.projectId === project.id && (m.statusDisplay === 'Completed' || m.statusDisplay === 'Verifying'));
+    }, [project, user, milestones]);
+
     const needsActivation = useMemo(() => {
         if (!project || !user) return false;
-        // If designer is assigned but project has no real startDate or is in a 'Draft'/'Pending' state
         return user.role === 'Designer' && project.designerId === user.id && (!project.startDate || project.status === 'Archived');
     }, [project, user]);
 
@@ -52,21 +54,15 @@ const ProjectDetails: React.FC = () => {
 
     const calculateTimeRemaining = useCallback(() => {
         if (!project || !project.startDate) return;
-        
-        // Accurate Start Time from Database
         const startTime = new Date(project.startDate).getTime();
         const commitmentMs = 45 * 24 * 60 * 60 * 1000;
         const deadlineTime = startTime + commitmentMs;
         const now = new Date().getTime();
-        
         const distance = deadlineTime - now;
-        
-        // If time is up or project is completed, stop at zero
         if (distance <= 0 || project.status === 'Completed') {
             setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
             return;
         }
-        
         setTimeLeft({
             d: Math.floor(distance / (1000 * 60 * 60 * 24)),
             h: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -86,25 +82,20 @@ const ProjectDetails: React.FC = () => {
     const handleStartProject = async () => {
         if (!project || isStartingProject) return;
         setIsStartingProject(true);
-        
         try {
             const now = new Date().toISOString();
-            // Update project to be officially Active and set the start date to NOW
             await updateRecord('projects', project.id, {
                 status: 'Active',
                 start_date: now,
                 stage: 'design_phase',
                 progress: 0
             });
-
-            // Notify Client via System Message
             await createRecord('messages', {
                 chat_id: project.id,
                 body: "OFFICIAL COMMENCEMENT: Your 45-day precision timeline has started now. We are fully committed to provide you a great experience. This is your life's best moment so we make every process amazing so we are on time.",
-                sender_id: '786786', // System Admin ID
+                sender_id: '786786',
                 is_system_message: true
             });
-
             await refetchData();
         } catch (err) {
             alert("Error starting project. Please check connection.");
@@ -128,20 +119,41 @@ const ProjectDetails: React.FC = () => {
     if (usersLoading || dataLoading) return <div className="p-10 text-center animate-pulse text-slate-400 font-bold uppercase tracking-widest text-xs">Syncing Portfolio...</div>;
     if (!project || !user) return <div className="text-center p-20">Broken Link.</div>;
 
+    if (isLocked) {
+        return (
+            <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 text-center">
+                <div className="max-w-xl w-full space-y-12 animate-in">
+                    <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" className="h-10 mx-auto" alt="AMAZ" />
+                    <div className="w-24 h-24 rounded-[32px] bg-white text-slate-900 flex items-center justify-center mx-auto shadow-gold-glow">
+                        <LockIcon className="w-10 h-10" />
+                    </div>
+                    <div className="space-y-4">
+                        <h2 className="text-5xl font-display font-black text-white uppercase tracking-tighter leading-tight">VAULT LOCKED</h2>
+                        <p className="text-brand-gold font-bold uppercase tracking-[6px] text-xs">Awaiting Settlement Confirmation</p>
+                    </div>
+                    <Card className="!bg-white/5 border-white/10 rounded-[40px] p-10">
+                        <p className="text-slate-300 text-lg leading-relaxed font-medium">
+                            "Your live project dashboard is currently restricted. Once our accounts department confirms your payment receipt, full access will be restored immediately."
+                        </p>
+                        <div className="mt-8 flex flex-col gap-4">
+                            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Expected Verification Time: 2-4 Hours</p>
+                            <Button onClick={() => navigate('/')} variant="secondary" className="!rounded-full !bg-white/10 !text-white !border-white/20 !px-12 !py-4">Return Home</Button>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
     const tabs = TABS[user.role] || [];
     const designer = findUserById(project.designerId);
 
     return (
         <>
-            {/* MANDATORY START POPUP FOR DESIGNERS */}
             {needsActivation && (
                 <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6">
                     <div className="max-w-xl w-full text-center space-y-10 animate-in">
-                        <img 
-                            src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-                            alt="AMAZ" 
-                            className="h-12 mx-auto" 
-                        />
+                        <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ" className="h-12 mx-auto" />
                         <div className="space-y-4">
                             <h2 className="text-5xl font-display font-black text-white tracking-tighter uppercase leading-none">
                                 ARE YOU READY TO <span className="text-brand-gold">START</span> PROJECT?
@@ -153,29 +165,16 @@ const ProjectDetails: React.FC = () => {
                                 "Once selected, the 45-day countdown begins immediately. Accurate time tracking will be visible to the client. Ensure all initial site inspections are completed."
                             </p>
                         </div>
-                        <Button 
-                            onClick={handleStartProject}
-                            disabled={isStartingProject}
-                            className="!w-full !py-6 !rounded-full !bg-brand-gold !text-slate-900 !text-lg !font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-[1.02] active:scale-95 transition-all"
-                        >
+                        <Button onClick={handleStartProject} disabled={isStartingProject} className="!w-full !py-6 !rounded-full !bg-brand-gold !text-slate-900 !text-lg !font-black uppercase tracking-[6px] shadow-gold-glow hover:scale-[1.02] active:scale-95 transition-all">
                             {isStartingProject ? 'INITIALIZING PRECISION TIMER...' : 'YES, START PROJECT NOW'}
                         </Button>
                     </div>
                 </div>
             )}
 
-            {/* TOUCH TIMER COMMITMENT MODAL */}
-            <Modal 
-                isOpen={isCommitmentModalOpen} 
-                onClose={() => setCommitmentModalOpen(false)} 
-                title="AMAZ GUARANTEE"
-            >
+            <Modal isOpen={isCommitmentModalOpen} onClose={() => setCommitmentModalOpen(false)} title="AMAZ GUARANTEE">
                 <div className="text-center py-6 px-4">
-                    <img 
-                        src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" 
-                        alt="AMAZ" 
-                        className="h-10 mx-auto mb-10" 
-                    />
+                    <img src="https://res.cloudinary.com/dzvmyhpff/image/upload/v1759808706/highqualiamaz_etnjtt.webp" alt="AMAZ" className="h-10 mx-auto mb-10" />
                     <p className="text-2xl sm:text-3xl font-display font-black text-slate-900 leading-tight tracking-tight uppercase mb-8">
                         "WE ARE FULLY COMMITED TO PROVIDE YOU A GREAT EXPERIENCE THIS IS YOUR LIFE'S BEST MOMENT SO WE MAKE EVERY PROCESS AMAZING SO WE ARE ON TIME"
                     </p>
@@ -203,10 +202,7 @@ const ProjectDetails: React.FC = () => {
                         </h1>
                     </div>
 
-                    <button 
-                        onClick={() => setCommitmentModalOpen(true)}
-                        className="w-full sm:w-[380px] bg-white rounded-[32px] shadow-soft p-6 border border-slate-100 relative overflow-hidden text-left transition-all hover:scale-[1.02] hover:shadow-premium group active:scale-95"
-                    >
+                    <button onClick={() => setCommitmentModalOpen(true)} className="w-full sm:w-[380px] bg-white rounded-[32px] shadow-soft p-6 border border-slate-100 relative overflow-hidden text-left transition-all hover:scale-[1.02] hover:shadow-premium group active:scale-95">
                         <div className="flex justify-between items-center mb-4">
                             <div>
                                 <p className="text-[9px] font-black text-brand-gold uppercase tracking-[3px]">Strict Commitment</p>
@@ -246,15 +242,7 @@ const ProjectDetails: React.FC = () => {
                 <div className="space-y-6">
                     <nav className="flex gap-1 bg-slate-100/60 p-1 rounded-2xl w-full overflow-x-auto no-scrollbar border border-slate-200/50">
                         {tabs.map(tab => (
-                            <button 
-                                key={tab} 
-                                onClick={() => setActiveTab(tab)} 
-                                className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${
-                                    activeTab === tab 
-                                    ? 'bg-white text-brand-blue shadow-sm ring-1 ring-slate-200/50' 
-                                    : 'text-slate-400 hover:text-slate-600'
-                                }`}
-                            >
+                            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 whitespace-nowrap ${activeTab === tab ? 'bg-white text-brand-blue shadow-sm ring-1 ring-slate-200/50' : 'text-slate-400 hover:text-slate-600'}`}>
                                 {tab}
                             </button>
                         ))}
@@ -328,10 +316,7 @@ const ProjectDetails: React.FC = () => {
                                                     </Button>
                                                 </a>
                                                 {user.role === 'Admin' && (
-                                                    <button 
-                                                        onClick={async () => { if(window.confirm('Delete this document?')) { await deleteRecord('quotes', quote.id); refetchData(); } }}
-                                                        className="p-2.5 text-slate-300 hover:text-red-500 transition-colors"
-                                                    >
+                                                    <button onClick={async () => { if(window.confirm('Delete this document?')) { await deleteRecord('quotes', quote.id); refetchData(); } }} className="p-2.5 text-slate-300 hover:text-red-500 transition-colors">
                                                         <TrashIcon className="w-5 h-5" />
                                                     </button>
                                                 )}
@@ -341,10 +326,7 @@ const ProjectDetails: React.FC = () => {
                                 </div>
 
                                 {(user.role === 'Admin' || user.role === 'Designer') && (
-                                    <button 
-                                        onClick={() => setUploadQuoteModalOpen(true)} 
-                                        className="flex items-center gap-6 p-8 border-2 border-dashed border-slate-200 rounded-[32px] hover:border-brand-blue hover:bg-white transition-all group shadow-sm bg-slate-50/50 w-full"
-                                    >
+                                    <button onClick={() => setUploadQuoteModalOpen(true)} className="flex items-center gap-6 p-8 border-2 border-dashed border-slate-200 rounded-[32px] hover:border-brand-blue hover:bg-white transition-all group shadow-sm bg-slate-50/50 w-full">
                                         <div className="w-12 h-12 rounded-2xl bg-white shadow-soft flex items-center justify-center text-slate-300 group-hover:bg-brand-blue group-hover:text-white transition-all duration-500">
                                             <FilePlusIcon className="w-6 h-6" />
                                         </div>
@@ -362,17 +344,13 @@ const ProjectDetails: React.FC = () => {
                     </div>
                 </div>
                 
-                <UploadQuoteModal 
-                    isOpen={isUploadQuoteModalOpen} 
-                    onClose={() => setUploadQuoteModalOpen(false)} 
-                    onUpload={async (f,v) => { 
-                        const url = await uploadProjectFile(project.id, f); 
-                        if(url) { 
-                            await createRecord('quotes', { project_id: project.id, version: v, file_url: url, uploaded_by: user.id }); 
-                            await refetchData(); 
-                        } 
-                    }} 
-                />
+                <UploadQuoteModal isOpen={isUploadQuoteModalOpen} onClose={() => setUploadQuoteModalOpen(false)} onUpload={async (f,v) => { 
+                    const url = await uploadProjectFile(project.id, f); 
+                    if(url) { 
+                        await createRecord('quotes', { project_id: project.id, version: v, file_url: url, uploaded_by: user.id }); 
+                        await refetchData(); 
+                    } 
+                }} />
             </div>
         </>
     );
