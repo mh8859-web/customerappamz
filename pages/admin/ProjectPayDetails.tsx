@@ -24,8 +24,12 @@ const ProjectPayDetails: React.FC = () => {
     const handleToggleLock = async () => {
         if (!project || isSyncing) return;
         
-        const nextState = !project.isPaymentAlertActive;
-        console.log(`[PAYMENT LOCK] Toggling for ${project.title}. Current: ${project.isPaymentAlertActive}, Next: ${nextState}`);
+        // Use mapped state correctly
+        const currentLockState = !!project.isPaymentAlertActive;
+        const nextState = !currentLockState;
+        
+        console.log(`[SENTINEL] Project: ${project.title} | ID: ${project.id}`);
+        console.log(`[SENTINEL] Toggling Lock: ${currentLockState} -> ${nextState}`);
         
         setIsSyncing(true);
         try {
@@ -37,7 +41,7 @@ const ProjectPayDetails: React.FC = () => {
             
             if (error) {
                 console.error("[DB ERROR]", error);
-                alert(`Sync Error: ${error.message}. Ensure the 'is_payment_alert_active' column exists in your projects table.`);
+                alert(`Sync Error: ${error.message}. If column is missing, run SQL provided in Admin Settings.`);
                 return;
             }
             
@@ -53,7 +57,6 @@ const ProjectPayDetails: React.FC = () => {
             
             // Refresh global data context to update all UI components
             await refetchData();
-            console.log("[PAYMENT LOCK] Update successful.");
         } catch (err) {
             console.error("Critical Failure:", err);
             alert("A system error occurred while toggling the lock.");
@@ -79,6 +82,8 @@ const ProjectPayDetails: React.FC = () => {
             }
             
             await refetchData();
+        } catch (err) {
+            console.error("Payment sync fault", err);
         } finally {
             setIsSyncing(false);
         }

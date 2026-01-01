@@ -147,8 +147,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 createdAt: p.created_at, 
                 updatedAt: p.updated_at, 
                 revenueDisplay: p.revenue_display,
-                // FORCE BOOLEAN: prevent undefined/null state issues
-                isPaymentAlertActive: !!p.is_payment_alert_active 
+                // CRITICAL FIX: Ensure mapping is exact to trigger UI logic
+                isPaymentAlertActive: p.is_payment_alert_active === true 
             })));
             setTasks(mapToCamelCase(dataMap.tasks, t => ({ ...t, projectId: t.project_id, assigneeId: t.assignee_id, dueDate: t.due_date })));
             setDesigns(mapToCamelCase(dataMap.designs, d => ({ ...d, projectId: d.project_id, uploadedBy: d.uploaded_by, fileUrl: d.file_url, submittedForReview: d.submitted_for_review, comments: d.comments || [], approvedBy: d.approved_by, approvedAt: d.approved_at })));
