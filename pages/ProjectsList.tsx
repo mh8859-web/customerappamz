@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +11,7 @@ import CreateProjectModal from '../components/admin/CreateProjectModal';
 import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile, deleteProject } from '../services/api';
-import { RefreshIcon, MapPinIcon, BriefcaseIcon, TrashIcon, LockIcon } from '../components/icons';
+import { RefreshIcon, MapPinIcon, BriefcaseIcon, TrashIcon, LockIcon, ClockIcon } from '../components/icons';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { user } = useAuth();
@@ -37,11 +38,11 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
 
     return (
         <div className="relative h-full">
-            <Card className={`group relative overflow-hidden h-full border-luxury transition-all duration-500 ${isLocked ? 'grayscale opacity-75' : 'hover:border-brand-gold/40'}`}>
+            <Card className={`group relative overflow-hidden h-full border-luxury transition-all duration-500 ${isLocked ? 'grayscale opacity-75' : 'hover:border-brand-gold/40 shadow-premium'}`}>
                 <div className="absolute top-0 right-0 p-6 flex items-center gap-3">
-                    <span className={`px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full ${
-                        project.status === 'Active' ? 'bg-accent-emerald/10 text-accent-emerald' : 
-                        project.status === 'Completed' ? 'bg-brand-gold/20 text-brand-gold' :
+                    <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full ${
+                        project.status === 'Active' ? 'bg-brand-blue text-white shadow-sm' : 
+                        project.status === 'Completed' ? 'bg-brand-gold text-slate-900 shadow-sm' :
                         'bg-zinc-200 text-zinc-500'}`}>{project.status}</span>
                     {user?.role === 'Admin' && (
                         <button onClick={handleDelete} className="p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Purge Portfolio">
@@ -52,33 +53,39 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
                 
                 <Link to={isLocked ? '#' : `/projects/${project.id}`} className={`flex flex-col h-full ${isLocked ? 'cursor-not-allowed' : ''}`}>
                     <div className="mb-6">
-                        <div className="w-16 h-16 rounded-3xl bg-page-bg flex items-center justify-center mb-4 group-hover:bg-brand-gold/10 transition-colors">
+                        <div className="w-16 h-16 rounded-3xl bg-slate-50 flex items-center justify-center mb-6 group-hover:bg-brand-gold/10 transition-colors">
                             <BriefcaseIcon className="w-8 h-8 text-brand-gold" />
                         </div>
-                        <h3 className="text-2xl font-display font-bold text-brand-dark group-hover:text-brand-gold transition-colors">{project.title}</h3>
-                        <div className="flex items-center gap-2 text-text-secondary mt-2 text-sm font-sans">
-                            <MapPinIcon className="w-4 h-4 text-brand-gold opacity-60" />
+                        <h3 className="text-2xl font-display font-black text-brand-dark group-hover:text-brand-gold transition-colors tracking-tight leading-tight uppercase">{project.title}</h3>
+                        <div className="flex items-center gap-2 text-slate-400 mt-2 text-[10px] font-bold uppercase tracking-widest">
+                            <MapPinIcon className="w-3.5 h-3.5 text-brand-gold opacity-60" />
                             {project.address}
                         </div>
                     </div>
 
+                    {/* --- 45-DAY COMMITMENT BADGE --- */}
+                    <div className="mb-8 px-4 py-2 bg-brand-gold/5 border border-brand-gold/20 rounded-2xl flex items-center gap-3">
+                        <ClockIcon className="w-4 h-4 text-brand-gold" />
+                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">45-Day Delivery Commitment</span>
+                    </div>
+
                     <div className="flex-1 space-y-4 mb-8 font-sans">
-                        <div className="flex justify-between items-center text-sm border-b border-border-luxury pb-3">
-                            <span className="text-text-secondary font-medium">Project Owner</span>
+                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Project Owner</span>
                             <UserNameDisplay user={customer} textClassName="font-bold text-brand-dark" />
                         </div>
-                        <div className="flex justify-between items-center text-sm border-b border-border-luxury pb-3">
-                            <span className="text-text-secondary font-medium">Design Lead</span>
+                        <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Design Lead</span>
                             <UserNameDisplay user={designer} textClassName="font-bold text-brand-dark" />
                         </div>
                     </div>
 
                     <div className="mt-auto pt-6">
-                        <div className="flex justify-between text-[11px] font-bold text-text-secondary uppercase tracking-[0.1em] mb-2 font-display">
-                            <span>Evolution Stage</span>
+                        <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-[0.1em] mb-2 font-display">
+                            <span>Overall Evolution</span>
                             <span className="text-brand-gold">{project.progress}%</span>
                         </div>
-                        <div className="w-full bg-page-bg rounded-full h-2 px-0.5 py-0.5 flex items-center overflow-hidden">
+                        <div className="w-full bg-slate-100 rounded-full h-2 px-0.5 py-0.5 flex items-center overflow-hidden">
                             <div className="bg-gradient-to-r from-brand-gold to-brand-gold-light h-1 rounded-full transition-all duration-1000 shadow-gold-glow" style={{ width: `${project.progress}%` }}></div>
                         </div>
                     </div>
@@ -116,23 +123,23 @@ const ProjectsList: React.FC = () => {
   );
 
   return (
-    <div className="space-y-12 animate-in">
+    <div className="space-y-12 animate-in pb-20">
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
         <div>
-            <h1 className="text-5xl font-display font-extrabold text-slate-900 tracking-tight uppercase">Master Portfolio</h1>
-            <p className="text-slate-400 mt-2 text-lg font-bold uppercase tracking-[4px] font-display">Architectural Excellence Registry</p>
+            <h1 className="text-5xl font-display font-extrabold text-slate-900 tracking-tighter uppercase">Master Portfolio</h1>
+            <p className="text-slate-400 mt-3 text-lg font-bold uppercase tracking-[6px] font-display">45-Day Performance Registry</p>
         </div>
         {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
             <div className="flex gap-4">
-                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8 hover:border-brand-gold/40 font-display">
+                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8 hover:border-brand-gold/40 font-display !py-4 shadow-soft">
                   <RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync CRM
                 </Button>
-                <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow font-display">+ Initiate Project</Button>
+                <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow font-display !py-4 font-black tracking-widest">+ Initiate Project</Button>
             </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
           {projectsForUser.filter(p => p.status === 'Active').map(project => (
             <ProjectCard key={project.id} project={project} />
           ))}

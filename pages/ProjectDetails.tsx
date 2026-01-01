@@ -9,7 +9,7 @@ import {
     BriefcaseIcon, ZapIcon, FilePlusIcon, EyeIcon, DownloadIcon, 
     SparklesIcon, TrashIcon, FileTextIcon, PhotoIcon, CheckCircleIcon, 
     LockIcon, PackageIcon, ClockIcon, MapPinIcon, MessageSquareIcon,
-    ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon
+    ArrowPathIcon, ChevronRightIcon, DollarSignIcon, TrendingUpIcon, BuildingIcon
 } from '../components/icons';
 import { UserRole, Milestone, Design } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -47,6 +47,7 @@ const ProjectDetails: React.FC = () => {
     const [isUploadModalOpen, setUploadModalOpen] = useState(false);
     const [selectedDesign, setSelectedDesign] = useState<Design | null>(null);
     const [siteHistory, setSiteHistory] = useState<any[]>([]);
+    const [refreshing, setRefreshing] = useState(false);
     
     const project = useMemo(() => projects.find(p => p.id === projectId), [projects, projectId]);
 
@@ -85,7 +86,6 @@ const ProjectDetails: React.FC = () => {
             return;
         };
         
-        // STRICT 45 DAY COMMITMENT LOGIC
         const startTime = new Date(project.startDate).getTime();
         const deadlineTime = startTime + (45 * 24 * 60 * 60 * 1000); 
         const now = new Date().getTime();
@@ -128,10 +128,16 @@ const ProjectDetails: React.FC = () => {
 
     const handleUploadDesign = async (file: File, notes: string, type: 'image' | 'gltf') => {
         if (!project || !user) return;
-        const url = await uploadProjectFile(project.id, file);
-        if (url) {
+        setRefreshing(true);
+        try {
+            const url = await uploadProjectFile(project.id, file);
+            if (!url) {
+                alert("CRITICAL ERROR: Cloud upload failed. Check Supabase Storage bucket 'amaz-storage' permissions.");
+                return;
+            }
+
             const nextVersion = designs.filter(d => d.projectId === project.id).length + 1;
-            await createRecord('designs', {
+            const { error: dbError } = await createRecord('designs', {
                 project_id: project.id,
                 file_url: url,
                 notes,
@@ -140,7 +146,16 @@ const ProjectDetails: React.FC = () => {
                 uploaded_by: user.id,
                 submitted_for_review: true,
             });
-            await refetchData();
+
+            if (dbError) {
+                alert(`DATABASE ERROR: Could not create design record. Ensure 'designs' table exists in Public schema.`);
+                console.error(dbError);
+            } else {
+                await refetchData();
+                setUploadModalOpen(false);
+            }
+        } finally {
+            setRefreshing(false);
         }
     };
 
@@ -184,36 +199,47 @@ const ProjectDetails: React.FC = () => {
             {needsActivation && (
                 <div className="fixed inset-0 z-[10000] bg-slate-900 flex items-center justify-center p-6 backdrop-blur-2xl">
                     <div className="max-w-xl w-full text-center space-y-12">
-                        <h2 className="text-5xl font-display font-black text-white uppercase leading-none">Activate commitment?</h2>
-                        <Button onClick={handleStartProject} disabled={isStartingProject} className="!w-full !py-8 !rounded-full !bg-brand-gold !text-slate-900 !text-xl font-black uppercase tracking-[4px]">Yes, Initiate 45-Day Timer</Button>
+                        <h2 className="text-5xl font-display font-black text-white uppercase leading-none">Initiate <span className="text-brand-gold">45-Day</span> Commitment?</h2>
+                        <p className="text-slate-400 font-bold uppercase tracking-[4px] text-xs">The countdown starts the moment you authorize commencement.</p>
+                        <Button onClick={handleStartProject} disabled={isStartingProject} className="!w-full !py-8 !rounded-full !bg-brand-gold !text-slate-900 !text-xl font-black uppercase tracking-[4px] shadow-gold-glow">Yes, Activate 45-Day Terminal</Button>
                     </div>
                 </div>
             )}
 
-            <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-8 pt-4">
+            <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-10 pt-4">
                 <div className="space-y-2">
-                    <span className="text-[10px] font-black uppercase tracking-[6px] text-slate-400">Master Record</span>
-                    <h1 className="text-5xl font-display font-black text-slate-900 uppercase leading-none">{project.title}</h1>
+                    <span className="text-[10px] font-black uppercase tracking-[6px] text-brand-gold">Master Architectural Record</span>
+                    <h1 className="text-5xl font-display font-black text-slate-900 uppercase leading-none tracking-tighter">{project.title}</h1>
                 </div>
 
-                {/* REFINED PREMIUM TIMER UI */}
-                <div className="bg-white rounded-[40px] shadow-premium p-6 sm:p-8 border border-slate-100 min-w-[340px] sm:min-w-[420px]">
-                    <div className="flex justify-around items-center">
-                        {[
-                            { v: timeLeft.d, l: 'DAYS' },
-                            { v: timeLeft.h, l: 'HRS' },
-                            { v: timeLeft.m, l: 'MIN' },
-                            { v: timeLeft.s, l: 'SEC' }
-                        ].map((unit, idx) => (
-                            <React.Fragment key={unit.l}>
-                                <div className="text-center">
-                                    <div className="text-3xl sm:text-5xl font-display font-extrabold text-slate-900 tabular-nums tracking-tighter leading-none">{String(unit.v).padStart(2, '0')}</div>
-                                    <span className="text-[8px] sm:text-[10px] font-black text-slate-300 uppercase tracking-[3px] mt-3 block">{unit.l}</span>
-                                </div>
-                                {idx < 3 && <div className="h-8 w-px bg-slate-100 mx-1 sm:mx-2"></div>}
-                            </React.Fragment>
-                        ))}
-                    </div>
+                <div className="relative group">
+                    <div className="absolute inset-0 bg-brand-gold/10 blur-[40px] rounded-full animate-pulse group-hover:bg-brand-gold/20 transition-all"></div>
+                    <Card className="luxury-glass !p-8 sm:!p-10 rounded-[40px] border-brand-gold/20 min-w-[340px] sm:min-w-[480px] relative z-10 shadow-premium overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-brand-gold shadow-[0_0_15px_rgba(212,175,55,0.5)]"></div>
+                        <div className="flex justify-between items-center mb-8">
+                            <span className="text-[11px] font-black text-brand-gold uppercase tracking-[5px] flex items-center gap-3">
+                                <ClockIcon className="w-5 h-5 animate-spin-slow" />
+                                45-Day Performance Deadline
+                            </span>
+                            <div className="px-3 py-1 bg-slate-900 rounded-full text-[8px] font-black text-white uppercase tracking-[2px]">STRICT COMMITMENT</div>
+                        </div>
+                        <div className="flex justify-around items-center">
+                            {[
+                                { v: timeLeft.d, l: 'DAYS' },
+                                { v: timeLeft.h, l: 'HRS' },
+                                { v: timeLeft.m, l: 'MIN' },
+                                { v: timeLeft.s, l: 'SEC' }
+                            ].map((unit, idx) => (
+                                <React.Fragment key={unit.l}>
+                                    <div className="text-center group/unit">
+                                        <div className="text-4xl sm:text-6xl font-display font-black text-slate-900 tabular-nums tracking-tighter leading-none group-hover/unit:text-brand-gold transition-colors">{String(unit.v).padStart(2, '0')}</div>
+                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-[3px] mt-4 block group-hover/unit:text-slate-500">{unit.l}</span>
+                                    </div>
+                                    {idx < 3 && <div className="h-12 w-px bg-slate-100 mx-2 opacity-60"></div>}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    </Card>
                 </div>
             </div>
 
@@ -233,11 +259,29 @@ const ProjectDetails: React.FC = () => {
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                             <div className="lg:col-span-8 space-y-10">
                                 {(user.role === 'Site Head' || user.role === 'Designer') && <SiteUpdateModule projectId={project.id} onSuccess={refetchData} />}
-                                <Card className="luxury-glass !p-10 rounded-[40px] border-slate-100">
-                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8">Asset Profile</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Site Location</p><p className="text-lg font-bold text-slate-800 mt-2">{project.address}</p></div>
-                                        <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Design Lead</p><div className="mt-2"><UserNameDisplay user={designer} showAvatar={true} textClassName="font-black text-slate-900" /></div></div>
+                                <Card className="luxury-glass !p-10 rounded-[40px] border-slate-100 shadow-premium bg-white">
+                                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-3">
+                                        <BuildingIcon className="w-5 h-5 text-brand-blue" />
+                                        Asset Registry Profile
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                        <div className="space-y-4">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[4px]">Site Location</p>
+                                            <div className="flex items-start gap-3">
+                                                <MapPinIcon className="w-5 h-5 text-brand-gold mt-1 flex-shrink-0" />
+                                                <p className="text-lg font-bold text-slate-800 leading-tight">{project.address}</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[4px]">Design Lead</p>
+                                            <div className="mt-2 flex items-center gap-4">
+                                                <img src={designer?.avatarUrl} className="w-12 h-12 rounded-2xl object-cover ring-4 ring-slate-50 shadow-soft" alt="" />
+                                                <div>
+                                                    <UserNameDisplay user={designer} showAvatar={false} textClassName="font-black text-slate-900 text-lg" />
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Creative Director</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </Card>
                             </div>
@@ -255,14 +299,14 @@ const ProjectDetails: React.FC = () => {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[4px] mt-2">High-Fidelity Visual Archive</p>
                                 </div>
                                 {user.role === 'Designer' && (
-                                    <Button onClick={() => setUploadModalOpen(true)} className="!rounded-full !px-8 shadow-button">
-                                        <FilePlusIcon className="w-5 h-5 mr-2" /> Upload New Version
+                                    <Button onClick={() => setUploadModalOpen(true)} disabled={refreshing} className="!rounded-full !px-8 shadow-button">
+                                        <FilePlusIcon className="w-5 h-5 mr-2" /> {refreshing ? 'Syncing...' : 'Upload New Version'}
                                     </Button>
                                 )}
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {projectDesigns.map(design => (
-                                    <Card key={design.id} className="p-0 overflow-hidden rounded-[32px] group border-slate-100 hover:border-brand-gold/30 transition-all bg-white">
+                                    <Card key={design.id} className="p-0 overflow-hidden rounded-[32px] group border-slate-100 hover:border-brand-gold/30 transition-all bg-white shadow-premium">
                                         <div className="aspect-video relative overflow-hidden bg-slate-100">
                                             <img src={design.fileUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" alt="" />
                                             <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -317,7 +361,7 @@ const ProjectDetails: React.FC = () => {
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Technical Repository</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {projectQuotes.map(q => (
-                                    <div key={q.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between group hover:border-brand-gold/30 transition-all">
+                                    <div key={q.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between group hover:border-brand-gold/30 transition-all shadow-soft">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-brand-gold group-hover:text-white transition-all">
                                                 <FileTextIcon className="w-6 h-6" />
@@ -367,7 +411,7 @@ const ProjectDetails: React.FC = () => {
                             <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Project P&L (Expenses)</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {projectExpenses.map(e => (
-                                    <div key={e.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between">
+                                    <div key={e.id} className="p-6 bg-white border border-slate-100 rounded-[32px] flex items-center justify-between shadow-soft">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center">
                                                 <DollarSignIcon className="w-6 h-6" />
@@ -389,7 +433,7 @@ const ProjectDetails: React.FC = () => {
                     )}
 
                     {activeTab === 'Financial Ledger' && (
-                        <Card className="luxury-glass !p-10 rounded-[40px] bg-white border-slate-100">
+                        <Card className="luxury-glass !p-10 rounded-[40px] bg-white border-slate-100 shadow-premium">
                              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Receivables Sentinel</h3>
                              <div className="space-y-6">
                                 {projectMilestones.map(m => (
@@ -412,7 +456,7 @@ const ProjectDetails: React.FC = () => {
                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Project BOM (Bill of Materials)</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {products.filter(p => p.projectId === project.id).map(prod => (
-                                    <Card key={prod.id} className="bg-white border-slate-100 rounded-[32px] p-6 group hover:border-brand-gold/30 transition-all">
+                                    <Card key={prod.id} className="bg-white border-slate-100 rounded-[32px] p-6 group hover:border-brand-gold/30 transition-all shadow-soft">
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400"><PackageIcon className="w-6 h-6" /></div>
                                             <span className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase tracking-widest">{prod.status}</span>

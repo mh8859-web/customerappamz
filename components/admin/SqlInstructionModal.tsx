@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import { adminUpdateUserPassword } from '../../services/api';
 import { supabase } from '../../services/supabaseClient';
-import { DatabaseIcon, LockIcon, RefreshIcon, AlertTriangleIcon, ZapIcon } from '../icons';
+import { DatabaseIcon, LockIcon, RefreshIcon, AlertTriangleIcon, ZapIcon, PackageIcon } from '../icons';
 
 interface SqlInstructionModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface SqlInstructionModalProps {
 }
 
 const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'password' | 'schema' | 'patch'>('schema');
+  const [activeTab, setActiveTab] = useState<'password' | 'schema' | 'storage'>('schema');
   const [targetUserId, setTargetUserId] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -55,13 +56,19 @@ const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClo
       }, 300);
   }
 
-  const MASTER_SQL = `ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS is_payment_alert_active boolean DEFAULT false;
+  const STORAGE_SQL = `-- 1. RUN THIS IN SUPABASE SQL EDITOR TO FIX BUCKET ISSUES
+-- Replace 'amaz-storage' if you named your bucket differently
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('amaz-storage', 'amaz-storage', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Re-run RLS policies for the new column
-DROP POLICY IF EXISTS "Public Access" ON public.projects;
-CREATE POLICY "Public Access" ON public.projects FOR ALL USING (true) WITH CHECK (true);`;
+-- 2. ENABLE PUBLIC ACCESS FOR UPLOADS & DOWNLOADS
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'amaz-storage');
+CREATE POLICY "Authenticated Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'amaz-storage');
+CREATE POLICY "Authenticated Update" ON storage.objects FOR UPDATE USING (bucket_id = 'amaz-storage');
+CREATE POLICY "Authenticated Delete" ON storage.objects FOR DELETE USING (bucket_id = 'amaz-storage');`;
 
-  const FULL_INIT_SQL = `-- Run this to create ALL tables from scratch if needed
+  const FULL_INIT_SQL = `-- RUN THIS TO INITIALIZE ALL TABLES AND RLS
 CREATE TABLE IF NOT EXISTS public.users (
     id uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
     email text UNIQUE NOT NULL,
@@ -83,11 +90,33 @@ CREATE TABLE IF NOT EXISTS public.projects (
     address text,
     budget_display numeric DEFAULT 0,
     is_payment_alert_active boolean DEFAULT false,
+    requested_milestone_id uuid,
+    friendly_reminder_milestone_id uuid,
     status text DEFAULT 'Active',
-    stage text DEFAULT 'design_phase',
+    stage text DEFAULT 'Design',
     progress integer DEFAULT 0,
+    start_date timestamp with time zone,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);`;
+);
+
+CREATE TABLE IF NOT EXISTS public.designs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
+    file_url text NOT NULL,
+    notes text,
+    version integer DEFAULT 1,
+    type text DEFAULT 'image',
+    uploaded_by uuid REFERENCES public.users(id),
+    submitted_for_review boolean DEFAULT true,
+    approved boolean DEFAULT false,
+    comments jsonb DEFAULT '[]'::jsonb,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- DISABLE RLS FOR RAPID START (OR ADD BROAD POLICIES)
+ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.designs DISABLE ROW LEVEL SECURITY;`;
 
   const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue/20 outline-none";
 
@@ -95,16 +124,16 @@ CREATE TABLE IF NOT EXISTS public.projects (
     <Modal isOpen={isOpen} onClose={handleClose} title="Advanced Admin Actions">
         <div className="flex gap-2 mb-6 bg-slate-100 p-1.5 rounded-2xl w-fit overflow-x-auto no-scrollbar">
             <button 
-                onClick={() => setActiveTab('patch')}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'patch' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-                Repair Track Pay
-            </button>
-            <button 
                 onClick={() => setActiveTab('schema')}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'schema' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
                 Full Schema
+            </button>
+            <button 
+                onClick={() => setActiveTab('storage')}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'storage' ? 'bg-brand-gold text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+                Storage Fix
             </button>
             <button 
                 onClick={() => setActiveTab('password')}
@@ -114,28 +143,25 @@ CREATE TABLE IF NOT EXISTS public.projects (
             </button>
         </div>
 
-        {activeTab === 'patch' && (
+        {activeTab === 'storage' && (
             <div className="space-y-6 animate-reveal">
                 <div className="bg-brand-gold/10 border border-brand-gold/30 p-6 rounded-[24px] flex items-start gap-4">
-                    <ZapIcon className="w-6 h-6 text-brand-gold mt-1" />
+                    <PackageIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
-                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Repair Track Pay Logic</h4>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">If "Request Payment" isn't triggering the lockout, the column might be missing. Run this SQL block to add it instantly.</p>
+                        <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Supabase Storage Policies</h4>
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">Run this script to ensure the 'amaz-storage' bucket exists and has public read/write permissions. Without this, images won't appear.</p>
                     </div>
                 </div>
                 <div className="relative group">
                     <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10 shadow-inner">
-                        {MASTER_SQL}
+                        {STORAGE_SQL}
                     </pre>
                     <button 
-                        onClick={() => { navigator.clipboard.writeText(MASTER_SQL); alert("Patch SQL Copied!"); }}
+                        onClick={() => { navigator.clipboard.writeText(STORAGE_SQL); alert("Storage SQL Copied!"); }}
                         className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
                     >
-                        Copy Patch
+                        Copy SQL
                     </button>
-                </div>
-                <div className="pt-4 flex justify-end">
-                    <Button onClick={handleClose} className="!bg-slate-900 !rounded-full !px-10 !text-[11px] uppercase tracking-widest">Close Terminal</Button>
                 </div>
             </div>
         )}
@@ -145,13 +171,16 @@ CREATE TABLE IF NOT EXISTS public.projects (
                 <div className="bg-slate-900 border border-brand-gold/30 p-5 rounded-2xl flex items-start gap-4">
                     <DatabaseIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
-                        <h4 className="font-black text-white uppercase tracking-tight text-sm">AMAZ MASTER INITIALIZATION</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the full infrastructure script for all features.</p>
+                        <h4 className="font-black text-white uppercase tracking-tight text-sm">DATABASE INITIALIZATION</h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the full schema to create the 'designs' table and projects structure.</p>
                     </div>
                 </div>
                 <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10">
                     {FULL_INIT_SQL}
                 </pre>
+                <div className="flex justify-end pt-4">
+                    <Button onClick={() => { navigator.clipboard.writeText(FULL_INIT_SQL); alert("Schema SQL Copied!"); }} className="!rounded-full !px-8 !text-[10px] font-black uppercase">Copy Schema</Button>
+                </div>
             </div>
         )}
 

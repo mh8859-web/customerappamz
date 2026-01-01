@@ -95,6 +95,7 @@ export const deleteProject = async (projectId: string) => {
  */
 async function uploadToSupabase(path: string, file: File): Promise<string | null> {
     try {
+        console.log(`[STORAGE] Attempting upload to bucket '${STORAGE_BUCKET}' at path: ${path}`);
         const { data, error } = await supabase.storage
             .from(STORAGE_BUCKET)
             .upload(path, file, {
@@ -103,7 +104,11 @@ async function uploadToSupabase(path: string, file: File): Promise<string | null
             });
 
         if (error) {
-            console.error('[SUPABASE UPLOAD ERROR]', error);
+            console.error('[SUPABASE UPLOAD ERROR]', error.message, error);
+            // Help for the user
+            if (error.message.includes('Bucket not found')) {
+                console.error(`FIX: Go to Supabase > Storage and create a bucket named exactly '${STORAGE_BUCKET}'.`);
+            }
             return null;
         }
 
@@ -111,6 +116,7 @@ async function uploadToSupabase(path: string, file: File): Promise<string | null
             .from(STORAGE_BUCKET)
             .getPublicUrl(path);
 
+        console.log(`[STORAGE] Upload successful. Public URL: ${publicUrl}`);
         return publicUrl;
     } catch (err) {
         console.error('[UPLOAD EXCEPTION]', err);
