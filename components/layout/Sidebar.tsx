@@ -8,7 +8,7 @@ import {
   ClockIcon, PieChartIcon, MessageSquareIcon, LayoutGridIcon, 
   CreditCardIcon, ClipboardIcon, CalendarIcon, LifeBuoyIcon,
   ChevronDoubleLeftIcon, PhotoIcon, DownloadIcon, UserCircleIcon, 
-  TrendingUpIcon, InfoIcon, ZapIcon
+  TrendingUpIcon, InfoIcon, ZapIcon, DollarSignIcon, PackageIcon
 } from '../icons';
 
 interface SidebarProps {
@@ -61,9 +61,11 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
       Accounts: {
         main: [
           { to: '/accounts/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Nerve Center' },
-          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Active Portfolios' },
+          { to: '/accounts/dashboard?tab=sentinel', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Project Collections' },
+          { to: '/accounts/dashboard?tab=payroll', icon: <UsersIcon className="w-5 h-5" />, label: 'Payroll & Salaries' },
+          { to: '/accounts/dashboard?tab=audit', icon: <PackageIcon className="w-5 h-5" />, label: 'Audit & Payables' },
           { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Margin Analytics' },
-          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Tax Vault' },
+          { to: '/downloads', icon: <DownloadIcon className="w-5 h-5" />, label: 'Tax Vault (GST)' },
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Profile' },
           { to: '/support', icon: <LifeBuoyIcon className="w-5 h-5" />, label: 'Help Desk' },
         ],
@@ -136,7 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           <div className="space-y-1">
             {navItems.main.map(item => (
               <NavLink 
-                end 
+                end={item.to === '/accounts/dashboard'} 
                 key={item.to} 
                 to={item.to} 
                 className={getNavLinkClass} 
