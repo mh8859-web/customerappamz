@@ -3,6 +3,7 @@
   "description": "Live High-Fidelity Interior Project Management System.",
   "requestFramePermissions": [
     "geolocation",
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

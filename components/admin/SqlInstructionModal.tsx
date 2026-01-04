@@ -57,7 +57,6 @@ const SqlInstructionModal: React.FC<SqlInstructionModalProps> = ({ isOpen, onClo
   }
 
   const STORAGE_SQL = `-- 1. RUN THIS IN SUPABASE SQL EDITOR TO FIX BUCKET ISSUES
--- Replace 'amaz-storage' if you named your bucket differently
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('amaz-storage', 'amaz-storage', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
@@ -68,7 +67,37 @@ CREATE POLICY "Authenticated Upload" ON storage.objects FOR INSERT WITH CHECK (b
 CREATE POLICY "Authenticated Update" ON storage.objects FOR UPDATE USING (bucket_id = 'amaz-storage');
 CREATE POLICY "Authenticated Delete" ON storage.objects FOR DELETE USING (bucket_id = 'amaz-storage');`;
 
-  const FULL_INIT_SQL = `-- RUN THIS TO INITIALIZE ALL TABLES AND RLS
+  const FULL_INIT_SQL = `-- 1. FIX PHASE SHIFT ERROR: ALLOW UPDATES ON PROJECTS
+-- Run this to grant UPDATE access to Designers and Admins
+DO $$ 
+BEGIN
+    -- Policy for Designers: Can update their assigned projects
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Allow Designers update assigned') THEN
+        CREATE POLICY "Allow Designers update assigned" 
+        ON public.projects FOR UPDATE TO authenticated
+        USING (auth.uid() = designer_id)
+        WITH CHECK (auth.uid() = designer_id);
+    END IF;
+
+    -- Policy for Admins: Can update all projects
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Allow Admins update all') THEN
+        CREATE POLICY "Allow Admins update all" 
+        ON public.projects FOR UPDATE TO authenticated
+        USING (
+          EXISTS (
+            SELECT 1 FROM public.users 
+            WHERE users.id = auth.uid() 
+            AND (users.role = 'Admin' OR users.role = 'Sub-Admin')
+          )
+        );
+    END IF;
+END $$;
+
+-- 2. ENSURE CORE TABLES AND RLS ARE STABLE
+-- If you are still seeing 'Access Denied', try running:
+-- ALTER TABLE public.projects DISABLE ROW LEVEL SECURITY;
+-- (Only use the above command for rapid development/debugging)
+
 CREATE TABLE IF NOT EXISTS public.users (
     id uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
     email text UNIQUE NOT NULL,
@@ -97,26 +126,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     progress integer DEFAULT 0,
     start_date timestamp with time zone,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS public.designs (
-    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    project_id uuid REFERENCES public.projects(id) ON DELETE CASCADE,
-    file_url text NOT NULL,
-    notes text,
-    version integer DEFAULT 1,
-    type text DEFAULT 'image',
-    uploaded_by uuid REFERENCES public.users(id),
-    submitted_for_review boolean DEFAULT true,
-    approved boolean DEFAULT false,
-    comments jsonb DEFAULT '[]'::jsonb,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- DISABLE RLS FOR RAPID START (OR ADD BROAD POLICIES)
-ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.projects DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.designs DISABLE ROW LEVEL SECURITY;`;
+);`;
 
   const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue/20 outline-none";
 
@@ -127,7 +137,7 @@ ALTER TABLE public.designs DISABLE ROW LEVEL SECURITY;`;
                 onClick={() => setActiveTab('schema')}
                 className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'schema' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
-                Full Schema
+                Master SQL
             </button>
             <button 
                 onClick={() => setActiveTab('storage')}
@@ -149,7 +159,7 @@ ALTER TABLE public.designs DISABLE ROW LEVEL SECURITY;`;
                     <PackageIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
                         <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Supabase Storage Policies</h4>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">Run this script to ensure the 'amaz-storage' bucket exists and has public read/write permissions. Without this, images won't appear.</p>
+                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">Run this script to ensure the 'amaz-storage' bucket exists and has public read/write permissions.</p>
                     </div>
                 </div>
                 <div className="relative group">
@@ -171,15 +181,15 @@ ALTER TABLE public.designs DISABLE ROW LEVEL SECURITY;`;
                 <div className="bg-slate-900 border border-brand-gold/30 p-5 rounded-2xl flex items-start gap-4">
                     <DatabaseIcon className="w-6 h-6 text-brand-gold mt-1" />
                     <div>
-                        <h4 className="font-black text-white uppercase tracking-tight text-sm">DATABASE INITIALIZATION</h4>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Execute the full schema to create the 'designs' table and projects structure.</p>
+                        <h4 className="font-black text-white uppercase tracking-tight text-sm">FIX PHASE SHIFT ERRORS</h4>
+                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">Run the SQL below in Supabase. It includes the UPDATE policies needed to allow Designers and Admins to modify projects.</p>
                     </div>
                 </div>
                 <pre className="bg-slate-900 text-brand-gold-light p-6 rounded-2xl overflow-x-auto text-[11px] font-mono leading-relaxed max-h-[300px] custom-scrollbar border border-white/10">
                     {FULL_INIT_SQL}
                 </pre>
                 <div className="flex justify-end pt-4">
-                    <Button onClick={() => { navigator.clipboard.writeText(FULL_INIT_SQL); alert("Schema SQL Copied!"); }} className="!rounded-full !px-8 !text-[10px] font-black uppercase">Copy Schema</Button>
+                    <Button onClick={() => { navigator.clipboard.writeText(FULL_INIT_SQL); alert("Master SQL Copied!"); }} className="!rounded-full !px-8 !text-[10px] font-black uppercase">Copy SQL</Button>
                 </div>
             </div>
         )}

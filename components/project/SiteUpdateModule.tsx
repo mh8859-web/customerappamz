@@ -39,7 +39,9 @@ const SiteUpdateModule: React.FC<SiteUpdateModuleProps> = ({ projectId, onSucces
         });
 
         setLoading(false);
-        if (!error) {
+        if (error) {
+            alert(`Sync Fault: ${error.message}`);
+        } else {
             setNotes('');
             setFile(null);
             onSuccess();
@@ -57,8 +59,7 @@ const SiteUpdateModule: React.FC<SiteUpdateModuleProps> = ({ projectId, onSucces
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <select value={stage} onChange={e => setStage(e.target.value as any)} className={inputClasses}>
-                    {/* Fix comparison error: 'completed' -> 'Completed' */}
-                    {PROJECT_STAGES.filter(s => s !== 'Completed').map(s => (
+                    {PROJECT_STAGES.filter(s => s !== 'completed').map(s => (
                         <option key={s} value={s}>{STAGE_DISPLAY_NAMES[s]}</option>
                     ))}
                 </select>

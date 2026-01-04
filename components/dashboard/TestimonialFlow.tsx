@@ -1,86 +1,159 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { Project } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-// FIX: Changed VideoIcon to VideoCameraIcon, as 'VideoIcon' is not an exported member of '../icons'.
-import { CheckCircleIcon, MicIcon, VideoCameraIcon } from '../icons';
+import { CheckCircleIcon, MicIcon, VideoCameraIcon, SparklesIcon, ZapIcon, UploadCloudIcon, XMarkIcon } from '../icons';
+import { uploadProjectFile } from '../../services/api';
 
 interface TestimonialFlowProps {
     project: Project;
 }
 
-const Balloon: React.FC<{delay: number}> = ({delay}) => (
-    <div 
-        className="absolute bottom-[-10rem] w-12 h-16 bg-brand-blue rounded-full opacity-70 animate-rise"
-        style={{
-            left: `${Math.random() * 90}%`,
-            animationDelay: `${delay}s`,
-            filter: `hue-rotate(${Math.random() * 180}deg)`
-        }}
-    ></div>
-);
-
 const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
-    const [submitted, setSubmitted] = useState(false);
-    const [view, setView] = useState<'celebration' | 'form'>('celebration');
+    const [view, setView] = useState<'celebration' | 'options' | 'recording' | 'success'>('celebration');
+    const [mediaType, setMediaType] = useState<'video' | 'audio' | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    if (submitted) {
-        return (
-             <div className="flex flex-col items-center justify-center text-center h-full">
-                <CheckCircleIcon className="w-16 h-16 text-green-400 mb-4" />
-                <h1 className="text-3xl font-bold text-text-headline">Thank You!</h1>
-                <p className="text-text-muted mt-2">Your feedback is invaluable to us. We enjoyed working with you on "{project.title}".</p>
-            </div>
-        );
-    }
-    
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            // Uploading to a virtual "testimonials" folder within the project storage
+            const url = await uploadProjectFile(`${project.id}/testimonials`, file);
+            if (url) {
+                setView('success');
+            }
+        } catch (err) {
+            alert("Asset Sync Error. Please try again.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     if (view === 'celebration') {
         return (
-             <Card className="text-center relative overflow-hidden">
-                <style>{`
-                    @keyframes rise {
-                        0% { transform: translateY(0) rotate(0deg); opacity: 0.7; }
-                        90% { opacity: 0.7; }
-                        100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
-                    }
-                    .animate-rise {
-                        animation: rise 10s infinite ease-in;
-                    }
-                `}</style>
-                {[...Array(10)].map((_, i) => <Balloon key={i} delay={i * Math.random()} />)}
-                <div className="mb-4 text-6xl">🎉</div>
-                <h1 className="text-3xl font-bold text-text-headline">Project "{project.title}" is Complete!</h1>
-                <p className="text-text-muted mt-2 mb-6">Congratulations on your new space! We loved bringing your vision to life.</p>
-                <Button onClick={() => setView('form')}>Leave a Testimonial</Button>
-             </Card>
+            <div className="min-h-[80vh] flex items-center justify-center p-4">
+                <Card className="max-w-3xl w-full !p-12 text-center luxury-glass border-brand-gold/30 relative overflow-hidden animate-reveal">
+                    {/* Visual Decor */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/10 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-blue/5 rounded-full blur-[100px] -ml-32 -mb-32"></div>
+
+                    <div className="relative z-10 space-y-10">
+                        <div className="w-24 h-24 bg-brand-gold text-slate-900 rounded-[40px] flex items-center justify-center mx-auto shadow-gold-glow animate-bounce-slow">
+                            <CheckCircleIcon className="w-12 h-12" />
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <h1 className="text-5xl md:text-6xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none">
+                                Mastery <br/> Achieved.
+                            </h1>
+                            <div className="h-1 w-20 bg-brand-gold mx-auto rounded-full"></div>
+                            <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed italic px-4">
+                                "Your vision, our craftsmanship. <br/> A masterpiece born from partnership."
+                            </p>
+                        </div>
+
+                        <div className="pt-10 border-t border-slate-100 flex flex-col items-center gap-6">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[6px]">Project Identity: {project.title}</p>
+                            <Button 
+                                onClick={() => setView('options')} 
+                                className="!px-16 !py-6 !rounded-full !bg-slate-900 !text-sm !font-black uppercase tracking-[4px] shadow-button hover:scale-105 active:scale-95 transition-all"
+                            >
+                                Begin Farewell Protocol
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            </div>
         );
     }
 
-    return (
-        <Card className="text-center">
-            <h1 className="text-3xl font-bold text-text-headline">Share Your Experience</h1>
-            <p className="text-text-muted mt-2 mb-6">Your feedback helps us grow. In exchange for a testimonial, we have a complimentary gift for you!</p>
-            
-            <div className="bg-primary-bg p-6 rounded-xl border border-border-color">
-                <h2 className="text-xl font-semibold text-text-headline">Submit a Testimonial</h2>
-                <p className="text-sm text-text-muted mt-1 mb-4">Share your thoughts with a voice note or a short video.</p>
-                <div className="flex justify-center gap-4">
-                    <Button onClick={() => setSubmitted(true)} className="flex items-center gap-2">
-                        <MicIcon className="w-5 h-5" />
-                        Record Voice
-                    </Button>
-                    <Button onClick={() => setSubmitted(true)} className="flex items-center gap-2">
-                        <VideoCameraIcon className="w-5 h-5" />
-                        Record Video
-                    </Button>
-                </div>
-            </div>
+    if (view === 'options' || view === 'recording') {
+        return (
+            <div className="min-h-[80vh] flex items-center justify-center p-4">
+                <Card className="max-w-4xl w-full !p-0 luxury-glass overflow-hidden rounded-[48px] border-slate-100 shadow-premium animate-in slide-in-from-bottom-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2">
+                        {/* Left: Video Testimonial Option */}
+                        <div className="p-12 flex flex-col items-center justify-center text-center gap-8 group hover:bg-slate-50 transition-colors border-b md:border-b-0 md:border-r border-slate-100">
+                            <div className="w-20 h-20 rounded-[32px] bg-brand-blue/10 text-brand-blue flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-sm">
+                                <VideoCameraIcon className="w-10 h-10" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-display font-black text-slate-900 uppercase">Video Review</h3>
+                                <p className="text-sm text-slate-500 mt-2 font-medium">Record a short clip of your <br/> new luxury space.</p>
+                            </div>
+                            <Button 
+                                onClick={() => { setMediaType('video'); fileInputRef.current?.click(); }}
+                                disabled={isUploading}
+                                className="!rounded-full !px-10 !bg-slate-900 !text-[10px] font-black uppercase tracking-widest"
+                            >
+                                {isUploading && mediaType === 'video' ? 'Transmitting...' : 'Upload Video'}
+                            </Button>
+                        </div>
 
-            <button onClick={() => setSubmitted(true)} className="text-sm text-text-muted mt-6 hover:text-text-headline">
-                Maybe later
-            </button>
-        </Card>
-    );
+                        {/* Right: Voice Message Option */}
+                        <div className="p-12 flex flex-col items-center justify-center text-center gap-8 group hover:bg-slate-50 transition-colors">
+                            <div className="w-20 h-20 rounded-[32px] bg-brand-gold/10 text-brand-gold flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-sm">
+                                <MicIcon className="w-10 h-10" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-display font-black text-slate-900 uppercase">Voice Memo</h3>
+                                <p className="text-sm text-slate-500 mt-2 font-medium">Share your thoughts via <br/> an audio greeting.</p>
+                            </div>
+                            <Button 
+                                onClick={() => { setMediaType('audio'); fileInputRef.current?.click(); }}
+                                disabled={isUploading}
+                                variant="gold"
+                                className="!rounded-full !px-10 !text-[10px] font-black uppercase tracking-widest shadow-gold-glow"
+                            >
+                                {isUploading && mediaType === 'audio' ? 'Syncing Audio...' : 'Upload Voice'}
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="bg-slate-900 p-8 text-center border-t border-white/5">
+                        <p className="text-white/40 text-[10px] font-black uppercase tracking-[6px]">Select your preferred testimonial medium</p>
+                    </div>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleFileUpload} 
+                        className="hidden" 
+                        accept={mediaType === 'video' ? "video/*" : "audio/*"}
+                    />
+                </Card>
+            </div>
+        );
+    }
+
+    if (view === 'success') {
+        return (
+            <div className="min-h-[80vh] flex items-center justify-center p-4">
+                <Card className="max-w-2xl w-full !p-16 text-center luxury-glass border-slate-100 animate-reveal">
+                    <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-10 shadow-sm ring-4 ring-green-50/50">
+                        <CheckCircleIcon className="w-10 h-10" />
+                    </div>
+                    <h2 className="text-4xl font-display font-black text-slate-900 uppercase tracking-tight">Sync Complete</h2>
+                    <p className="text-lg text-slate-500 font-medium mt-4 leading-relaxed italic">
+                        "Your words fuel our passion. <br/> Welcome home to your Amaz creation."
+                    </p>
+                    <div className="mt-12 pt-10 border-t border-slate-100">
+                        <Button 
+                            onClick={() => window.location.href = '/'}
+                            className="!px-12 !py-4 !rounded-full !bg-slate-900 !text-[10px] font-black uppercase tracking-widest"
+                        >
+                            Return to Portal
+                        </Button>
+                    </div>
+                </Card>
+            </div>
+        );
+    }
+
+    return null;
 };
 
 export default TestimonialFlow;

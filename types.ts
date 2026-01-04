@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts' | 'Project Head' | 'Production Head' | 'Site Head';
 
 export interface User {
@@ -12,15 +13,16 @@ export interface User {
   userId: string;
 }
 
-// STRICT ENUM AS REQUESTED
+// ALIGNED WITH SUPABASE ENUM
 export type ProjectStage =
-  | 'Design'
-  | 'Material Ordering'
-  | 'Production'
-  | 'Site Work'
-  | 'Installation'
-  | 'Handover'
-  | 'Completed';
+  | 'design_phase'
+  | 'material_selection'
+  | 'production_phase'
+  | 'site_work'
+  | 'installation'
+  | 'handover'
+  | 'management_approval'
+  | 'completed';
 
 export interface Project {
   id: string;
@@ -31,7 +33,7 @@ export interface Project {
   adminId: string;
   address: string;
   budgetDisplay: number;
-  budgetApproved: number; // For Budget Sentinel
+  budgetApproved: number;
   areaSqft: number;
   startDate: string;
   createdAt: string;
@@ -41,7 +43,7 @@ export interface Project {
   status: 'Active' | 'Completed' | 'Archived';
   stage: ProjectStage;
   isPaymentAlertActive?: boolean;
-  isDelayed?: boolean; // Red badge trigger
+  isDelayed?: boolean;
   requestedMilestoneId?: string;
   friendlyReminderMilestoneId?: string;
 }
@@ -52,7 +54,7 @@ export interface SiteUpdate {
   supervisorId: string;
   notes: string;
   imageUrl?: string;
-  videoUrl?: string; // Max 30 sec as requested
+  videoUrl?: string;
   stage: ProjectStage;
   createdAt: string;
 }
@@ -113,7 +115,7 @@ export interface Task {
   assigneeId: string;
   dueDate: string;
   status: 'To Do' | 'In Progress' | 'For Review' | 'Done';
-  isApproved?: boolean; // Task & Approval System
+  isApproved?: boolean;
 }
 
 export interface CurrentWork {
@@ -173,7 +175,6 @@ export interface FinalGalleryImage {
   caption: string;
 }
 
-// Added missing type definitions
 export interface WorkLog {
   id: string;
   designerId: string;

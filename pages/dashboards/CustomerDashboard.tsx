@@ -51,8 +51,8 @@ const CustomerDashboard: React.FC = () => {
 
     const completedProject = useMemo(() => {
         if (!user) return null;
-        // Fix comparison error: 'completed' -> 'Completed'
-        return projects.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'Completed');
+        // --- FIX: Corrected 'Completed' to 'completed' to match ProjectStage type ---
+        return projects.find(p => p.customerId === user.id && p.status === 'Completed' && p.stage === 'completed');
     }, [user, projects]);
     
     const latestAnnouncement = announcements

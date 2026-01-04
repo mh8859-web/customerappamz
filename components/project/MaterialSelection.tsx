@@ -319,7 +319,8 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
 
     if (loading) return <div className="p-24 text-center text-slate-300 font-black uppercase tracking-[8px] animate-pulse">Scanning Asset Registry...</div>;
 
-    const canComplete = !isClient && currentProject?.stage === 'Material Ordering';
+    // --- FIX: Corrected comparison value to match ProjectStage type ('material_selection') ---
+    const canComplete = !isClient && currentProject?.stage === 'material_selection';
 
     return (
         <div className="space-y-12 animate-reveal">

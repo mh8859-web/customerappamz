@@ -23,7 +23,8 @@ const SiteHeadDashboard: React.FC = () => {
     const { projects, siteVisits, loading: dataLoading } = useData();
     const { findUserById, users } = useUsers();
 
-    const executionProjects = useMemo(() => projects.filter(p => p.stage === 'Site Work' || p.stage === 'Installation'), [projects]);
+    // --- FIX: Corrected comparison values to match ProjectStage type ('site_work' and 'installation') ---
+    const executionProjects = useMemo(() => projects.filter(p => p.stage === 'site_work' || p.stage === 'installation'), [projects]);
     const upcomingVisits = useMemo(() => siteVisits.filter(s => new Date(s.scheduledAt) >= new Date() && s.status === 'Scheduled'), [siteVisits]);
 
     if (dataLoading) return <div className="p-24 text-center animate-pulse text-slate-400 font-black uppercase tracking-[8px] text-xs font-display">Synchronizing Field Assets...</div>;
