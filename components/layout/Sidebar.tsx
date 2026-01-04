@@ -128,6 +128,9 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'My Designs' },
           { to: '/designer/task-board', icon: <LayoutGridIcon className="w-5 h-5" />, label: 'Registry' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Team Chat' },
+          { to: '/designer/my-attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance' },
+          { to: '/designer/daily-work', icon: <ClipboardIcon className="w-5 h-5" />, label: 'Daily Work' },
+          { to: '/designer/leave', icon: <CalendarIcon className="w-5 h-5" />, label: 'Leave' },
         ],
         secondary: [
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },

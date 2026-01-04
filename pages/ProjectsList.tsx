@@ -11,7 +11,7 @@ import CreateProjectModal from '../components/admin/CreateProjectModal';
 import SyncQuotesModal from '../components/admin/SyncQuotesModal';
 import { useData } from '../context/DataContext';
 import { createRecord, uploadProjectFile, deleteProject } from '../services/api';
-import { RefreshIcon, MapPinIcon, BriefcaseIcon, TrashIcon, LockIcon, ClockIcon } from '../components/icons';
+import { RefreshIcon, MapPinIcon, BriefcaseIcon, TrashIcon, LockIcon } from '../components/icons';
 
 const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     const { user } = useAuth();
@@ -63,12 +63,6 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
                         </div>
                     </div>
 
-                    {/* --- 45-DAY COMMITMENT BADGE --- */}
-                    <div className="mb-8 px-4 py-2 bg-brand-gold/5 border border-brand-gold/20 rounded-2xl flex items-center gap-3">
-                        <ClockIcon className="w-4 h-4 text-brand-gold" />
-                        <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">45-Day Delivery Commitment</span>
-                    </div>
-
                     <div className="flex-1 space-y-4 mb-8 font-sans">
                         <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Project Owner</span>
@@ -114,7 +108,7 @@ const ProjectsList: React.FC = () => {
   if (!user) return null;
 
   const handleCreateProject = async (projectData: any, quoteFile: File) => {
-    // Project creation logic...
+    // Project creation logic handled via context/API
     await refetchData();
   };
 
@@ -127,13 +121,14 @@ const ProjectsList: React.FC = () => {
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
         <div>
             <h1 className="text-5xl font-display font-extrabold text-slate-900 tracking-tighter uppercase">Master Portfolio</h1>
-            <p className="text-slate-400 mt-3 text-lg font-bold uppercase tracking-[6px] font-display">45-Day Performance Registry</p>
+            <p className="text-slate-400 mt-3 text-lg font-bold uppercase tracking-[6px] font-display">Active Registry</p>
         </div>
         {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
             <div className="flex gap-4">
                 <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8 hover:border-brand-gold/40 font-display !py-4 shadow-soft">
                   <RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync CRM
                 </Button>
+                {/* FIX: Corrected state setter name from setCreateProjectModalOpen to setCreateModalOpen */}
                 <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow font-display !py-4 font-black tracking-widest">+ Initiate Project</Button>
             </div>
         )}

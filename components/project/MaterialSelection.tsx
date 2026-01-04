@@ -59,10 +59,9 @@ const AddMaterialModal: React.FC<{
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        // --- FIX: Explicitly type files as File[] to prevent inference as unknown[] which causes error on line 69 ---
         const files: File[] = Array.from(e.target.files || []);
         if (files.length + selectedFiles.length > 10) {
-            alert("Maximum 10 images can be uploaded at once.");
+            alert("Protocol Violation: Maximum 10 assets can be synchronized at once.");
             return;
         }
         
@@ -80,12 +79,12 @@ const AddMaterialModal: React.FC<{
         e.preventDefault();
         
         if (!formData.name.trim() || !formData.brand.trim()) {
-            alert("Please fill in the material name and brand.");
+            alert("Primary metadata (Name/Brand) is mandatory.");
             return;
         }
 
         if (selectedFiles.length === 0) {
-            alert("Please select at least one material image.");
+            alert("No material assets selected for sync.");
             return;
         }
 
@@ -97,11 +96,11 @@ const AddMaterialModal: React.FC<{
                 const file = selectedFiles[i];
                 const uploadedUrl = await uploadProjectFile(projectId, file);
                 
-                if (!uploadedUrl) throw new Error(`Upload Failed for image ${i + 1}`);
+                if (!uploadedUrl) throw new Error(`Asset Stream Failure: Ref ${i + 1}`);
 
                 const { error } = await createRecord('project_materials', {
                     project_id: projectId,
-                    name: selectedFiles.length > 1 ? `${formData.name} (Ref ${i + 1})` : formData.name,
+                    name: selectedFiles.length > 1 ? `${formData.name} (${i + 1})` : formData.name,
                     category: formData.category,
                     brand: formData.brand.trim(),
                     image_url: uploadedUrl,
@@ -114,12 +113,12 @@ const AddMaterialModal: React.FC<{
 
             onSuccess();
             onClose();
-            // Reset
+            // Reset state
             setFormData({ name: '', category: 'Laminate', brand: '' });
             setSelectedFiles([]);
             setPreviews([]);
         } catch (err: any) {
-            alert(`Error: ${err.message || 'Could not save materials.'}`);
+            alert(`Synchronization Fault: ${err.message || 'Unknown error'}`);
         } finally {
             setIsSubmitting(false);
             setUploadProgress(0);
@@ -129,11 +128,11 @@ const AddMaterialModal: React.FC<{
     const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-base font-bold focus:ring-4 focus:ring-brand-gold/10 focus:border-brand-gold outline-none transition-all";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Batch Material Registration">
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <Modal isOpen={isOpen} onClose={onClose} title="Batch Asset Registration">
+            <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Category</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Asset Category</label>
                         <select 
                             value={formData.category} 
                             onChange={e => setFormData({...formData, category: e.target.value})}
@@ -145,13 +144,14 @@ const AddMaterialModal: React.FC<{
                             <option>Fabric</option>
                             <option>Stone/Marble</option>
                             <option>Glass</option>
+                            <option>Paint/Finish</option>
                         </select>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Base Name</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Base Identifier</label>
                         <input 
                             type="text" 
-                            placeholder="e.g. Master Suite Hardware"
+                            placeholder="e.g. Master Bedroom Palette"
                             value={formData.name}
                             onChange={e => setFormData({...formData, name: e.target.value})}
                             className={inputClasses}
@@ -161,10 +161,10 @@ const AddMaterialModal: React.FC<{
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Brand / Catalog</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Brand / Provider Code</label>
                     <input 
                         type="text" 
-                        placeholder="e.g. Hafele Elite Collection"
+                        placeholder="e.g. Hafele Luxe-2025 Series"
                         value={formData.brand}
                         onChange={e => setFormData({...formData, brand: e.target.value})}
                         className={inputClasses}
@@ -173,22 +173,23 @@ const AddMaterialModal: React.FC<{
                 </div>
 
                 <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Physical Swatches ({selectedFiles.length}/10)</label>
-                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[10px] font-black text-brand-blue uppercase tracking-widest">Add More</button>
+                    <div className="flex justify-between items-center border-b border-slate-100 pb-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">High-Res Assets ({selectedFiles.length}/10 Max)</label>
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[10px] font-black text-brand-blue uppercase tracking-widest hover:text-brand-gold transition-colors">Add More</button>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                         {previews.map((src, i) => (
-                            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group bg-slate-50">
-                                <img src={src} className="w-full h-full object-cover" alt="" />
+                            <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-100 group bg-slate-50 shadow-sm">
+                                <img src={src} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="" />
                                 <button 
                                     type="button" 
                                     onClick={() => removeFile(i)}
-                                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                                 >
-                                    <XMarkIcon className="w-3 h-3" />
+                                    <XMarkIcon className="w-3.5 h-3.5" />
                                 </button>
+                                <div className="absolute bottom-0 left-0 right-0 bg-slate-900/40 p-1 text-[8px] text-white font-black text-center uppercase tracking-tighter">REF-{i+1}</div>
                             </div>
                         ))}
                         
@@ -196,10 +197,10 @@ const AddMaterialModal: React.FC<{
                             <button 
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 hover:border-brand-gold hover:bg-slate-50 transition-all text-slate-300"
+                                className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 hover:border-brand-gold hover:bg-slate-50 transition-all text-slate-300 group"
                             >
-                                <UploadCloudIcon className="w-6 h-6" />
-                                <span className="text-[8px] font-black uppercase">Attach</span>
+                                <UploadCloudIcon className="w-6 h-6 group-hover:text-brand-gold transition-colors" />
+                                <span className="text-[8px] font-black uppercase tracking-widest">Attach Asset</span>
                             </button>
                         )}
                     </div>
@@ -215,32 +216,32 @@ const AddMaterialModal: React.FC<{
                 </div>
 
                 {isSubmitting && (
-                    <div className="space-y-2">
+                    <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                         <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                            <span className="text-brand-blue">Uploading Stream...</span>
-                            <span className="text-slate-400">{uploadProgress}%</span>
+                            <span className="text-brand-blue animate-pulse">Syncing Asset Stream...</span>
+                            <span className="text-slate-500">{uploadProgress}%</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                            <div className="bg-brand-blue h-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                        <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div className="bg-brand-blue h-full transition-all duration-300 shadow-[0_0_10px_rgba(37,99,235,0.5)]" style={{ width: `${uploadProgress}%` }}></div>
                         </div>
                     </div>
                 )}
 
-                <div className="flex justify-end gap-4 pt-6 border-t border-slate-100">
+                <div className="flex justify-end gap-6 pt-6 border-t border-slate-100">
                     <button 
                         type="button" 
                         onClick={onClose} 
                         disabled={isSubmitting}
-                        className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 px-4"
+                        className="text-[11px] font-black uppercase tracking-[4px] text-slate-300 hover:text-slate-600 transition-colors"
                     >
                         Discard
                     </button>
                     <Button 
                         type="submit" 
                         disabled={isSubmitting || selectedFiles.length === 0} 
-                        className="!px-10 !py-4 !rounded-2xl !bg-slate-900 !text-[11px] !font-black uppercase tracking-widest shadow-button"
+                        className="!px-12 !py-5 !rounded-[24px] !bg-slate-900 !text-[11px] !font-black uppercase tracking-[4px] shadow-premium hover:scale-[1.02] active:scale-95 transition-all"
                     >
-                        {isSubmitting ? `Processing ${selectedFiles.length} Assets...` : 'Register Materials'}
+                        {isSubmitting ? `Transmitting ${selectedFiles.length} Assets...` : 'Authorize Sync'}
                     </Button>
                 </div>
             </form>
@@ -287,9 +288,9 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
         
         const pendingCount = materials.filter(m => m.status === 'Pending').length;
         if (pendingCount > 0) {
-            if (!window.confirm(`There are still ${pendingCount} materials awaiting client approval. Finalize anyway?`)) return;
+            if (!window.confirm(`Action Required: There are ${pendingCount} assets still awaiting client authorization. Finalize override?`)) return;
         } else {
-            if (!window.confirm("Move project to Production phase?")) return;
+            if (!window.confirm("Initialize Production Phase?")) return;
         }
 
         setIsCompleting(true);
@@ -303,25 +304,25 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
 
             await createRecord('messages', {
                 chat_id: projectId,
-                body: `SYSTEM: Material Selection Finalized. Moving to factory production protocol.`,
+                body: `SYSTEM: Material Phase Finalized. Project has been synchronized for factory production.`,
                 sender_id: user?.id,
                 is_system_message: true
             });
 
             onUpdate();
         } catch (err) {
-            alert("Phase Shift Failed.");
+            alert("Phase Transition Failed.");
         } finally {
             setIsCompleting(false);
         }
     };
 
-    if (loading) return <div className="p-24 text-center text-slate-400 font-black uppercase tracking-[6px] animate-pulse">Scanning Registry...</div>;
+    if (loading) return <div className="p-24 text-center text-slate-300 font-black uppercase tracking-[8px] animate-pulse">Scanning Asset Registry...</div>;
 
     const canComplete = !isClient && currentProject?.stage === 'Material Ordering';
 
     return (
-        <div className="space-y-10 animate-in">
+        <div className="space-y-12 animate-reveal">
             <AddMaterialModal 
                 isOpen={isAddModalOpen} 
                 onClose={() => setAddModalOpen(false)} 
@@ -340,67 +341,67 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
 
             <div className="flex flex-col md:flex-row justify-between md:items-end gap-6">
                 <div>
-                    <h3 className="text-3xl font-display font-black text-slate-900 uppercase tracking-tight">Material Registry</h3>
-                    <p className="text-xs text-slate-400 font-bold uppercase mt-2 tracking-[4px]">Sourced Finishes & Components</p>
+                    <h3 className="text-4xl font-display font-black text-slate-900 uppercase tracking-tighter leading-none">Material Registry</h3>
+                    <p className="text-xs text-slate-400 font-bold uppercase mt-3 tracking-[5px]">Verified Physical Swatches & Finishes</p>
                 </div>
                 <div className="flex gap-4">
                     {canComplete && materials.length > 0 && (
                         <Button 
                             onClick={handleCompleteSelection} 
                             disabled={isCompleting}
-                            className="!rounded-full !px-8 !py-4 shadow-gold-glow !bg-brand-gold !text-slate-900 !text-[11px] font-black uppercase tracking-widest animate-pulse hover:animate-none"
+                            className="!rounded-full !px-10 !py-5 shadow-gold-glow !bg-brand-gold !text-slate-900 !text-[10px] font-black uppercase tracking-[4px] animate-pulse hover:animate-none"
                         >
-                            Finalize Selection
+                            Finalize Selection Phase
                         </Button>
                     )}
                     {!isClient && (
-                        <Button onClick={() => setAddModalOpen(true)} className="!rounded-full !px-8 !py-4 shadow-button !bg-slate-900 !text-[11px] font-black uppercase tracking-widest">
-                            <FilePlusIcon className="w-5 h-5 mr-2 text-brand-gold" /> Upload Materials
+                        <Button onClick={() => setAddModalOpen(true)} className="!rounded-full !px-10 !py-5 shadow-button !bg-slate-900 !text-[10px] font-black uppercase tracking-[4px]">
+                            <FilePlusIcon className="w-5 h-5 mr-3 text-brand-gold" /> Add Asset Stream
                         </Button>
                     )}
                 </div>
             </div>
 
             {materials.length === 0 ? (
-                <div className="p-32 text-center border-2 border-dashed border-slate-200 rounded-[50px] bg-slate-50/50 flex flex-col items-center justify-center gap-6">
-                    <div className="w-24 h-24 rounded-[32px] bg-white shadow-soft flex items-center justify-center text-slate-200">
+                <div className="p-32 text-center border-2 border-dashed border-slate-200 rounded-[64px] bg-slate-50/30 flex flex-col items-center justify-center gap-8">
+                    <div className="w-24 h-24 rounded-[36px] bg-white shadow-soft flex items-center justify-center text-slate-200 ring-1 ring-slate-100">
                         <PackageIcon className="w-12 h-12" />
                     </div>
-                    <div>
-                        <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight">Registry Empty</h4>
-                        <p className="text-sm text-slate-400 font-bold uppercase mt-2 tracking-widest">
-                            {isClient ? "Designer is uploading your project's physical palette." : "Attach material assets to this project."}
+                    <div className="space-y-2">
+                        <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Registry Uninitialized</h4>
+                        <p className="text-sm text-slate-400 font-bold uppercase tracking-[4px]">
+                            {isClient ? "Designer is preparing your project's material palette." : "Initiate the physical finish catalog for this project."}
                         </p>
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
                     {materials.map(material => (
-                        <Card key={material.id} className="p-0 overflow-hidden rounded-[40px] group border-slate-100 hover:shadow-premium transition-all bg-white relative">
-                            <div className="aspect-[4/5] relative overflow-hidden bg-slate-100">
+                        <Card key={material.id} className="p-0 overflow-hidden rounded-[48px] group border-slate-100 hover:shadow-premium transition-all duration-700 bg-white relative">
+                            <div className="aspect-[4/5] relative overflow-hidden bg-slate-50">
                                 <img 
                                     src={material.imageUrl} 
-                                    className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110" 
+                                    className="w-full h-full object-cover transition-transform duration-[2s] group-hover:scale-110" 
                                     alt={material.name}
                                 />
-                                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                                <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
                                     <button 
                                         onClick={() => setViewerAsset({ url: material.imageUrl, name: material.name })}
-                                        className="px-6 py-2 bg-white text-slate-900 rounded-full text-[10px] uppercase font-black tracking-widest shadow-premium"
+                                        className="px-8 py-3 bg-white text-slate-900 rounded-full text-[10px] uppercase font-black tracking-[4px] shadow-2xl scale-90 group-hover:scale-100 transition-all duration-500"
                                     >
-                                        Inspect
+                                        Inspect Detail
                                     </button>
                                 </div>
-                                <div className="absolute top-8 left-8">
-                                    <span className="px-5 py-2 bg-white/95 backdrop-blur-md shadow-premium rounded-full text-[10px] font-black text-slate-900 uppercase tracking-[3px] border border-slate-100">{material.category}</span>
+                                <div className="absolute top-10 left-10">
+                                    <span className="px-6 py-2 bg-white/95 backdrop-blur-md shadow-premium rounded-full text-[10px] font-black text-slate-900 uppercase tracking-[4px] border border-slate-100">{material.category}</span>
                                 </div>
                             </div>
-                            <div className="p-10">
-                                <h4 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight">{material.name}</h4>
-                                <p className="text-[11px] text-brand-gold font-black uppercase mt-2 tracking-[4px]">{material.brand}</p>
+                            <div className="p-12">
+                                <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight">{material.name}</h4>
+                                <p className="text-[11px] text-brand-gold font-black uppercase mt-3 tracking-[5px]">{material.brand}</p>
                                 
-                                <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
-                                    <span className={`px-4 py-1.5 rounded-2xl text-[9px] font-black uppercase tracking-[2px] border ${
+                                <div className="mt-12 pt-10 border-t border-slate-50 flex items-center justify-between">
+                                    <span className={`px-5 py-2 rounded-2xl text-[9px] font-black uppercase tracking-[3px] border ${
                                         material.status === 'Approved' ? 'bg-green-50 text-green-600 border-green-200' :
                                         material.status === 'Rejected' ? 'bg-red-50 text-red-500 border-red-100' :
                                         'bg-slate-50 text-slate-400 border-slate-200/60'
@@ -409,18 +410,18 @@ const MaterialSelection: React.FC<MaterialSelectionProps> = ({ projectId, isClie
                                     </span>
                                     
                                     {isClient && material.status === 'Pending' && (
-                                        <div className="flex gap-3">
+                                        <div className="flex gap-4">
                                             <button 
                                                 onClick={() => handleApproval(material.id, 'Rejected')} 
-                                                className="w-10 h-10 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                                                className="w-12 h-12 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shadow-sm"
                                             >
-                                                <XMarkIcon className="w-5 h-5"/>
+                                                <XMarkIcon className="w-6 h-6"/>
                                             </button>
                                             <button 
                                                 onClick={() => handleApproval(material.id, 'Approved')} 
-                                                className="w-10 h-10 bg-green-50 text-green-500 rounded-xl hover:bg-green-500 hover:text-white transition-all flex items-center justify-center"
+                                                className="w-12 h-12 bg-green-50 text-green-500 rounded-2xl hover:bg-green-500 hover:text-white transition-all flex items-center justify-center shadow-sm"
                                             >
-                                                <CheckCircleIcon className="w-5 h-5"/>
+                                                <CheckCircleIcon className="w-6 h-6"/>
                                             </button>
                                         </div>
                                     )}
