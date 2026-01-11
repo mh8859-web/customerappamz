@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -8,7 +9,7 @@ import { signUpNewUser, upsertRecord, deleteUser } from '../../services/api';
 import { useUsers } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
 import UserNameDisplay from '../../components/ui/UserNameDisplay';
-import { EyeIcon, RefreshIcon } from '../../components/icons';
+import { EyeIcon, RefreshIcon, EditIcon } from '../../components/icons';
 
 const UserManagement: React.FC = () => {
   const [isCreateUserModalOpen, setCreateUserModalOpen] = useState(false);
@@ -40,7 +41,6 @@ const UserManagement: React.FC = () => {
 
         if (newUser) {
              // 2. Immediate Database Sync (Upsert)
-             // We await this to ensure the record exists before we try to show it
              const { data: profileData, error: profileError } = await upsertRecord('users', {
                  id: newUser.id,
                  email: u.email.toLowerCase().trim(),
@@ -56,7 +56,6 @@ const UserManagement: React.FC = () => {
              }
 
              // 3. Instant UI Injection
-             // Instead of waiting for a fetch, we build the user object and inject it into the context
              const userToInject: User = {
                 id: newUser.id,
                 fullName: u.fullName.trim(),
@@ -71,10 +70,7 @@ const UserManagement: React.FC = () => {
              addUser(userToInject);
         }
 
-        // 4. Clean up and safety refresh
         setCreateUserModalOpen(false);
-        
-        // Background refresh to ensure everything is perfectly synced
         setTimeout(() => refetchUsers(), 500);
 
     } catch (err: any) {
@@ -89,14 +85,8 @@ const UserManagement: React.FC = () => {
   };
 
   const handleUpdateUser = async (userId: string, updates: Partial<User>) => {
-    const updatesForDb: Record<string, any> = {};
-    if (updates.fullName !== undefined) updatesForDb.full_name = updates.fullName;
-    if (updates.role !== undefined) updatesForDb.role = updates.role;
-    if (updates.verified !== undefined) updatesForDb.verified = updates.verified;
-
-    const { error } = await upsertRecord('users', { id: userId, ...updatesForDb });
-    if (error) alert(`Update Failed: ${error.message}`);
-    else await refetchUsers();
+    // This is handled inside the modal via direct DB calls for comprehensive updates
+    await refetchUsers();
   };
 
   const handleDeleteUser = async (userToDelete: User) => {
@@ -173,11 +163,17 @@ const UserManagement: React.FC = () => {
                         }`}>{user.role}</span>
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={() => handleOpenEditModal(user)} 
+                                className="p-2 bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white rounded-lg transition-all shadow-sm" 
+                                title="Edit Profile"
+                            >
+                                <EditIcon className="w-4 h-4" />
+                            </button>
                             <button onClick={() => handleImpersonate(user)} className="p-2 text-slate-400 hover:text-brand-blue rounded-lg transition-colors" title="Impersonate">
                               <EyeIcon className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleOpenEditModal(user)} className="px-3 py-2 text-slate-400 hover:text-slate-900 text-[10px] font-black uppercase tracking-widest transition-colors">Modify</button>
                             <button onClick={() => handleDeleteUser(user)} className="px-3 py-2 text-slate-300 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-colors">Void</button>
                         </div>
                       </td>

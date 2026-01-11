@@ -37,12 +37,12 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
     };
 
     return (
-        <div className="relative h-full">
+        <div className="relative h-full animate-in">
             <Card className={`group relative overflow-hidden h-full border-luxury transition-all duration-500 ${isLocked ? 'grayscale opacity-75' : 'hover:border-brand-gold/40 shadow-premium'}`}>
                 <div className="absolute top-0 right-0 p-6 flex items-center gap-3">
                     <span className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full ${
                         project.status === 'Active' ? 'bg-brand-blue text-white shadow-sm' : 
-                        project.status === 'Completed' ? 'bg-brand-gold text-slate-900 shadow-sm' :
+                        project.status === 'Completed' ? 'bg-green-500 text-white shadow-sm' :
                         'bg-zinc-200 text-zinc-500'}`}>{project.status}</span>
                     {user?.role === 'Admin' && (
                         <button onClick={handleDelete} className="p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" title="Purge Portfolio">
@@ -69,7 +69,7 @@ const ProjectCard: React.FC<{ project: Project }> = ({ project }) => {
                             <UserNameDisplay user={customer} textClassName="font-bold text-brand-dark" />
                         </div>
                         <div className="flex justify-between items-center text-sm border-b border-slate-50 pb-3">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Design Lead</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Architect Designer</span>
                             <UserNameDisplay user={designer} textClassName="font-bold text-brand-dark" />
                         </div>
                     </div>
@@ -104,6 +104,7 @@ const ProjectsList: React.FC = () => {
   const { projects, refetchData } = useData();
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isSyncModalOpen, setSyncModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'active' | 'completed'>('active');
   
   if (!user) return null;
 
@@ -116,28 +117,53 @@ const ProjectsList: React.FC = () => {
       user.role === 'Admin' || user.role === 'Sub-Admin' || p.designerId === user.id || p.customerId === user.id
   );
 
+  const filteredProjects = projectsForUser.filter(p => 
+      viewMode === 'active' ? p.status === 'Active' : p.status === 'Completed'
+  );
+
   return (
     <div className="space-y-12 animate-in pb-20">
       <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
         <div>
-            <h1 className="text-5xl font-display font-extrabold text-slate-900 tracking-tighter uppercase">Master Portfolio</h1>
+            <h1 className="text-5xl font-display font-extrabold text-slate-900 tracking-tighter uppercase">Projects</h1>
             <p className="text-slate-400 mt-3 text-lg font-bold uppercase tracking-[6px] font-display">Active Registry</p>
         </div>
-        {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
-            <div className="flex gap-4">
-                <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-8 hover:border-brand-gold/40 font-display !py-4 shadow-soft">
-                  <RefreshIcon className="w-5 h-5 mr-2 text-brand-gold" /> Sync CRM
-                </Button>
-                {/* FIX: Corrected state setter name from setCreateProjectModalOpen to setCreateModalOpen */}
-                <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-10 shadow-gold-glow font-display !py-4 font-black tracking-widest">+ Initiate Project</Button>
+        <div className="flex gap-4 items-center">
+            <div className="bg-slate-100 p-1 rounded-2xl flex">
+                <button 
+                    onClick={() => setViewMode('active')} 
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'active' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    Active Sites
+                </button>
+                <button 
+                    onClick={() => setViewMode('completed')} 
+                    className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'completed' ? 'bg-white text-green-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                    Completed Archives
+                </button>
             </div>
-        )}
+            
+            {(user.role === 'Admin' || user.role === 'Sub-Admin') && (
+                <>
+                    <Button variant="secondary" onClick={() => setSyncModalOpen(true)} className="!rounded-full !px-6 hover:border-brand-gold/40 font-display !py-4 shadow-soft">
+                      <RefreshIcon className="w-5 h-5 text-brand-gold" />
+                    </Button>
+                    <Button variant="gold" onClick={() => setCreateModalOpen(true)} className="!rounded-full !px-8 shadow-gold-glow font-display !py-4 font-black tracking-widest text-[10px] uppercase">+ New Project</Button>
+                </>
+            )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-          {projectsForUser.filter(p => p.status === 'Active').map(project => (
+          {filteredProjects.map(project => (
             <ProjectCard key={project.id} project={project} />
           ))}
+          {filteredProjects.length === 0 && (
+              <div className="col-span-full py-20 text-center border-2 border-dashed border-slate-200 rounded-[32px]">
+                  <p className="text-slate-300 font-bold uppercase tracking-widest text-sm">No {viewMode} projects found.</p>
+              </div>
+          )}
       </div>
 
       <CreateProjectModal isOpen={isCreateModalOpen} onClose={() => setCreateModalOpen(false)} onCreate={handleCreateProject} />

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
@@ -37,6 +38,8 @@ import CurrentWorks from "./pages/designer/CurrentWorks";
 import WorkTracking from "./pages/admin/WorkTracking";
 import TrackPay from "./pages/admin/TrackPay";
 import ProjectPayDetails from "./pages/admin/ProjectPayDetails";
+import NotifyEmployees from "./pages/admin/NotifyEmployees";
+import ClientTestimonials from "./pages/admin/ClientTestimonials";
 import Button from "./components/ui/Button";
 import HourlyPromptModal from "./components/designer/HourlyPromptModal";
 
@@ -133,6 +136,8 @@ const App: React.FC = () => {
             <Route path="admin/work-tracking" element={<WorkTracking />} />
             <Route path="admin/track-pay" element={<TrackPay />} />
             <Route path="admin/track-pay/:projectId" element={<ProjectPayDetails />} />
+            <Route path="admin/notify" element={<NotifyEmployees />} />
+            <Route path="admin/testimonials" element={<ClientTestimonials />} />
             <Route element={<RoleBasedRoutes allowedRoles={["Admin"]} />}>
               <Route path="admin/settings" element={<AdminSettings />} />
             </Route>

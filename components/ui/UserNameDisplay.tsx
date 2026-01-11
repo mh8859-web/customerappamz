@@ -25,7 +25,7 @@ const badgeUrlMap: Record<UserRole, string> = {
 const roleDetails: Record<UserRole, { title: string; text: string; }> = {
     Admin: { title: 'Executive', text: 'Official Management Member.' },
     'Sub-Admin': { title: 'Admin', text: 'Privileged oversight access.' },
-    Designer: { title: 'Lead Designer', text: 'Creative project lead.' },
+    Designer: { title: 'Architect', text: 'Creative project lead.' },
     Customer: { title: 'Client', text: 'Verified project owner.' },
     Accounts: { title: 'Financial Auditor', text: 'Accounts & Audit head.' },
     'Project Head': { title: 'PROJECT HEAD', text: 'Portfolio Strategy & Team Lead.' },

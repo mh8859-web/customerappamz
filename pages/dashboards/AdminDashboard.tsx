@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/ui/Card';
@@ -58,7 +59,7 @@ const AdminDashboard: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatCard title="Active Projects" value={currentProjects} icon={<BriefcaseIcon className="w-6 h-6" />} trend="+2 this week" />
           <StatCard title="Total Revenue" value={`₹${(totalRevenue / 100000).toFixed(1)}L`} icon={<DollarSignIcon className="w-6 h-6" />} trend="12% up" />
-          <StatCard title="Lead Designers" value={activeDesigners} icon={<UsersIcon className="w-6 h-6" />} />
+          <StatCard title="Architects" value={activeDesigners} icon={<UsersIcon className="w-6 h-6" />} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

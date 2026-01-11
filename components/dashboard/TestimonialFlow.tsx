@@ -4,13 +4,15 @@ import { Project } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import { CheckCircleIcon, MicIcon, VideoCameraIcon, SparklesIcon, ZapIcon, UploadCloudIcon, XMarkIcon } from '../icons';
-import { uploadProjectFile } from '../../services/api';
+import { uploadProjectFile, createRecord } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface TestimonialFlowProps {
     project: Project;
 }
 
 const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
+    const { user } = useAuth();
     const [view, setView] = useState<'celebration' | 'options' | 'recording' | 'success'>('celebration');
     const [mediaType, setMediaType] = useState<'video' | 'audio' | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -18,13 +20,19 @@ const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        if (!file || !user) return;
 
         setIsUploading(true);
         try {
             // Uploading to a virtual "testimonials" folder within the project storage
             const url = await uploadProjectFile(`${project.id}/testimonials`, file);
             if (url) {
+                // Save DB record
+                await createRecord('testimonials', {
+                    project_id: project.id,
+                    client_id: user.id,
+                    video_url: url
+                });
                 setView('success');
             }
         } catch (err) {
@@ -49,11 +57,12 @@ const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
                         
                         <div className="space-y-4">
                             <h1 className="text-5xl md:text-6xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none">
-                                Mastery <br/> Achieved.
+                                Congratulations On Your <br/>
+                                <span className="text-brand-gold">New Dream Home!</span>
                             </h1>
                             <div className="h-1 w-20 bg-brand-gold mx-auto rounded-full"></div>
                             <p className="text-xl md:text-2xl text-slate-600 font-medium leading-relaxed italic px-4">
-                                "Your vision, our craftsmanship. <br/> A masterpiece born from partnership."
+                                "We Wish you and your family a happy and joyful life Hereafter!"
                             </p>
                         </div>
 
@@ -63,7 +72,7 @@ const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
                                 onClick={() => setView('options')} 
                                 className="!px-16 !py-6 !rounded-full !bg-slate-900 !text-sm !font-black uppercase tracking-[4px] shadow-button hover:scale-105 active:scale-95 transition-all"
                             >
-                                Begin Farewell Protocol
+                                Share Your Experience (Video)
                             </Button>
                         </div>
                     </div>
@@ -115,7 +124,7 @@ const TestimonialFlow: React.FC<TestimonialFlowProps> = ({ project }) => {
                         </div>
                     </div>
                     <div className="bg-slate-900 p-8 text-center border-t border-white/5">
-                        <p className="text-white/40 text-[10px] font-black uppercase tracking-[6px]">Select your preferred testimonial medium</p>
+                        <p className="text-white/40 text-[10px] font-black uppercase tracking-[6px]">Before End Can you do as a favour? Please Share your experience in video testimonial.</p>
                     </div>
                     <input 
                         type="file" 

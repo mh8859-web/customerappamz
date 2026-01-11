@@ -232,7 +232,7 @@ const CustomerDashboard: React.FC = () => {
                                         </div>
                                         <div>
                                             <UserNameDisplay user={designer} textClassName="font-black text-slate-900 text-lg" />
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[3px] mt-1">Lead Creative</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[3px] mt-1">Architect</p>
                                         </div>
                                     </div>
                                 )}

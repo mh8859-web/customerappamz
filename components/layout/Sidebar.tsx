@@ -9,7 +9,7 @@ import {
   CreditCardIcon, ClipboardIcon, CalendarIcon, LifeBuoyIcon,
   ChevronDoubleLeftIcon, PhotoIcon, DownloadIcon, UserCircleIcon, 
   TrendingUpIcon, InfoIcon, ZapIcon, DollarSignIcon, PackageIcon,
-  ShieldCheckIcon, BuildingIcon, SearchIcon
+  ShieldCheckIcon, BuildingIcon, SearchIcon, MegaphoneIcon, VideoCameraIcon
 } from '../icons';
 
 interface SidebarProps {
@@ -38,22 +38,27 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
   const navItems = useMemo(() => {
     if (!user) return { main: [], secondary: [] };
     
+    // STRICT ACCESS CONTROL: System Settings only for 787878
+    const showSystemSettings = user.userId === '787878';
+
     const items: Record<string, { main: any[], secondary: any[] }> = {
       Admin: {
         main: [
           { to: '/admin/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Executive Home' },
           { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Strategic Overview' },
-          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Designer Pulse' },
+          { to: '/admin/work-tracking', icon: <ZapIcon className="w-5 h-5" />, label: 'Architect Pulse' },
+          { to: '/admin/notify', icon: <MegaphoneIcon className="w-5 h-5" />, label: 'Notify Employees' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Global Messages' },
-          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Master Portfolio' },
-          { to: '/admin/track-pay', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Payment Sentinel' },
+          { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Projects' },
+          { to: '/admin/track-pay', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Client Payments' },
           { to: '/admin/reports', icon: <PieChartIcon className="w-5 h-5" />, label: 'Financial Audit' },
           { to: '/admin/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Attendance HQ' },
           { to: '/admin/salary-allocation', icon: <DollarSignIcon className="w-5 h-5" />, label: 'Payroll Setup' },
-          { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'Identity Index' },
+          { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'Users' },
+          { to: '/admin/testimonials', icon: <VideoCameraIcon className="w-5 h-5" />, label: 'Client Testimonial' },
         ],
         secondary: [
-          { to: '/admin/settings', icon: <SettingsIcon className="w-5 h-5" />, label: 'System Settings' },
+          ...(showSystemSettings ? [{ to: '/admin/settings', icon: <SettingsIcon className="w-5 h-5" />, label: 'System Settings' }] : []),
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'My Account' },
           { to: '/about', icon: <InfoIcon className="w-5 h-5" />, label: 'System Intel' },
         ]
@@ -62,11 +67,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, isCollap
         main: [
           { to: '/admin/dashboard', icon: <HomeIcon className="w-5 h-5" />, label: 'Dashboard' },
           { to: '/admin/overview', icon: <TrendingUpIcon className="w-5 h-5" />, label: 'Operations' },
+          { to: '/admin/notify', icon: <MegaphoneIcon className="w-5 h-5" />, label: 'Notify Employees' },
           { to: '/chat', icon: <MessageSquareIcon className="w-5 h-5" />, label: 'Team Chat' },
           { to: '/projects', icon: <BriefcaseIcon className="w-5 h-5" />, label: 'Active Projects' },
           { to: '/admin/track-pay', icon: <CreditCardIcon className="w-5 h-5" />, label: 'Track Payments' },
           { to: '/admin/attendance', icon: <ClockIcon className="w-5 h-5" />, label: 'Field Attendance' },
           { to: '/admin/users', icon: <UsersIcon className="w-5 h-5" />, label: 'Directory' },
+          { to: '/admin/testimonials', icon: <VideoCameraIcon className="w-5 h-5" />, label: 'Client Testimonial' },
         ],
         secondary: [
           { to: '/account', icon: <UserCircleIcon className="w-5 h-5" />, label: 'Profile' },

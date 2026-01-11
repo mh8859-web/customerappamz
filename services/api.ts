@@ -18,7 +18,7 @@ export const getUsers = async (): Promise<User[]> => {
         .order('created_at', { ascending: false });
 
     if (error) {
-        console.error('Error fetching users:', error);
+        console.error('Error fetching users:', error.message || error);
         return [];
     }
 
@@ -31,6 +31,10 @@ export const getUsers = async (): Promise<User[]> => {
         verified: !!user.verified,
         verificationRequested: !!user.verification_requested,
         userId: user.user_id || '',
+        joinedDate: user.joined_date,
+        experience: user.experience,
+        phoneNumber: user.phone_number,
+        idProofUrls: user.id_proof_urls || [],
     }));
 };
 
@@ -126,6 +130,11 @@ async function uploadToSupabase(path: string, file: File): Promise<string | null
 
 export const uploadAvatar = async (userId: string, file: File): Promise<string | null> => {
     const path = `avatars/${userId}/${Date.now()}_${file.name}`;
+    return uploadToSupabase(path, file);
+};
+
+export const uploadIdProof = async (userId: string, file: File): Promise<string | null> => {
+    const path = `id_proofs/${userId}/${Date.now()}_${file.name}`;
     return uploadToSupabase(path, file);
 };
 

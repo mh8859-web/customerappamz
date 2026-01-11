@@ -1,6 +1,8 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, UserCircleIcon, LogOutIcon } from '../icons';
+import { useData } from '../../context/DataContext';
+import { SearchIcon, BellIcon, MenuIcon, ChevronDownIcon, UserCircleIcon, LogOutIcon, MegaphoneIcon } from '../icons';
 import { Link } from 'react-router-dom';
 import UserNameDisplay from '../ui/UserNameDisplay';
 
@@ -12,6 +14,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   const { user, logout } = useAuth();
+  const { myActiveNotification } = useData();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +29,14 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
   }, []);
   
   return (
-    <header className="sticky top-0 z-40 h-20 px-6 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between">
+    <>
+      {myActiveNotification && (
+        <div className="bg-brand-blue text-white px-6 py-2 flex items-center justify-center text-xs font-bold uppercase tracking-widest relative z-50 shadow-md">
+            <MegaphoneIcon className="w-4 h-4 mr-2 animate-bounce" />
+            <span>{myActiveNotification.message}</span>
+        </div>
+      )}
+      <header className="sticky top-0 z-40 h-20 px-6 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             className="md:hidden p-2 rounded-xl bg-brand-blue text-white shadow-button"
@@ -89,6 +99,7 @@ const Header: React.FC<HeaderProps> = ({ setSidebarOpen }) => {
           </div>
         </div>
       </header>
+    </>
   );
 };
 

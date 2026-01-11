@@ -43,7 +43,7 @@ const WorkTracking: React.FC = () => {
             <header className="flex flex-col lg:flex-row justify-between lg:items-end gap-6">
                 <div>
                     <h1 className="text-5xl font-display font-black text-slate-900 tracking-tighter uppercase leading-none">
-                        {selectedDesigner ? 'DESIGNER PROFILE' : 'DESIGNER PULSE'}
+                        {selectedDesigner ? 'ARCHITECT PROFILE' : 'ARCHITECT PULSE'}
                     </h1>
                     <p className="text-slate-400 font-bold uppercase tracking-[6px] text-[10px] mt-3 flex items-center gap-2">
                         <ZapIcon className="w-3.5 h-3.5 text-brand-gold" />
@@ -84,7 +84,7 @@ const WorkTracking: React.FC = () => {
                                         </div>
                                     </div>
                                     <h3 className="text-2xl font-display font-black text-slate-900 uppercase tracking-tight leading-none mb-2">{designer.fullName}</h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px] mb-8">ID: {designer.userId} &bull; Creative Lead</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px] mb-8">ID: {designer.userId} &bull; Architect</p>
                                     <div className="w-full grid grid-cols-2 gap-4 mb-8">
                                         <div className="bg-slate-50 p-4 rounded-3xl">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Sites</p>
@@ -113,7 +113,7 @@ const WorkTracking: React.FC = () => {
                             <img src={selectedDesigner?.avatarUrl} className="w-32 h-32 rounded-[40px] object-cover mb-8 ring-4 ring-slate-50 mx-auto shadow-premium" alt="" />
                             <div className="text-center space-y-2">
                                 <h3 className="text-3xl font-display font-black text-slate-900 uppercase leading-none">{selectedDesigner?.fullName}</h3>
-                                <p className="text-[10px] font-black text-brand-gold uppercase tracking-[5px]">{selectedDesigner?.role}</p>
+                                <p className="text-[10px] font-black text-brand-gold uppercase tracking-[5px]">Architect</p>
                             </div>
                             <div className="mt-10 pt-10 border-t border-slate-100 space-y-6">
                                 <div className="flex justify-between items-center">

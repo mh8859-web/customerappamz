@@ -126,7 +126,47 @@ CREATE TABLE IF NOT EXISTS public.projects (
     progress integer DEFAULT 0,
     start_date timestamp with time zone,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);`;
+);
+
+-- 3. SYSTEM NOTIFICATIONS TABLE
+CREATE TABLE IF NOT EXISTS public.system_notifications (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    message text NOT NULL,
+    target_user_ids text[] DEFAULT '{}',
+    is_active boolean DEFAULT true,
+    created_by uuid REFERENCES public.users(id),
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+-- Allow public read so employees can see notifications
+ALTER TABLE public.system_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Enable read access for all users" ON public.system_notifications FOR SELECT USING (true);
+CREATE POLICY "Enable insert/update for admins" ON public.system_notifications FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE users.id = auth.uid() 
+    AND (users.role = 'Admin' OR users.role = 'Sub-Admin')
+  )
+);
+
+-- 4. TESTIMONIALS TABLE
+CREATE TABLE IF NOT EXISTS public.testimonials (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  project_id uuid REFERENCES public.projects(id),
+  client_id uuid REFERENCES public.users(id),
+  video_url text NOT NULL,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.testimonials FOR SELECT USING (true);
+CREATE POLICY "Client upload" ON public.testimonials FOR INSERT WITH CHECK (auth.uid() = client_id);
+
+-- 5. ENHANCED USER PROFILE FIELDS
+ALTER TABLE public.users 
+ADD COLUMN IF NOT EXISTS joined_date timestamp with time zone,
+ADD COLUMN IF NOT EXISTS experience text,
+ADD COLUMN IF NOT EXISTS phone_number text,
+ADD COLUMN IF NOT EXISTS id_proof_urls text[] DEFAULT '{}';
+`;
 
   const inputClasses = "w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-brand-blue/20 outline-none";
 

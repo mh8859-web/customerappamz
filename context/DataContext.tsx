@@ -5,7 +5,7 @@ import {
     Project, Task, Design, Message, Milestone, Quote, ActivityLog, SiteVisit,
     SupportTicket, AttendanceLog, LeaveRequest, WorkLog, ProjectUpdate,
     Expense, Product, ProjectTemplate, Announcement, Post, FeedComment, FinalGalleryImage,
-    CurrentWork
+    CurrentWork, SystemNotification, Testimonial
 } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -31,6 +31,9 @@ interface DataContextType {
     posts: Post[];
     feedComments: FeedComment[];
     currentWorks: CurrentWork[];
+    systemNotifications: SystemNotification[];
+    testimonials: Testimonial[];
+    myActiveNotification: SystemNotification | null;
     refetchData: () => Promise<void>;
     loading: boolean;
     unreadCounts: Record<string, number>;
@@ -70,6 +73,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [posts, setPosts] = useState<Post[]>([]);
     const [feedComments, setFeedComments] = useState<FeedComment[]>([]);
     const [currentWorks, setCurrentWorks] = useState<CurrentWork[]>([]);
+    const [systemNotifications, setSystemNotifications] = useState<SystemNotification[]>([]);
+    const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
     const conversations = useMemo(() => {
         if (!user || !projects) return [];
@@ -131,7 +136,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 'projects', 'tasks', 'designs', 'messages', 'milestones', 'quotes', 'activity_logs', 
                 'site_visits', 'support_tickets', 'attendance_logs', 'leave_requests', 'work_logs', 
                 'project_updates', 'final_gallery_images', 'expenses', 'products', 'project_templates', 
-                'announcements', 'posts', 'feed_comments', 'designer_hourly_updates'
+                'announcements', 'posts', 'feed_comments', 'designer_hourly_updates', 'system_notifications',
+                'testimonials'
             ];
             
             const results = await Promise.all(tables.map(table => supabase.from(table).select('*')));
@@ -192,6 +198,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 content: p.content || '',
             })));
             setFeedComments(mapToCamelCase(dataMap.feed_comments, fc => ({ ...fc, postId: fc.post_id, authorId: fc.author_id, createdAt: fc.created_at })));
+            setSystemNotifications(mapToCamelCase(dataMap.system_notifications, sn => ({ 
+                id: sn.id, message: sn.message, targetUserIds: sn.target_user_ids || [], isActive: sn.is_active, createdAt: sn.created_at, createdBy: sn.created_by 
+            })));
+            setTestimonials(mapToCamelCase(dataMap.testimonials, t => ({
+                id: t.id, projectId: t.project_id, clientId: t.client_id, videoUrl: t.video_url, createdAt: t.created_at
+            })));
         } catch (error) {
             console.error("Data Sync Fault:", error);
         } finally {
@@ -205,11 +217,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [authLoading, user?.id, fetchData]);
 
+    // Find the latest active notification relevant to the current user
+    const myActiveNotification = useMemo(() => {
+        if (!user || systemNotifications.length === 0) return null;
+        // Filter active notifications where user ID is in target array
+        const relevant = systemNotifications.filter(sn => 
+            sn.isActive && sn.targetUserIds.includes(user.id)
+        );
+        // Return the most recent one
+        return relevant.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+    }, [systemNotifications, user]);
+
     const value: DataContextType = {
         projects, tasks, designs, messages, milestones, quotes, activityLogs, siteVisits,
         supportTickets, attendanceLogs, leaveRequests, workLogs, projectUpdates,
         finalGalleryImages, expenses, products, projectTemplates, announcements, posts, feedComments,
-        currentWorks,
+        currentWorks, systemNotifications, myActiveNotification, testimonials,
         refetchData: fetchData,
         loading,
         unreadCounts,

@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
     BriefcaseIcon, ZapIcon, FilePlusIcon, PhotoIcon, CheckCircleIcon, 
     PackageIcon, MapPinIcon, BuildingIcon, FileTextIcon,
-    ChevronRightIcon, AlertTriangleIcon, XMarkIcon, ShieldCheckIcon
+    ChevronRightIcon, AlertTriangleIcon, XMarkIcon, ShieldCheckIcon, ClockIcon
 } from '../components/icons';
 import { UserRole, Design, Project } from '../types';
 import ProjectStatusBar from '../components/ProjectStatusBar';
@@ -64,24 +64,55 @@ const ProjectDetails: React.FC = () => {
         projectDesigns.some(d => d.approved === true),
     [projectDesigns]);
 
+    // Determines if the "Next Step/Close Project" button should appear
     const showNextPhaseButton = useMemo(() => {
-        if (!project || !user || project.stage === 'completed') return false;
+        if (!project || !user || project.status === 'Completed') return false;
         
-        // HOLD LOGIC: Management Approval can only be authorized by ADMIN
-        if (project.stage === 'management_approval') {
+        // Critical Logic: Allow Admins to close if at Step 7 OR Step 8
+        if (project.stage === 'management_approval' || project.stage === 'completed') {
             return user.role === 'Admin' || user.role === 'Sub-Admin';
         }
 
         // Standard logic for other phases
-        return (user.role === 'Designer' && project.designerId === user.id) || user.role === 'Admin';
+        return (user.role === 'Designer' && project.designerId === user.id) || user.role === 'Admin' || user.role === 'Sub-Admin';
     }, [project, user]);
 
     const handleMoveToNextPhase = async () => {
         if (!project || isTransitioning) return;
         setTransitionError(null);
 
+        // --- CLOSURE LOGIC (Step 7 or 8) ---
+        // If we are at Management Verification OR already technically at 'completed' stage but status is still Active
+        if (project.stage === 'management_approval' || project.stage === 'completed') {
+             setIsTransitioning(true);
+             try {
+                 const { error } = await updateRecord('projects', project.id, {
+                     stage: 'completed',
+                     status: 'Completed',
+                     progress: 100
+                 });
+                 if (error) throw error;
+                 
+                 await createRecord('messages', {
+                    chat_id: project.id,
+                    body: `PROJECT CLOSED: This masterpiece is now officially completed and fully verified by management. Handover protocol finalized.`,
+                    sender_id: user!.id,
+                    is_system_message: true
+                });
+                await refetchData();
+             } catch (err: any) {
+                 setTransitionError(`Closure Error: ${err.message}`);
+             } finally {
+                 setIsTransitioning(false);
+             }
+             return;
+        }
+        
         const currentStageIdx = PROJECT_STAGES.indexOf(project.stage);
         const nextStageIdx = currentStageIdx + 1;
+        
+        if (nextStageIdx >= PROJECT_STAGES.length) return;
+        
         const nextStage = PROJECT_STAGES[nextStageIdx];
 
         // --- VALIDATION PROTOCOLS ---
@@ -94,14 +125,8 @@ const ProjectDetails: React.FC = () => {
         try {
             const updates: any = {
                 stage: nextStage,
-                progress: Math.min(project.progress + 15, 100)
+                progress: Math.min(project.progress + 15, 95)
             };
-
-            // If moving to COMPLETED, change project status too
-            if (nextStage === 'completed') {
-                updates.status = 'Completed';
-                updates.progress = 100;
-            }
 
             const { error } = await updateRecord('projects', project.id, updates);
 
@@ -109,9 +134,7 @@ const ProjectDetails: React.FC = () => {
             
             await createRecord('messages', {
                 chat_id: project.id,
-                body: nextStage === 'completed' 
-                    ? `PROJECT ARCHIVED: This masterpiece is now officially completed and verified by management.`
-                    : `PHASE ADVANCE: Project has successfully transitioned to ${STAGE_DISPLAY_NAMES[nextStage]}.`,
+                body: `PHASE ADVANCE: Project has successfully transitioned to ${STAGE_DISPLAY_NAMES[nextStage]}.`,
                 sender_id: user!.id,
                 is_system_message: true
             });
@@ -170,13 +193,16 @@ const ProjectDetails: React.FC = () => {
     if (!project || !user) return <div className="text-center p-20 font-display font-black text-slate-400 uppercase tracking-widest">Project Not Found</div>;
 
     // --- CUSTOMER COMPLETION FLOW ---
-    if (user.role === 'Customer' && project.stage === 'completed') {
+    if (user.role === 'Customer' && project.status === 'Completed') {
         return <TestimonialFlow project={project} />;
     }
 
     const tabs = TABS[user.role] || [];
     const designer = findUserById(project.designerId);
     const projectMilestones = milestones.filter(m => m.projectId === project.id);
+    
+    // Determine button state
+    const isReadyToClose = project.stage === 'management_approval' || project.stage === 'completed';
 
     return (
         <div className="space-y-12 pb-24">
@@ -199,7 +225,7 @@ const ProjectDetails: React.FC = () => {
                 
                 <Card className="luxury-glass !px-10 !py-6 rounded-[32px] border-slate-100 shadow-premium flex items-center gap-8 bg-white">
                     <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full animate-pulse shadow-gold-glow ${project.stage === 'completed' ? 'bg-brand-gold' : 'bg-accent-success'}`}></div>
+                        <div className={`w-3 h-3 rounded-full animate-pulse shadow-gold-glow ${project.status === 'Completed' ? 'bg-brand-gold' : 'bg-accent-success'}`}></div>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[4px]">Status: {project.status.toUpperCase()}</span>
                     </div>
                     <div className="h-10 w-px bg-slate-100"></div>
@@ -210,7 +236,37 @@ const ProjectDetails: React.FC = () => {
                 </Card>
             </div>
 
-            <ProjectStatusBar currentStage={project.stage} progress={project.progress} />
+            {/* MANAGEMENT HOLD BANNER FOR CLIENTS */}
+            {user.role === 'Customer' && isReadyToClose && project.status !== 'Completed' && (
+                <Card className="!p-10 bg-brand-gold/5 border-brand-gold/30 rounded-[40px] flex flex-col md:flex-row items-center gap-8 shadow-premium animate-in slide-in-from-top-4 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-gold/5 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+                    <div className="w-20 h-20 rounded-[28px] bg-brand-gold text-slate-900 flex items-center justify-center shadow-xl flex-shrink-0 animate-bounce-slow">
+                        <ShieldCheckIcon className="w-10 h-10" />
+                    </div>
+                    <div className="text-center md:text-left relative z-10">
+                        <h3 className="text-2xl font-display font-black text-slate-900 uppercase tracking-tight">Final Verification Protocol</h3>
+                        <p className="text-lg text-slate-600 font-bold uppercase tracking-widest mt-4 italic leading-relaxed max-w-2xl">
+                            "MANAGEMENT CHECKING ALL DETAILS PAYMENTS AND ALL ONCE MANAGEMENT VERIFIED THIS PROJECT WILL BE COMPLETED"
+                        </p>
+                    </div>
+                </Card>
+            )}
+
+            {/* COMPLETION BANNER FOR ADMINS/STAFF */}
+            {project.status === 'Completed' && user.role !== 'Customer' && (
+                <Card className="!p-12 bg-green-50 border-green-200 rounded-[40px] shadow-premium animate-in text-center relative overflow-hidden">
+                     <div className="absolute top-0 right-0 w-64 h-64 bg-green-200/30 rounded-full blur-[100px] -mr-32 -mt-32"></div>
+                     <div className="relative z-10 flex flex-col items-center">
+                        <div className="w-20 h-20 rounded-full bg-green-500 text-white flex items-center justify-center mb-6 shadow-lg">
+                            <CheckCircleIcon className="w-10 h-10" />
+                        </div>
+                        <h2 className="text-4xl font-display font-black text-green-900 uppercase tracking-tighter">Project Successfully Completed!</h2>
+                        <p className="text-green-700 font-bold uppercase tracking-widest mt-2">All Phases Verified & Archived.</p>
+                     </div>
+                </Card>
+            )}
+
+            {project.status !== 'Completed' && <ProjectStatusBar currentStage={project.stage} progress={project.progress} />}
 
             {/* PHASE TRANSITION COMMANDER */}
             {showNextPhaseButton && (
@@ -227,26 +283,27 @@ const ProjectDetails: React.FC = () => {
                             <button onClick={() => setTransitionError(null)} className="p-2 text-red-300 hover:text-red-600"><XMarkIcon className="w-6 h-6"/></button>
                         </Card>
                     )}
-                    <Card className={`!p-8 rounded-[32px] flex flex-col md:flex-row items-center justify-between gap-8 shadow-gold-glow ${project.stage === 'management_approval' ? '!bg-brand-gold !border-slate-900' : '!bg-slate-900 !border-brand-gold/30'}`}>
-                        <div className="flex items-center gap-6 text-left">
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl ${project.stage === 'management_approval' ? 'bg-slate-900 text-brand-gold' : 'bg-brand-gold text-slate-900'}`}>
-                                {project.stage === 'management_approval' ? <ShieldCheckIcon className="w-8 h-8" /> : <ZapIcon className="w-8 h-8" />}
+                    
+                    <Card className={`!p-10 rounded-[40px] flex flex-col md:flex-row items-center justify-between gap-10 shadow-premium transition-all duration-500 border-luxury ${isReadyToClose ? '!bg-brand-gold shadow-gold-glow border-slate-900/10' : '!bg-slate-900'}`}>
+                        <div className="flex items-center gap-8 text-left">
+                            <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center shadow-2xl transition-colors ${isReadyToClose ? 'bg-slate-900 text-brand-gold' : 'bg-brand-gold text-slate-900'}`}>
+                                {isReadyToClose ? <ShieldCheckIcon className="w-9 h-9" /> : <ZapIcon className="w-9 h-9" />}
                             </div>
                             <div>
-                                <h3 className={`text-xl font-display font-black uppercase tracking-tight ${project.stage === 'management_approval' ? 'text-slate-900' : 'text-white'}`}>
-                                    {project.stage === 'management_approval' ? 'Management Authorization Required' : 'Phase Advance Interface'}
+                                <h3 className={`text-2xl font-display font-black uppercase tracking-tight ${isReadyToClose ? 'text-slate-900' : 'text-white'}`}>
+                                    {isReadyToClose ? 'Executive Verification Required' : 'Phase Advance Interface'}
                                 </h3>
-                                <p className={`${project.stage === 'management_approval' ? 'text-slate-700' : 'text-slate-400'} text-xs font-bold uppercase tracking-[2px] mt-1`}>
-                                    {project.stage === 'management_approval' ? 'Executive review before final hand-off.' : 'Initialize next protocol for project execution.'}
+                                <p className={`${isReadyToClose ? 'text-slate-700' : 'text-slate-400'} text-xs font-bold uppercase tracking-[3px] mt-2`}>
+                                    {isReadyToClose ? 'Audit all deliverables and financial settlements before project closure.' : 'Initialize next protocol for project execution workflow.'}
                                 </p>
                             </div>
                         </div>
                         <Button 
                             onClick={handleMoveToNextPhase}
                             disabled={isTransitioning}
-                            className={`!rounded-full !px-12 !py-4 font-black uppercase tracking-[3px] shadow-gold-glow hover:scale-105 active:scale-95 transition-all ${project.stage === 'management_approval' ? '!bg-slate-900 !text-brand-gold' : '!bg-brand-gold !text-slate-900'}`}
+                            className={`!rounded-full !px-16 !py-6 !text-sm !font-black uppercase tracking-[4px] shadow-2xl hover:scale-[1.03] active:scale-95 transition-all ${isReadyToClose ? '!bg-slate-900 !text-white' : '!bg-brand-gold !text-slate-900'}`}
                         >
-                            {isTransitioning ? 'SYNCHRONIZING...' : project.stage === 'management_approval' ? 'AUTHORIZE COMPLETION' : 'NEXT STEP: PHASE ADVANCE'}
+                            {isTransitioning ? 'SYNCHRONIZING...' : isReadyToClose ? 'CLOSE PROJECT' : 'NEXT STEP: PHASE ADVANCE'}
                         </Button>
                     </Card>
                 </div>
@@ -291,7 +348,7 @@ const ProjectDetails: React.FC = () => {
                     {activeTab === 'Live Updates' && (
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                             <div className="lg:col-span-8 space-y-10">
-                                {(user.role === 'Site Head' || user.role === 'Designer') && project.stage !== 'completed' && <SiteUpdateModule projectId={project.id} onSuccess={refetchData} />}
+                                {(user.role === 'Site Head' || user.role === 'Designer') && project.stage !== 'completed' && project.status !== 'Completed' && <SiteUpdateModule projectId={project.id} onSuccess={refetchData} />}
                                 <Card className="luxury-glass !p-10 rounded-[40px] border-slate-100 shadow-premium bg-white">
                                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8 flex items-center gap-3">
                                         <BuildingIcon className="w-5 h-5 text-brand-blue" />
@@ -306,12 +363,12 @@ const ProjectDetails: React.FC = () => {
                                             </div>
                                         </div>
                                         <div className="space-y-4">
-                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[4px]">Design Lead</p>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-[4px]">Architect</p>
                                             <div className="mt-2 flex items-center gap-4">
                                                 <img src={designer?.avatarUrl} className="w-12 h-12 rounded-2xl object-cover ring-4 ring-slate-50 shadow-soft" alt="" />
                                                 <div>
                                                     <UserNameDisplay user={designer} showAvatar={false} textClassName="font-black text-slate-900 text-lg" />
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Creative Director</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lead Creative</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -319,7 +376,7 @@ const ProjectDetails: React.FC = () => {
                                 </Card>
                             </div>
                             <div className="lg:col-span-4">
-                                {(user.role === 'Designer' || user.role === 'Site Head') && project.stage !== 'completed' && <MaterialRequestModule projectId={project.id} onSuccess={refetchData} />}
+                                {(user.role === 'Designer' || user.role === 'Site Head') && project.stage !== 'completed' && project.status !== 'Completed' && <MaterialRequestModule projectId={project.id} onSuccess={refetchData} />}
                             </div>
                         </div>
                     )}
@@ -331,7 +388,7 @@ const ProjectDetails: React.FC = () => {
                                     <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Design Iterations</h3>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[4px] mt-2">Verified Visual Registry</p>
                                 </div>
-                                {user.role === 'Designer' && project.stage !== 'completed' && (
+                                {user.role === 'Designer' && project.status !== 'Completed' && (
                                     <Button onClick={() => setUploadModalOpen(true)} className="!rounded-full !px-8 shadow-button">
                                         <FilePlusIcon className="w-5 h-5 mr-2" /> Upload New Version
                                     </Button>

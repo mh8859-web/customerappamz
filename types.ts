@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'Admin' | 'Sub-Admin' | 'Designer' | 'Customer' | 'Accounts' | 'Project Head' | 'Production Head' | 'Site Head';
 
 export interface User {
@@ -11,6 +10,11 @@ export interface User {
   verified: boolean;
   verificationRequested: boolean;
   userId: string;
+  // Enhanced Profile Fields
+  joinedDate?: string;
+  experience?: string;
+  phoneNumber?: string;
+  idProofUrls?: string[];
 }
 
 // ALIGNED WITH SUPABASE ENUM
@@ -303,5 +307,22 @@ export interface Material {
   brand: string;
   imageUrl: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  createdAt: string;
+}
+
+export interface SystemNotification {
+  id: string;
+  message: string;
+  targetUserIds: string[]; 
+  isActive: boolean;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface Testimonial {
+  id: string;
+  projectId: string;
+  clientId: string;
+  videoUrl: string;
   createdAt: string;
 }

@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { BuildingIcon, ShieldCheckIcon, PaletteIcon, CreditCardIcon, MailIcon, DatabaseIcon, AlertTriangleIcon } from '../../components/icons';
 import SqlInstructionModal from '../../components/admin/SqlInstructionModal';
+import { useAuth } from '../../context/AuthContext';
 
 type SettingsTab = 'profile' | 'permissions' | 'customization' | 'billing' | 'notifications' | 'security';
 
@@ -230,8 +232,25 @@ const DataSecuritySettings = () => {
 };
 
 const AdminSettings: React.FC = () => {
+    const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
     const [isSqlModalOpen, setSqlModalOpen] = useState(false);
+    
+    // RESTRICTED ACCESS: Only for user 787878
+    if (user?.userId !== '787878') {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-8 animate-in">
+                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-6">
+                    <ShieldCheckIcon className="w-8 h-8" />
+                </div>
+                <h1 className="text-3xl font-display font-black text-slate-900 uppercase tracking-tight">Access Restricted</h1>
+                <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-xs">Security Protocol Active</p>
+                <p className="max-w-md mt-6 text-slate-600">
+                    This advanced system configuration module is strictly reserved for the System Administrator (ID: 787878).
+                </p>
+            </div>
+        );
+    }
     
     const settingsTabs = [
         { id: 'profile', label: 'Company Profile', icon: <BuildingIcon className="w-5 h-5" /> },

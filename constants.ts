@@ -1,5 +1,4 @@
 
-
 import { ProjectStage } from './types';
 
 export const USER_ROLES = ['Admin', 'Sub-Admin', 'Designer', 'Customer', 'Accounts', 'Project Head', 'Production Head', 'Site Head'];
@@ -22,7 +21,7 @@ export const STAGE_DISPLAY_NAMES: Record<string, string> = {
     'site_work': 'Site Execution',
     'installation': 'Installation',
     'handover': 'Final Handover',
-    'management_approval': 'Management Approval',
+    'management_approval': 'Management Verification',
     'completed': 'Project Complete',
 };
 
@@ -64,9 +63,9 @@ export const STAGE_DESCRIPTIONS: Record<string, { title: string; note: string; a
         action: "Issuing completion certificate."
     },
     'management_approval': {
-        title: "Executive Review",
-        note: "Final project audit by Amaz Management to ensure perfection.",
-        action: "Hold for Admin authorization."
+        title: "Executive Audit",
+        note: "MANAGEMENT CHECKING ALL DETAILS PAYMENTS AND ALL ONCE MANAGEMENT VERIFIED THIS PROJECT WILL BE COMPLETED",
+        action: "Hold for Final Authorization."
     },
     'completed': {
         title: "Welcome Home",

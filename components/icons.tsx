@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 
 // Re-imagined premium icons with more detail and consistent luxury styling.
@@ -459,6 +460,13 @@ export const MegaphoneIcon: React.FC<IconProps> = ({ className }) => (
   </svg>
 );
 
+export const CameraIcon: React.FC<IconProps> = ({ className }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+);
+
 // --- FIX: Added missing icons requested by other components ---
 
 export const UserCircleIcon: React.FC<IconProps> = ({ className }) => (
@@ -515,5 +523,12 @@ export const ArrowPathIcon: React.FC<IconProps> = ({ className }) => (
 export const ChevronRightIcon: React.FC<IconProps> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
+export const PlusIcon: React.FC<IconProps> = ({ className }) => (
+  <svg viewBox="0 0 24 24" fill="none" className={className} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
   </svg>
 );
