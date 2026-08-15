@@ -1,20 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+COMPLETE SOFTWARE FOR INTERIOR BACKEND
 
-# Run and deploy your AI Studio app
+<img width="3003" height="1530" alt="image" src="https://github.com/user-attachments/assets/ec60395b-a3b4-45f4-af63-1fdcecdbe12e" />
 
-This contains everything you need to run your app locally.
+<img width="3015" height="1553" alt="image" src="https://github.com/user-attachments/assets/d469fb43-5a5e-419d-b655-efa089d2acc9" />
 
-View your app in AI Studio: https://ai.studio/apps/drive/1EW_VAAUtRDTMUe9Vi0hd-XUJ9YULa3GZ
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
